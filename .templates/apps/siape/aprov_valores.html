@@ -1,0 +1,44 @@
+<!-- templates/funcionarios/lista_registros.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block addtitle %}<title>Lista de Registros</title>{% endblock %}
+
+{% block addcss_extra %}
+<link rel="stylesheet" href="{% static 'tabela.css' %}">
+{% endblock %}
+
+{% block content %}
+<h1>Lista de Registros Pendentes</h1>
+
+<table class="tabela-registros">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Funcionário</th>
+            <th>CPF do Cliente</th>
+            <th>Valor Estimado</th>
+            <th>Data</th>
+            <th>Ação</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for registro in registros %}
+        <tr>
+            <td>{{ registro.id }}</td>
+            <td>{{ registro.funcionario }}</td>
+            <td>{{ registro.cpf_cliente }}</td>
+            <td>R$ {{ registro.valor_est }}</td>
+            <td>{{ registro.data }}</td>
+            <td>
+                <a href="{% url 'colab:alterar_status' registro.id %}" class="btn btn-success">Marcar como Pago</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="6">Nenhum registro encontrado.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

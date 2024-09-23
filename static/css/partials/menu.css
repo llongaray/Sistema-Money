@@ -1,0 +1,85 @@
+/* Estilos para o menu de navegação */
+#menu-navbar {
+    background-color: var(--color-1);
+    color: var(--color-3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 20px;
+    position: relative;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+/* Logotipo */
+#logo {
+    flex: 1;
+}
+
+#logo a {
+    display: block;
+    text-decoration: none;
+    color: var(--color-3);
+}
+
+#logo img {
+    max-width: 100px;
+}
+
+/* Estilo para o menu */
+#menu {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 3;
+}
+
+#menu ul {
+    list-style: none;
+    display: flex;
+    gap: 20px;
+}
+
+#menu ul li {
+    font-size: 18px;
+}
+
+#menu ul li a {
+    text-decoration: none;
+    color: var(--color-3);
+    padding: 10px 15px;
+    border-radius: 5px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+#menu ul li a:hover {
+    background-color: var(--color-2);
+    color: var(--color-1);
+}
+
+/* Área de login e logout */
+#login-logout {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    font-size: 16px;
+}
+
+#login-logout p {
+    margin: 0;
+}
+
+#login-logout a {
+    text-decoration: none;
+    color: var(--color-3);
+    padding: 10px 15px;
+    border-radius: 5px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+#login-logout a:hover {
+    color: blue;
+}

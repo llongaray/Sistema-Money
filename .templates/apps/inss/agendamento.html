@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block addtitle %}<title>Agendamento INSS</title>{% endblock %}
+
+{% block addcss_extra %}
+<link rel="stylesheet" href="{% static 'inss/inss_agendamento.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="formulario container">
+    <form action="" method="post">
+        {% csrf_token %}
+        <div class="inputs">
+            <div class="box">
+                <input type="text" name="nome_cliente" placeholder="Nome do Cliente" value="{{ form.nome_cliente.value|default_if_none:'' }}" required>
+                <input type="text" name="cpf_cliente" placeholder="CPF do Cliente" value="{{ form.cpf_cliente.value|default_if_none:'' }}" required>
+                <input type="text" name="numero_celular" placeholder="Número Whatsapp" value="{{ form.numero_celular.value|default_if_none:'' }}" pattern="\d{11}">
+            </div>
+            <div class="box">
+                <input type="date" name="data_inicio" value="{{ form.data_inicio.value }}" required>
+                <input type="date" name="data_fim" value="{{ form.data_fim.value }}" required>
+            </div>
+            <div class="box">
+                <select name="loja_agendada" required>
+                    <option value="" disabled selected>Selecione a Loja</option>
+                    <option value="Porto Alegre" {% if form.loja_agendada.value == 'Porto Alegre' %}selected{% endif %}>Porto Alegre</option>
+                    <option value="São Leopoldo" {% if form.loja_agendada.value == 'São Leopoldo' %}selected{% endif %}>São Leopoldo</option>
+                    <option value="Santa Maria" {% if form.loja_agendada.value == 'Santa Maria' %}selected{% endif %}>Santa Maria</option>
+                </select>
+            </div>
+
+            {% if funcionario_logado %}
+                <div class="box">
+                    <select name="funcionario">
+                        <option value="{{ funcionario_logado.id }}">Para mim ({{ funcionario_logado.nome }})</option>
+                        {% for funcionario in funcionarios %}
+                            <option value="{{ funcionario.id }}">{{ funcionario.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% else %}
+                <div class="box">
+                    <select name="funcionario" required>
+                        <option value="" disabled selected>Selecionar Funcionário</option>
+                        {% for funcionario in funcionarios %}
+                            <option value="{{ funcionario.id }}">{{ funcionario.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="button">
+            <button type="submit">Enviar</button>
+        </div>
+    </form>
+</div>
+
+<div class="tabela container">
+    <table>
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>CPF</th>
+                <th>Contato</th>
+                <th>Data</th>
+                <th>Loja</th>
+                <th>Funcionário</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for agendamento in agendamentos %}
+            <tr>
+                <td>{{ agendamento.nome_cliente }}</td>
+                <td>{{ agendamento.cpf_cliente }}</td>
+                <td>{{ agendamento.numero_celular }}</td>
+                <td>{{ agendamento.data_inicio }} - {{ agendamento.data_fim }}</td>
+                <td>{{ agendamento.loja_agendada }}</td>
+                <td>{{ agendamento.funcionario.nome }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block addjs %}
+<script>
+    // Lógica para exibir/esconder campo de seleção de funcionário
+    document.querySelectorAll('input[name="tipo_agendamento"]').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            if (this.value === 'outro') {
+                document.getElementById('funcionarios_select').style.display = 'block';
+            } else {
+                document.getElementById('funcionarios_select').style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

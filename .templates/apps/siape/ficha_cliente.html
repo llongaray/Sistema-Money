@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Ficha do Cliente{% endblock %}
+
+{% block addcss_extra %}
+<!-- Estilos adicionais específicos para esta página -->
+<link rel="stylesheet" href="{% static 'ficha.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-dX3JGqLDdPSQUAebWEmVz5u4yXlHnJv1hNwP1DF7GP4X8unL28l8LTeQojcNdgHesjx2F6D9wG4dGub1I4H0lw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+{% endblock %}
+
+{% block content %}
+<section class="container-ficha">
+    <!-- Informações do Cliente -->
+    <div id="info-clientes" class="box">
+        <div class="container-info">
+            <h2>Informações do Cliente</h2>
+            <div class="box-info">
+                <p>Nome: {{ cliente.nome }}</p>
+                <p>CPF: {{ cliente.cpf }}</p>
+                <p>UF: {{ cliente.uf }}</p>
+            </div>
+            <div class="box-info">
+                <p>Matrícula Instituidor: {{ cliente.matricula_instituidor }}</p>
+                <p>UPAG: {{ cliente.upag }}</p>
+                <p>Situação Funcional: {{ cliente.situacao_funcional }}</p>
+                <p>RJUR: {{ cliente.rjur }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Margens do Cliente -->
+    <div id="margens" class="box-cards">
+        {% for margem in margens %}
+        <div class="card">
+            <h3>Margem Empréstimo 35%</h3>
+            <span><p>{{ margem.saldo_35 }}</p></span>
+        </div>
+        <div class="card">
+            <h3>Margem Cartão 5%</h3>
+            <span><p>{{ margem.saldo_5 }}</p></span>
+        </div>
+        <div class="card">
+            <h3>Margem Benefício 5%</h3>
+            <span><p>{{ margem.beneficio_saldo_5 }}</p></span>
+        </div>
+        {% endfor %}
+    </div>  
+
+    <!-- Tabela de Contratos -->
+    <div id="contratos" class="box" data-tab="debitos">
+        <h2>Débitos</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Matrícula</th>
+                    <th>BANCO</th>
+                    <th>Orgão</th>
+                    <th>PMT</th>
+                    <th>PRAZO</th>
+                    <th>TIPO CONTRATO</th>
+                    <th>Margem</th>
+                    <th>Saldo Devedor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for contrato in matriculas %}
+                <tr>
+                    <td>{{ contrato.matricula }}</td>
+                    <td>{{ contrato.banco }}</td>
+                    <td>{{ contrato.orgao }}</td>
+                    <td>{{ contrato.pmt }}</td>
+                    <td>{{ contrato.prazo }}</td>
+                    <td>{{ contrato.tipo_contrato }}</td>
+                    <td>{{ contrato.margem }}</td>
+                    <td>{{ contrato.saldo_devedor }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div> 
+
+    <!-- Barra de Navegação para as Calculadoras -->
+    <div class="tab-navigation">
+        <label class="tab-label" onclick="showModal('calc-margem')">Calculadora de Margem</label>
+        <label class="tab-label" onclick="showModal('calc-bcb')">Calculadora do Banco Central</label>
+        <label class="tab-label" onclick="showModal('calc-saldo-devedor')">Calculadora de Saldo Devedor</label>
+    </div>
+
+    <!-- Container para Modais -->
+    <div class="container-calc" onclick="fecharModalFora(event)">
+        <!-- Modal: Calculadora de Margem -->
+        <div id="calc-margem" class="box-modal">
+            <span class="close-modal" onclick="fecharModal('calc-margem')"><i class="fas fa-times"></i></span>
+            <div class="calculator">
+                <h2>Calculadora de Margem</h2>
+                <label for="margem">Margem 35%:</label>
+                <input type="text" id="margem"><br>
+                <label for="coeficiente">Coeficiente do dia:</label>
+                <input type="text" id="coeficiente"><br>
+                <label for="valor-liberado">Valor liberado:</label>
+                <input type="text" id="valor-liberado" disabled><br>
+                <button onclick="calcularMargem()">Calcular</button>
+            </div>
+        </div>
+        
+        <!-- Modal: Calculadora do Banco Central -->
+        <div id="calc-bcb" class="box-modal">
+            <span class="close-modal" onclick="fecharModal('calc-bcb')"><i class="fas fa-times"></i></span>
+            <div class="calculator">
+                <h2>Calculadora do Banco Central</h2>
+                <label for="meses">Nº de Meses:</label>
+                <input type="text" id="meses"><br>
+                <label for="taxa-juros">Taxa de Juros Mensal (%):</label>
+                <input type="text" id="taxa-juros"><br>
+                <label for="prestacao">Valor da Prestação:</label>
+                <input type="text" id="prestacao"><br>
+                <label for="financiado">Valor do Financiado:</label>
+                <input type="text" id="financiado"><br>
+                <button onclick="calcularBancoCentral()">Calcular</button>
+                <button onclick="limparBancoCentral()">Limpar</button>
+                <button onclick="imprimirBancoCentral()">Imprimir</button>
+            </div>
+        </div>
+
+        <!-- Modal: Calculadora de Saldo Devedor -->
+        <div id="calc-saldo-devedor" class="box-modal">
+            <span class="close-modal" onclick="fecharModal('calc-saldo-devedor')"><i class="fas fa-times"></i></span>
+            <div class="calculator">
+                <h2>Calculadora de Saldo Devedor</h2>
+                <label for="capital-inicial">Capital Inicial:</label>
+                <input type="text" id="capital-inicial"><br>
+                <label for="numero-parcelas">Número de Parcelas:</label>
+                <input type="text" id="numero-parcelas"><br>
+                <label for="saldo-devedor">Saldo Devedor:</label>
+                <input type="text" id="saldo-devedor" disabled><br>
+                <button onclick="calcularSaldoDevedor()">Calcular</button>
+                <button onclick="limparSaldoDevedor()">Limpar</button>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block addjs_extra %}
+<!-- Slick Carousel CSS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.css"/>
+
+<!-- Slick Carousel JS -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
+
+<script src="{% static 'ficha.js' %}"></script>
+<script>
+    // Função para exibir o modal e adicionar a classe 'active'
+    function showModal(tabId) {
+        document.querySelectorAll('.box-modal').forEach(function(modal) {
+            modal.classList.remove('active');
+        });
+        document.querySelector('.container-calc').classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+    }
+
+    // Função para fechar o modal
+    function fecharModal(tabId) {
+        document.getElementById(tabId).classList.remove('active');
+        document.querySelector('.container-ccalc').classList.remove('active');
+    }
+
+    // Fecha o modal ao clicar fora dele
+    function fecharModalFora(event) {
+        if (event.target.classList.contains('container-calc')) {
+            document.querySelector('.container-calc').classList.remove('active');
+            document.querySelectorAll('.box-modal').forEach(function(modal) {
+                modal.classList.remove('active');
+            });
+        }
+    }
+</script>
+{% endblock %}

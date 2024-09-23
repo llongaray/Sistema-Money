@@ -1,0 +1,78 @@
+:root { /* de nos todos */
+    /* cores */
+    --cor-preto: #000000; /* Preto */
+    --cor-branco: #ffffff; /* Branco */
+    --cor-branco-color-5: #e0e0dd;
+    --cor-branco-color-6: #f0f0f5;
+    --cor-cinza: #333333; /* Cinza */
+    --cor-cinza-claro: #cccccc; /* Cinza Claro */
+    --cor-cinza-color-4: #868b94;
+    --cor-azul: #4A90E2; /* Azul */
+    --cor-azul-escuro: #0000ff; /* Azul Escuro */
+    --cor-azul-acinzentado: #33697b;  /* Azul Acinzentado */
+    --cor-azul-acinzentado-escuro: #1e3545;  /* Azul Acinzentado Escuro */
+    --cor-verde: #2aa848; /* Verde */
+    --cor-verde-agua: #50E3C2; /* Verde Água */
+    --cor-verde-apagado: #c3e6cb; /* Verde Apagado */
+    --cor-vermelho: #d8000c; /* Vermelho */
+    --cor-amarelo: #ffcc00; /* Amarelo */
+    --cor-amarelo-alaranjado: #ffa500; /* Amarelo Alaranjado */
+
+    /* paleta */
+    --color-1: var(--cor-azul-acinzentado-escuro);
+    --color-2: var(--cor-azul-acinzentado);
+    --color-3: var(--cor-branco);
+    --color-4: var(--cor-cinza-color-4);
+    --color-5: var(--cor-branco-color-5);
+    --color-6: var(--cor-branco-color-6);
+
+    --cor-primaria: var(--cor-azul);
+    --cor-secundaria: var(--cor-verde-agua);
+    --cor-texto: var(--cor-cinza);
+
+    /* cores card */
+    --cor-fundo-card: var(--cor-branco);
+
+    /* cores botao */
+    --cor-botao: var(--cor-azul);
+    --cor-botao-hover: var(--cor-verde);
+
+    /* cores modal */
+    --cor-fundo-modal: var(--cor-preto);
+    --cor-fundo-modal-conteudo: var(--cor-branco);
+    --cor-borda-modal-conteudo: var(--cor-cinza-claro);
+
+    /* cores table */
+    --cor-table-head: var(--cor-branco);
+
+    /* cor box-shadow */
+    --cor-box-shadow: 0 0 10px var(--cor-preto);
+
+    /* fontes */
+    --fonte-arial: Arial, sans-serif;
+
+    /* fontes utilizadas */
+    --fonte-principal: var(--fonte-arial);
+
+    /* alertas */
+    --cor-alerta: var(--cor-amarelo);
+    --cor-alerta-fundo: var(--cor-amarelo-alaranjado);
+    --cor-alerta-sucesso: var(var(--cor-branco));
+    --cor-alerta-sucesso-fundo: var(var(--cor-verde));
+    --cor-alerta-sucesso-borda: var(--cor-verde-apagado);
+    
+
+    /* -- -- -- -- */
+
+    /* tamanho */
+    /* fonte */
+    --fonte-tamanho-titulo: 36pt; /* 48px */
+    --fonte-tamanho-subtitulo: 27pt; /* 36px */
+    --fonte-tamanho-icone-titulo: 25pt; /* 33.33px */
+    --fonte-tamanho-lista: 13.5pt; /* 18px */
+    --fonte-tamanho-texto: 12pt; /* 16px */
+
+    /* border-radius */
+    --border-radius-tamanho: 5px;
+    --border-radius-tamanho-grande: 10px;
+}

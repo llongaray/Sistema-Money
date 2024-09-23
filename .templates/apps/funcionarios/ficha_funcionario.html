@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block addcss_extra %}
+<link rel="stylesheet" href="{% static 'funcionarios/all_forms.css' %}">
+<link rel="stylesheet" href="{% static 'mensagem.css' %}">
+{% endblock %}
+
+{% block content %}
+<div id="messageDiv" class="message {{ classe_mensagem }}">
+    {{ mensagem }}
+</div>
+<div class="container">
+
+    <!-- Botões para abrir os modais -->
+    <div class="options_modais">
+        <button type="button" class="btn btn-primary" data-target="#modalEditarFuncionario">
+            Editar Funcionário
+        </button>
+        <button type="button" class="btn btn-primary" data-target="#modalEditarUsuario">
+            Editar Usuário
+        </button>
+    </div>
+
+    <!-- Formulário para editar funcionário -->
+    <div class="modal" id="modalEditarFuncionario">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Funcionário</h5>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" enctype="multipart/form-data" action="{% url 'funcionarios:update_funcionario' funcionario.id %}">
+                        {% csrf_token %}
+                        {{ form_funcionario.as_p }}
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-primary" name="update_funcionario">Atualizar Funcionário</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulário para editar usuário -->
+    <div class="modal" id="modalEditarUsuario">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Usuário</h5>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="{% url 'funcionarios:update_user' funcionario.id %}">
+                        {% csrf_token %}
+                        {{ form_user.as_p }}
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-primary" name="update_user">Atualizar Usuário</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+{% endblock %}
+
+{% block addjs_extra %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // Mostrar o primeiro modal por padrão
+        var $modals = $('.modal');
+        if ($modals.length > 0) {
+            $modals.first().show().addClass('active');
+        }
+    
+        // Adicionar eventos de clique aos botões para mostrar o modal correspondente
+        $('.options_modais .btn').on('click', function () {
+            var targetModal = $($(this).data('target'));
+    
+            $modals.each(function () {
+                if ($(this).is(targetModal)) {
+                    $(this).show().addClass('active');
+                } else {
+                    $(this).hide().removeClass('active');
+                }
+            });
+        });
+    
+        // Fechar modais quando o botão de fechar é clicado
+        $('.btn-close').on('click', function () {
+            $(this).closest('.modal').hide().removeClass('active');
+        });
+    
+        // Ajuste de altura para o container, excluindo a tabela
+        function adjustContainerHeight() {
+            // Encontrar a altura do maior modal
+            var maxHeight = 0;
+            $('.modal').each(function () {
+                var modalHeight = $(this).outerHeight();
+                if (modalHeight > maxHeight) {
+                    maxHeight = modalHeight;
+                }
+            });
+    
+            // Definir a altura do .container com base no maior modal, excluindo a tabela
+            var containerHeight = maxHeight;
+            $('.container').not('.tabela').css('height', containerHeight + 'px');
+        }
+    
+        // Ajusta a altura ao carregar a página
+        adjustContainerHeight();
+    
+        // Ajusta a altura sempre que um modal é mostrado
+        $('.btn-primary').on('click', function () {
+            setTimeout(adjustContainerHeight, 100); // Ajusta a altura após o modal ser exibido
+        });
+    });
+</script>
+<script src="{% static 'mensagem.js' %}"></script>
+{% endblock %}

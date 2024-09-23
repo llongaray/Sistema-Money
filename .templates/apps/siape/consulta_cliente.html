@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Consulta de Cliente{% endblock %}
+
+{% block addcss_extra %}
+<!-- Estilo específico para a página de consulta -->
+<link rel="stylesheet" href="{% static '/siape/consultas.css' %}">
+{% endblock %}
+
+{% block content %}
+<section id="bloco-consulta">
+    <h2>Consulta de Cliente</h2>
+    
+    <!-- Formulário de consulta -->
+    <form action="{% url 'siape:consulta_cliente' %}" method="post" id="formConsulta">
+        {% csrf_token %}
+        <label for="cpfCliente">CPF do Cliente:</label>
+        <input type="text" id="cpfCliente" name="cpf_cliente" placeholder="Digite o CPF" required>
+        <button type="submit">Consultar</button>
+    </form>
+
+    <!-- Exibição de mensagem de erro -->
+    <h4 class="alert-erro" style="display: none;"></h4>
+</section>
+
+<!-- Script para exibir mensagem de erro -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const mensagem = "{{ mensagem|escapejs }}";
+        if (mensagem) {
+            const alertErro = document.querySelector('.alert-erro');
+            alertErro.textContent = mensagem;
+            alertErro.style.display = 'block';
+        }
+    });
+</script>
+{% endblock %}

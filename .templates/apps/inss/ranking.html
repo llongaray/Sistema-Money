@@ -1,0 +1,75 @@
+<!-- templates/funcionarios/ranking.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block addtitle %}<title>Ranking</title>{% endblock %}
+
+{% block addcss_extra %}
+<link rel="stylesheet" href="{% static '/siape/ranking.css' %}">
+<link rel="stylesheet" href="{% static 'rocket-ani.css' %}">
+{% endblock %}
+
+{% block content %}
+<section id="metaGeral" class="progress-meta">
+    <!-- Pode adicionar conteúdo ou elementos específicos aqui -->
+</section>
+<section id="ranking">
+    <!-- Classificação dos Top 5 -->
+    <div class="container-bar" id="top-5">
+        <div class="info-box">
+            <img src="{{ top_5.foto }}" alt="Foto de {{ top_5.nome_completo }}">
+            <h4 class="name">{{ top_5.nome_completo }}</h4>
+            <p class="value">R$ {{ top_5.valor_total }}</p>
+        </div>
+        <div class="progress-bar"><h2 class="numb">5º</h2></div>
+    </div>
+
+    <div class="container-bar" id="top-3">
+        <div class="info-box">
+            <img src="{{ top_3.foto }}" alt="Foto de {{ top_3.nome_completo }}">
+            <h4 class="name">{{ top_3.nome_completo }}</h4>
+            <p class="value">R$ {{ top_3.valor_total }}</p>
+        </div>
+        <div class="progress-bar"><h2 class="numb">3º</h2></div>
+    </div>
+
+    <div class="container-bar" id="top-1">
+        <div class="info-box">
+            <img src="{{ top_1.foto }}" alt="Foto de {{ top_1.nome_completo }}">
+            <h4 class="name">{{ top_1.nome_completo }}</h4>
+            <p class="value">R$ {{ top_1.valor_total }}</p>
+        </div>
+        <div class="progress-bar"><h2 class="numb">1º</h2></div>
+    </div>
+
+    <div class="container-bar" id="top-2">
+        <div class="info-box">
+            <img src="{{ top_2.foto }}" alt="Foto de {{ top_2.nome_completo }}">
+            <h4 class="name">{{ top_2.nome_completo }}</h4>
+            <p class="value">R$ {{ top_2.valor_total }}</p>
+        </div>
+        <div class="progress-bar"><h2 class="numb">2º</h2></div>
+    </div>
+
+    <div class="container-bar" id="top-4">
+        <div class="info-box">
+            <img src="{{ top_4.foto }}" alt="Foto de {{ top_4.nome_completo }}">
+            <h4 class="name">{{ top_4.nome_completo }}</h4>
+            <p class="value">R$ {{ top_4.valor_total }}</p>
+        </div>
+        <div class="progress-bar"><h2 class="numb">4º</h2></div>
+    </div>
+</section>
+<section id="metaEquipe" class="progress-meta">
+    <!-- Pode adicionar conteúdo ou elementos específicos aqui -->
+</section>
+{% endblock %}
+
+{% block addjs_extra %}
+<script>
+    // URL para atualização do ranking
+    const rankingUrl = "{% url 'inss:update_ranking' %}";
+</script>
+<script src="{% static 'siape/ranking.js' %}"></script>
+<script src="{% static 'rocket-ani.js' %}"></script>
+{% endblock %}

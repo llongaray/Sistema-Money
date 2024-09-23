@@ -1,0 +1,223 @@
+/* Importando variáveis de cores */
+@import url('colors.css');
+
+/* ESTILOS GERAIS */
+main {
+    font-family: Arial, sans-serif;
+    padding: 0;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f2f2f2;
+}
+
+.container-ficha {
+    display: flex;
+    flex-direction: column;
+    padding: 16px; /* Reduzido de 20px para 16px */
+    justify-content: center;
+    align-items: center;
+    width: 90%; /* Reduzido de 100% para 90% */
+    max-width: 960px; /* Reduzido de 1200px para 960px */
+    margin: 20px auto 50px; /* Reduzido de 50px para 40px */
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1); /* Reduzido o efeito de sombra */
+}
+
+/* Estilo para o título da ficha */
+.container-ficha h2 {
+    margin-bottom: 12px; /* Reduzido de 15px para 12px */
+    color: #333;
+    font-size: 22px; /* Reduzido de 24px para 22px */
+    text-align: center;
+    text-transform: uppercase;
+}
+
+/* Estilos para as informações do cliente */
+.container-ficha .box {
+    width: 100%;
+    background-color: #f9f9f9;
+    padding: 16px; /* Reduzido de 20px para 16px */
+    border-radius: 8px;
+    margin-bottom: 16px; /* Reduzido de 20px para 16px */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.container-ficha .box p {
+    margin: 5px 0;
+    font-size: 14px; /* Reduzido de 16px para 14px */
+    color: #666;
+}
+
+.container-ficha .box .box-info {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.container-ficha .box .box-info p {
+    width: calc(50% - 10px);
+}
+
+/* Estilos para os cards de margem */
+.container-ficha .box-cards {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.container-ficha .box-cards .card {
+    width: calc(31.33% - 16px); /* Ajustado para ocupar um pouco menos */
+    background-color: #fff;
+    padding: 12px; /* Reduzido de 15px para 12px */
+    border-radius: 8px;
+    margin: 8px; /* Reduzido de 10px para 8px */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.container-ficha .box-cards .card h3 {
+    color: #333;
+    font-size: 16px; /* Reduzido de 18px para 16px */
+    margin-bottom: 8px; /* Reduzido de 10px para 8px */
+}
+
+.container-ficha .box-cards .card p {
+    color: #666;
+    font-size: 14px; /* Reduzido de 16px para 14px */
+}
+
+/* Estilos para a tabela de contratos */
+.container-ficha .box table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px; /* Reduzido de 20px para 16px */
+}
+
+.container-ficha .box table th,
+.container-ficha .box table td {
+    padding: 10px; /* Reduzido de 12px para 10px */
+    text-align: center;
+    border: 1px solid #ddd;
+    font-size: 12px; /* Reduzido de 14px para 12px */
+}
+
+.container-ficha .box table th {
+    background-color: #f2f2f2;
+    color: #333;
+    text-transform: uppercase;
+}
+
+.container-ficha .box table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* Estilos para a barra de navegação */
+.tab-navigation {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 20px;
+}
+
+.tab-navigation .tab-label {
+    padding: 8px 16px; /* Reduzido de 10px 20px para 8px 16px */
+    background-color: #007bff;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin: 0 36px; /* Reduzido de 0 45px para 0 36px */
+}
+
+.tab-navigation .tab-label:hover {
+    background-color: #0056b3;
+}
+
+/* Estilos para os modais calculadoras */
+.box-modal {
+    display: none;
+    flex-direction: column;
+    width: max-content;
+    padding: 16px; /* Reduzido de 20px para 16px */
+    justify-content: center;
+    align-items: center;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.box-modal.active {
+    display: flex;
+}
+
+.container-calc {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.container-calc.active {
+    display: flex;
+}
+
+.box-modal .calculator {
+    margin-top: 10px;
+}
+
+.box-modal h2 {
+    font-size: 1.4rem; /* Reduzido de 1.5rem para 1.4rem */
+    margin-bottom: 12px; /* Reduzido de 15px para 12px */
+}
+
+.box-modal label {
+    margin-bottom: 8px;
+    display: block;
+}
+
+.box-modal input {
+    padding: 6px; /* Reduzido de 8px para 6px */
+    margin-bottom: 10px; /* Reduzido de 12px para 10px */
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9rem; /* Reduzido de 1rem para 0.9rem */
+}
+
+.box-modal button {
+    padding: 8px 16px; /* Reduzido de 10px 20px para 8px 16px */
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-size: 0.9rem; /* Reduzido de 1rem para 0.9rem */
+}
+
+.box-modal button:hover {
+    background-color: #0056b3;
+}
+
+.close-modal {
+    cursor: pointer;
+    color: #ffffff;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.close-modal:hover {
+    color: #960000;
+}

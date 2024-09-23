@@ -1,0 +1,283 @@
+/* Variáveis de cor e estilo */
+:root {
+    --primary-color: #007bff;
+    --secondary-color: #ffffff;
+    --hover-color: #0056b3;
+    --background-fundo: #F0F0F1;
+    --background-container: #FFFFFF;
+    --title-color: #767A7C;
+    --color: #DBDCDD;
+    --links-color: #2271B1;
+    --border: 1px solid #87898C;
+    --border-claro: 2px solid #e2e2e4;
+}
+
+/* Estilos principais */
+main * {
+    border: none;
+}
+
+main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background-color: var(--background-fundo);
+}
+
+.container {
+    width: 100%;
+    max-width: 1000px;
+    min-height: max-content;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: stretch;
+    background-color: var(--background-container);
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 2px;
+    border: var(--border);
+    margin: 40px 0 80px;
+}
+
+/* Estilos para os botões que abrem os modais */
+.options_modais {
+    display: flex;
+    justify-content: flex-start;
+    flex-direction: column;
+    align-items: stretch;
+    border-right: var(--border-claro);
+    width: 40%;
+}
+
+/* Botões principais */
+.btn-primary {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    background-color: var(--background-container);
+    color: var(--links-color);
+    padding: 13px 20px 13px 8px;
+    border-bottom: var(--border-claro);
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: 100%;
+}
+
+.btn-primary:hover {
+    background-color: var(--background-fundo);
+}
+
+/* Estilos dos modais */
+.modal {
+    display: none; /* Oculta todos os modais por padrão */
+    position: relative;
+    width: 100%;
+    text-decoration: none;
+    background-color: var(--background-container);
+}
+
+.modal.active {
+    display: block; /* Torna o modal visível quando a classe 'active' é adicionada */
+}
+
+.modal-header {
+    border-bottom: var(--border);
+    padding: 10px;
+}
+
+.modal-title {
+    font-size: 1.25em;
+    color: var(--title-color);
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    border-top: var(--border);
+    padding: 10px;
+}
+
+/* Ajustes adicionais para os formulários dentro dos modais */
+/* Estilos para o Formulário */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Espaçamento reduzido */
+    width: 100%;
+}
+
+form label {
+    font-weight: bold;
+    margin-bottom: 3px; /* Margem menor */
+    color: var(--title-color);
+    font-size: 14px; /* Tamanho de fonte menor */
+}
+
+form input, form select, form textarea {
+    width: 75%; /* Inputs ocupando 75% da largura */
+    padding: 8px; /* Padding reduzido */
+    border: var(--border);
+    border-radius: 4px;
+    background-color: #f9f9f9;
+    color: #333;
+    font-size: 14px; /* Tamanho de fonte menor */
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+form input:focus, form select:focus, form textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 4px rgba(0, 123, 255, 0.4); /* Sombra mais suave */
+}
+
+form .btn-primary {
+    background-color: var(--primary-color);
+    color: var(--secondary-color);
+    border: none;
+    padding: 10px 16px; /* Padding menor */
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px; /* Tamanho de fonte menor */
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+form .btn-primary:hover {
+    background-color: var(--hover-color);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1); /* Sombra mais sutil */
+}
+
+/* Estilo para mensagens de erro */
+form .errorlist {
+    color: red;
+    font-size: 12px; /* Tamanho menor */
+    margin-top: -5px; /* Margem superior ajustada */
+}
+
+/* Para campos obrigatórios */
+form .required::after {
+    content: "*";
+    color: red;
+    margin-left: 5px;
+}
+
+/* Checkbox e Radio personalizados */
+form input[type="checkbox"], form input[type="radio"] {
+    accent-color: var(--primary-color);
+}
+
+/* Tooltip no botão */
+form button:hover::after {
+    content: attr(data-tooltip);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 5px;
+    border-radius: 4px;
+    font-size: 10px; /* Fonte do tooltip menor */
+    position: absolute;
+    top: 100%;
+    left: 0;
+    transform: translateY(8px); /* Distância menor */
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+/* Espaçamento entre campo de formulário e botão */
+form button {
+    margin-top: 15px; /* Espaçamento ajustado */
+    align-self: flex-start;
+}
+
+/* Estilos para a tabela de funcionários */
+.tabela {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.tabela .table-container {
+    width: 100%;  /* Garante que a tabela ocupe toda a largura disponível */
+    overflow-x: auto;  /* Permite rolar horizontalmente se a tabela for muito larga */
+}
+
+.container .title {
+    padding: 15px;
+    color: var(--title-color);
+    text-align: center;
+    font-size: 1.5em;
+    border-bottom: var(--border-claro);
+}
+
+.container table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.container thead {
+    background-color: var(--primary-color);
+    color: var(--secondary-color);
+}
+
+.container th, .container td {
+    padding: 12px;
+    border-bottom: var(--border-claro);
+    text-align: left;
+}
+
+.container th {
+    font-weight: bold;
+}
+
+/* Estilo para o tbody com scroll */
+.table-container tbody {
+    display: block;
+    max-height: calc(4 * 48px); /* 4 linhas com altura aproximada de 48px cada (ajuste conforme necessário) */
+    overflow-y: auto;  /* Adiciona rolagem vertical se houver mais linhas */
+    height: 1px; /* Garante a altura mínima */
+}
+
+.table-container thead, .table-container tbody tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.table-container thead {
+    width: calc(100% - 1em); /* Ajusta a largura para compensar a rolagem */
+}
+
+.table-container tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.table-container tbody tr:hover {
+    background-color: var(--background-fundo);
+}
+
+.container img {
+    max-width: 100px;
+    height: auto;
+    border-radius: 50%;
+}
+ 
+p, .form-group {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.delete-btn {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    color: #f44336; /* Vermelho */
+}
+
+.delete-btn:hover {
+    color: #d32f2f;
+}
