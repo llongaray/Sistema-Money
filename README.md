@@ -58,3 +58,31 @@ O arquivo `.gitignore` serve para especificar quais arquivos ou diretórios não
 ```venv/  .env  __pycache__/ *.pyc```
 
 Esses passos ajudam a garantir a segurança e organização do projeto.
+
+--------------------------------------------------
+
+# Sistema Money
+
+## Atualização de Versão - v4.0
+
+Este documento destaca as principais atualizações, erros corrigidos e tentativas de implementação realizadas durante o desenvolvimento da versão mais recente do **Sistema Money**.
+
+### Atualizações Gerais
+
+- **Digitalização de Processos e Integrações**: Nesta versão, houve melhorias significativas na digitalização e automação dos processos internos. O foco foi na eficiência e na modernização dos procedimentos que, anteriormente, eram realizados de forma manual.
+
+- **Autenticação por QR Code**: Implementamos um sistema onde, após o primeiro login com usuário e senha fornecidos, os funcionários devem utilizar um QR Code com aplicativos de autenticação como Google Authenticator para registrar ações subsequentes. Esta medida aumenta a segurança e facilita o controle de acesso.
+
+- **Verificação de Dados**: Foram implementados mecanismos de validação e verificação para garantir a consistência dos dados e evitar duplicidade em determinadas ações.
+
+### Tentativas Mal-Sucedidas
+
+- **Problemas com Arquivos Grandes no GitHub**: Durante o desenvolvimento, houve diversas tentativas de fazer _push_ de arquivos grandes, resultando em erros. O arquivo `db_antigo.sqlite3`, que ultrapassava o limite de 100 MB imposto pelo GitHub, causou vários conflitos. Como resultado, optou-se por remover o arquivo do controle de versão e configurar o `.gitignore` para evitar futuros conflitos.
+
+- **GitHub LFS (Large File Storage)**: Consideramos brevemente a implementação do Git LFS para gerenciar arquivos grandes, mas, após análise, a equipe decidiu seguir sem essa tecnologia, mantendo o foco no desenvolvimento da aplicação.
+
+### Correções de Erros
+
+- **Erros no Commit e Push Iniciais**: Ao iniciar o repositório, ocorreram erros durante os _commits_ e _pushes_ devido à falta de adição dos arquivos ao _stage_ e à tentativa de enviar arquivos grandes. Esses problemas foram solucionados com a remoção dos arquivos grandes e a adoção de boas práticas de versionamento com o Git.
+
+- **Branch Principal**: Foi necessário ajustar o branch padrão para `main` e corrigir erros relacionados ao envio das alterações para o repositório remoto.
