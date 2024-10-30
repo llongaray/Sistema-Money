@@ -1,0 +1,6 @@
+{% load static %}
+{% if mensagem %}
+<div id="messageDiv" class="message {{ mensagem.classe }}">
+    {{ mensagem.texto }}
+</div>
+{% endif %}    

@@ -1,42 +1,42 @@
+# Django imports
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import ValidationError
-from .forms import FuncionarioForm, UserForm, FuncionarioFullForm, CustomUserForm  # Importando os formulários
-from .models import Funcionario, Empresa, Horario, Departamento, Cargo
-from custom_tags_app.permissions import check_access
-from datetime import datetime
-from django.http import JsonResponse
-import json
-import logging
-from datetime import date
-from .forms import UserGroupForm
-
+from django.http import JsonResponse, HttpResponse
 from django.utils.text import slugify
-import os
 from django.core.files.storage import default_storage
 from django.conf import settings
+from django.contrib import messages
+from django.utils.dateparse import parse_date
+
+# Python standard library imports
+from datetime import datetime, date
+import json
+import logging
+import os
+
+# Third-party imports
+# (Nenhuma importação de terceiros neste momento)
+
+# Local imports
+from .forms import FuncionarioForm, UserForm, FuncionarioFullForm, CustomUserForm, UserGroupForm
+from .models import Funcionario, Empresa, Horario, Departamento, Cargo, Loja
+from custom_tags_app.permissions import check_access
 
 # Configuração do logger
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
-ESTADOS_BRASIL = [
-    ('AC', 'Acre'), ('AL', 'Alagoas'), ('AP', 'Amapá'), ('AM', 'Amazonas'), ('BA', 'Bahia'),
-    ('CE', 'Ceará'), ('DF', 'Distrito Federal'), ('ES', 'Espírito Santo'), ('GO', 'Goiás'),
-    ('MA', 'Maranhão'), ('MT', 'Mato Grosso'), ('MS', 'Mato Grosso do Sul'), ('MG', 'Minas Gerais'),
-    ('PA', 'Pará'), ('PB', 'Paraíba'), ('PR', 'Paraná'), ('PE', 'Pernambuco'), ('PI', 'Piauí'),
-    ('RJ', 'Rio de Janeiro'), ('RN', 'Rio Grande do Norte'), ('RS', 'Rio Grande do Sul'),
-    ('RO', 'Rondônia'), ('RR', 'Roraima'), ('SC', 'Santa Catarina'), ('SP', 'São Paulo'),
-    ('SE', 'Sergipe'), ('TO', 'Tocantins')
-]
-
-
-
 # ----- Gets de funcionarios -----------
-def get_funcionario(dados):
+from django.db import transaction
+from .models import Funcionario
+from datetime import date
+
+def post_funcionario(dados):
     """Processa o formulário de cadastro de funcionário, cria e salva o funcionário, e retorna uma mensagem de sucesso ou erro."""
-    print("Função 'get_funcionario' aberta\n")  # Print quando a função é chamada
+    print("\n----- Iniciando post_funcionario -----")
+    print("Dados recebidos:", dados)
 
     # Valores padrão para campos não informados
     valores_padrao = {
@@ -61,112 +61,114 @@ def get_funcionario(dados):
         'data_de_admissao': date(2000, 1, 1),
         'numero_da_folha': '000000',
         'ctps': '0000000000',
-        'superior_direto': None,
-        'identidade': None,
-        'carteira_de_trabalho': None,
-        'comprovante_de_escolaridade': None,
-        'pdf_contrato': None,
-        'certidao_de_nascimento': None,
     }
 
-    # Atualiza os valores padrão com os dados do formulário, sobrepondo apenas o que foi informado
+    # Combina dados recebidos com valores padrão
     dados_completos = {**valores_padrao, **dados}
-    print("Dados completos após inclusão dos valores padrão:", dados_completos, "\n")  # Print após combinação com valores padrão
-
-    # Cria uma instância do modelo Funcionario com os dados
-    funcionario = Funcionario(
-        nome=dados_completos.get('nome', ''),
-        sobrenome=dados_completos.get('sobrenome', ''),
-        cpf=dados_completos.get('cpf', ''),
-        cep=dados_completos.get('cep', ''),
-        endereco=dados_completos.get('endereco', ''),
-        bairro=dados_completos.get('bairro', ''),
-        cidade=dados_completos.get('cidade', ''),
-        estado=dados_completos.get('estado', ''),
-        empresa_id=dados_completos.get('empresa', None),
-        horario_id=dados_completos.get('horario', None),
-        cargo_id=dados_completos.get('cargo', None),
-        departamento_id=dados_completos.get('departamento', None),
-        foto=dados_completos.get('foto', None),
-        **valores_padrao
-    )
-
-    print("Funcionário instanciado com os dados:", funcionario, "\n")  # Print para visualizar o objeto Funcionario criado
+    print("Dados completos:", dados_completos)
 
     try:
-        funcionario.save()  # Salva o funcionário no banco de dados
-        print("Funcionário salvo com sucesso:", funcionario, "\n")  # Print após o funcionário ser salvo
-        mensagem = f'Funcionário {funcionario.nome} {funcionario.sobrenome} cadastrado com sucesso!'
+        with transaction.atomic():
+            funcionario = Funcionario(
+                nome=dados_completos['nome'],
+                sobrenome=dados_completos['sobrenome'],
+                cpf=dados_completos['cpf'],
+                cep=dados_completos.get('cep', ''),
+                endereco=dados_completos.get('endereco', ''),
+                bairro=dados_completos.get('bairro', ''),
+                cidade=dados_completos.get('cidade', ''),
+                estado=dados_completos.get('estado', ''),
+                empresa_id=dados_completos.get('empresa'),
+                horario_id=dados_completos.get('horario'),
+                cargo_id=dados_completos.get('cargo'),
+                departamento_id=dados_completos.get('departamento'),
+                loja_id=dados_completos.get('loja'),
+                foto=dados_completos.get('foto'),
+                **{k: v for k, v in valores_padrao.items() if k not in dados_completos}
+            )
+            funcionario.save()
+            print(f"Funcionário {funcionario.nome} {funcionario.sobrenome} salvo com sucesso.")
+            mensagem = {
+                'texto': f'Funcionário {funcionario.nome} {funcionario.sobrenome} cadastrado com sucesso!',
+                'classe': 'success'
+            }
     except Exception as e:
-        mensagem = f'Erro ao cadastrar o funcionário. Tente novamente mais tarde. Detalhes: {e}'
-        print("Erro ao salvar o funcionário:", e, "\n")  # Print para exibir qualquer erro ocorrido
+        print(f"Erro ao salvar o funcionário: {str(e)}")
+        mensagem = {
+            'texto': f'Erro ao cadastrar o funcionário. Detalhes: {str(e)}',
+            'classe': 'error'
+        }
 
-    print("Mensagem final:", mensagem, "\n")  # Print da mensagem final
+    print("Mensagem final:", mensagem)
+    print("----- Finalizando post_funcionario -----\n")
     return mensagem
 
 
 # ------ CRIAR USUARIO -------------------
-def get_usuario(form_data, funcionario):
-    # Cria uma instância do modelo User com os dados
+def post_usuario(form_data, funcionario):
+    print("\n\n----- Iniciando post_usuario -----\n")
+    print("Dados do formulário:", form_data)
+    print("Funcionário associado:", funcionario)
+
+    print("Criando instância do modelo User...")
     usuario = User(
         username=form_data['username'],
-        first_name=funcionario.nome,  # Nome do funcionário
-        last_name=funcionario.sobrenome,  # Sobrenome do funcionário
+        first_name=funcionario.nome,
+        last_name=funcionario.sobrenome,
         email=form_data['email'],
     )
-    usuario.set_password(form_data['password'])  # Define a senha de forma segura
+    print("Definindo senha...")
+    usuario.set_password(form_data['password'])
 
+    print("Usuário criado:", usuario)
+    print("\n----- Finalizando post_usuario -----\n")
     return usuario
 
-def create_user(form, funcionario_id):
+def create_user(usuario_data, funcionario_id):
     """Processa o formulário de cadastro de usuário e retorna uma mensagem de sucesso ou erro."""
-    mensagem = 'none'
+    print("\n\n----- Iniciando create_user -----\n")
+    print("Dados do usuário:", usuario_data)
+    print("ID do funcionário:", funcionario_id)
 
-    # Print para verificar se o formulário é válido
-    print(f"Formulário válido? {form.is_valid()}")
+    mensagem = {'texto': 'none', 'classe': ''}
 
-    if form.is_valid():
-        formulario = {
-            'username': form.cleaned_data.get('username'),
-            'email': form.cleaned_data.get('email'),
-            'password': form.cleaned_data.get('password'),
-        }
+    print("Verificando se todos os campos obrigatórios estão preenchidos...")
+    if not all([usuario_data.get('username'), usuario_data.get('email'), usuario_data.get('password')]):
+        mensagem['texto'] = 'Todos os campos são obrigatórios.'
+        mensagem['classe'] = 'error'
+        print("Erro: Campos obrigatórios não preenchidos")
+        return mensagem
 
-        # Print para verificar os dados limpos do formulário
-        print(f"Dados do formulário: {formulario}")
+    try:
+        print("Criando usuário...")
+        usuario = User.objects.create_user(
+            username=usuario_data['username'],
+            email=usuario_data['email'],
+            password=usuario_data['password']
+        )
+        print("Usuário criado com sucesso:", usuario)
 
-        try:
-            if funcionario_id:
-                # Print para verificar o ID do funcionário
-                print(f"ID do funcionário: {funcionario_id}")
-                
-                funcionario = Funcionario.objects.get(id=funcionario_id)
-                print(f"Funcionário encontrado: {funcionario}")
+        if funcionario_id:
+            print(f"Associando usuário ao funcionário com ID {funcionario_id}...")
+            funcionario = Funcionario.objects.get(id=funcionario_id)
+            funcionario.usuario = usuario
+            funcionario.save()
+            print("Usuário associado ao funcionário com sucesso")
 
-                usuario = get_usuario(formulario, funcionario)
-                print(f"Usuário criado: {usuario}")
+        mensagem['texto'] = f'Usuário {usuario.username} cadastrado com sucesso!'
+        mensagem['classe'] = 'success'
 
-                usuario.save()
-                print("Usuário salvo com sucesso.")
+    except ValidationError as e:
+        print("Erro de validação ao criar usuário:", str(e))
+        mensagem['texto'] = f'Erro ao cadastrar o usuário: {e}'
+        mensagem['classe'] = 'error'
+    except Exception as e:
+        print("Erro ao criar usuário:", str(e))
+        mensagem['texto'] = f'Erro ao cadastrar o usuário. Tente novamente mais tarde. Detalhes: {e}'
+        mensagem['classe'] = 'error'
 
-                # Atualiza o Funcionario relacionado com o ID do usuário criado
-                funcionario.usuario_id = usuario.id
-                funcionario.save()
-                print("Funcionário atualizado com o ID do usuário.")
-
-                mensagem = f'Usuário {usuario.username} cadastrado com sucesso!'
-            else:
-                mensagem = 'Nenhum funcionário selecionado.'
-                print(mensagem)
-            
-        except Exception as e:
-            mensagem = f'Erro ao cadastrar o usuário. Tente novamente mais tarde. Detalhes: {e}'
-            print(mensagem)
-    
-    else:
-        mensagem = 'Erro na validação do formulário.'
-        print(mensagem)
-
+    print("Mensagem final:", mensagem)
+    print("\n----- Finalizando create_user -----\n")
     return mensagem
 
 
@@ -175,310 +177,613 @@ def create_user(form, funcionario_id):
 # ------- ASSOCIAR GROUPOS AO USER ------------------------
 
 def associar_grupos(form):
-    """Processa o formulário para associar grupos a um usuário e retorna uma mensagem de sucesso ou erro."""
-    mensagem = 'none'
+    print("\n\n----- Iniciando associar_grupos -----\n")
+    mensagem = {'texto': 'none', 'classe': ''}
 
+    print("Verificando validade do formulário...")
     if form.is_valid():
-        # Obtém os dados do formulário
-        user = form.cleaned_data['user']
-        groups = form.cleaned_data['groups']
-        
-        # Processa os dados com a função get_associar_grupos
-        mensagem_resultado = get_associar_grupos(user, groups)
-        mensagem = mensagem_resultado['texto']
-    
+        print("Formulário válido. Processando dados...")
+        user_id = form.cleaned_data['user'].id
+        print(f"ID do usuário: {user_id}")
+
+        selected_groups_ids = form.cleaned_data['groups']
+        print(f"IDs dos grupos selecionados: {selected_groups_ids}")
+
+        selected_groups = Group.objects.filter(id__in=selected_groups_ids)
+        print(f"Grupos selecionados: {[group.name for group in selected_groups]}")
+
+        try:
+            user = User.objects.get(id=user_id)
+            print(f"Usuário encontrado: {user.username}")
+        except User.DoesNotExist:
+            print("Erro: Usuário não encontrado.")
+            return {'texto': 'Usuário não encontrado.', 'classe': 'error'}
+
+        user_groups = user.groups.all()
+        print(f"Grupos atuais do usuário: {[group.name for group in user_groups]}")
+
+        print("Adicionando novos grupos ao usuário...")
+        for group in selected_groups:
+            if group not in user_groups:
+                user.groups.add(group)
+                print(f"Grupo '{group.name}' adicionado.")
+
+        print("Removendo grupos desmarcados...")
+        for group in user_groups:
+            if group not in selected_groups:
+                user.groups.remove(group)
+                print(f"Grupo '{group.name}' removido.")
+
+        mensagem = {
+            'texto': 'Associação de grupos atualizada com sucesso.',
+            'classe': 'success'
+        }
     else:
-        mensagem = 'Formulário inválido. Verifique os dados e tente novamente.'
-
+        print("Erro: Formulário inválido.")
+        mensagem = {
+            'texto': 'Formulário inválido. Verifique os dados e tente novamente.',
+            'classe': 'error'
+        }
+    
+    print(f"Mensagem final: {mensagem}")
+    print("\n----- Finalizando associar_grupos -----\n")
     return mensagem
-
-
-def get_associar_grupos(user, groups):
-    """Associa grupos ao usuário e retorna uma mensagem."""
-    try:
-        # Inicializa a lista para armazenar os nomes dos grupos associados
-        grupos_associados = []
-        
-        for group in groups:
-            user.groups.add(group)
-            grupos_associados.append(group.name)
-
-        return {
-            'texto': f'Grupos ({", ".join(grupos_associados)}) associados com sucesso ao usuário {user.username}!',
-            'tipo': 'success'
-        }
-    except Exception as e:
-        return {
-            'texto': f'Ocorreu um erro: {str(e)}',
-            'tipo': 'error'
-        }
 
 # ------------------ EDITAÇÃO DE FUNCIONARIO E USER --------------------------
 
 def render_ficha_funcionario(request, id, nome_sobrenome):
+    print(f"\n\n----- Iniciando render_ficha_funcionario para ID: {id} -----\n")
+    
+    print(f"Buscando funcionário com ID: {id}")
     funcionario = get_object_or_404(Funcionario, id=id)
+    print(f"Funcionário encontrado: {funcionario.nome} {funcionario.sobrenome}")
+    
     user = funcionario.usuario
-
-    # Carrega os forms pré-preenchidos com os dados existentes
+    form_user = None
+    
+    if user:
+        print(f"Usuário associado: {user.username}")
+        form_user = CustomUserForm(instance=user)
+    else:
+        print("Nenhum usuário associado ao funcionário")
+    
+    print("Carregando formulários...")
     form_funcionario = FuncionarioFullForm(instance=funcionario)
-    form_user = CustomUserForm(instance=user)
 
-    return render(request, 'funcionarios/ficha_funcionario.html', {
+    context = {
         'form_funcionario': form_funcionario,
         'form_user': form_user,
         'funcionario': funcionario,
-    })
+        'has_user': user is not None  # Adiciona flag para verificar se existe usuário
+    }
+    print("Contexto preparado para renderização.")
+
+    print("\n----- Finalizando render_ficha_funcionario -----\n")
+    return render(request, 'funcionarios/ficha_funcionario.html', context)
 
 def update_funcionario(request, id):
+    print(f"\n\n----- Iniciando update_funcionario para ID: {id} -----\n")
+    
+    print(f"Buscando funcionário com ID: {id}")
     funcionario = get_object_or_404(Funcionario, id=id)
+    print(f"Funcionário encontrado: {funcionario.nome} {funcionario.sobrenome}")
     
     if request.method == 'POST':
+        print("Método POST detectado. Processando formulário...")
         form_funcionario = FuncionarioFullForm(request.POST, request.FILES, instance=funcionario)
         
         if form_funcionario.is_valid():
-            # Cria um dicionário com os dados do formulário
-            dados_atualizados = {
-                'nome': form_funcionario.cleaned_data.get('nome'),
-                'sobrenome': form_funcionario.cleaned_data.get('sobrenome'),
-                'cpf': form_funcionario.cleaned_data.get('cpf'),
-                'cnpj': form_funcionario.cleaned_data.get('cnpj'),
-                'pis': form_funcionario.cleaned_data.get('pis'),
-                'rg': form_funcionario.cleaned_data.get('rg'),
-                'data_de_nascimento': form_funcionario.cleaned_data.get('data_de_nascimento'),
-                'cnh': form_funcionario.cleaned_data.get('cnh'),
-                'categoria_cnh': form_funcionario.cleaned_data.get('categoria_cnh'),
-                'cep': form_funcionario.cleaned_data.get('cep'),
-                'endereco': form_funcionario.cleaned_data.get('endereco'),
-                'bairro': form_funcionario.cleaned_data.get('bairro'),
-                'cidade': form_funcionario.cleaned_data.get('cidade'),
-                'estado': form_funcionario.cleaned_data.get('estado'),
-                'celular': form_funcionario.cleaned_data.get('celular'),
-                'celular_sms': form_funcionario.cleaned_data.get('celular_sms'),
-                'celular_ligacao': form_funcionario.cleaned_data.get('celular_ligacao'),
-                'celular_whatsapp': form_funcionario.cleaned_data.get('celular_whatsapp'),
-                'nome_do_pai': form_funcionario.cleaned_data.get('nome_do_pai'),
-                'nome_da_mae': form_funcionario.cleaned_data.get('nome_da_mae'),
-                'genero': form_funcionario.cleaned_data.get('genero'),
-                'nacionalidade': form_funcionario.cleaned_data.get('nacionalidade'),
-                'naturalidade': form_funcionario.cleaned_data.get('naturalidade'),
-                'estado_civil': form_funcionario.cleaned_data.get('estado_civil'),
-                'matricula': form_funcionario.cleaned_data.get('matricula'),
-                'status': form_funcionario.cleaned_data.get('status'),
-                'data_de_admissao': form_funcionario.cleaned_data.get('data_de_admissao'),
-                'horario': form_funcionario.cleaned_data.get('horario'),
-                'departamento': form_funcionario.cleaned_data.get('departamento'),
-                'cargo': form_funcionario.cleaned_data.get('cargo'),
-                'numero_da_folha': form_funcionario.cleaned_data.get('numero_da_folha'),
-                'ctps': form_funcionario.cleaned_data.get('ctps'),
-                'superior_direto': form_funcionario.cleaned_data.get('superior_direto'),
-                'identidade': form_funcionario.cleaned_data.get('identidade'),
-                'carteira_de_trabalho': form_funcionario.cleaned_data.get('carteira_de_trabalho'),
-                'comprovante_de_escolaridade': form_funcionario.cleaned_data.get('comprovante_de_escolaridade'),
-                'pdf_contrato': form_funcionario.cleaned_data.get('pdf_contrato'),
-                'certidao_de_nascimento': form_funcionario.cleaned_data.get('certidao_de_nascimento'),
-            }
-
-            # Atualiza os campos do funcionário com os dados do dicionário
-            for campo, valor in dados_atualizados.items():
-                setattr(funcionario, campo, valor)
+            print("Formulário válido. Atualizando dados...")
+            funcionario = form_funcionario.save(commit=False)
+            funcionario.status = 'Ativo' if request.POST.get('status') == 'on' else 'Inativo'
+            
+            # Tratamento específico para a foto
+            if 'foto' in request.FILES:
+                funcionario.foto = request.FILES['foto']
+            elif 'foto-clear' in request.POST:
+                funcionario.foto = None
             
             try:
                 funcionario.save()
+                print("Funcionário atualizado com sucesso.")
                 messages.success(request, f'Funcionário {funcionario.nome} {funcionario.sobrenome} atualizado com sucesso!')
                 logger.info(f'Funcionário {funcionario.nome} {funcionario.sobrenome} atualizado com sucesso!')
             except Exception as e:
                 error_message = f'Erro ao atualizar o funcionário: {e}'
+                print(f"Erro: {error_message}")
                 messages.error(request, error_message)
                 logger.error(error_message)
         else:
-            # Adiciona mensagens de erro específicas de cada campo
+            print("Formulário inválido. Erros encontrados:")
             for field in form_funcionario.errors:
                 for error in form_funcionario.errors[field]:
                     error_message = f'Erro no campo {field}: {error}'
+                    print(error_message)
                     messages.error(request, error_message)
                     logger.warning(error_message)
+    else:
+        form_funcionario = FuncionarioFullForm(instance=funcionario)
 
-    return redirect('funcionarios:all_forms')
+    print("\n----- Finalizando update_funcionario -----\n")
+    return render(request, 'funcionarios/ficha_funcionario.html', {
+        'form_funcionario': form_funcionario,
+        'funcionario': funcionario,
+    })
 
 def update_user(request, id):
-    funcionario = get_object_or_404(Funcionario, id=id)
+    print(f"\n\n----- Iniciando update_user para ID: {id} -----\n")
+    
+    print(f"Buscando funcionário com ID: {id}")
+    funcionario = post_object_or_404(Funcionario, id=id)
+    print(f"Funcionário encontrado: {funcionario.nome} {funcionario.sobrenome}")
+    
     user = funcionario.usuario
+    print(f"Usuário associado: {user.username}")
 
     if request.method == 'POST':
+        print("Método POST detectado. Processando formulário...")
         form_user = CustomUserForm(request.POST, instance=user)
         if form_user.is_valid():
+            print("Formulário válido. Atualizando usuário...")
             form_user.save()
+            print("Usuário atualizado com sucesso.")
             messages.success(request, f'Usuário {user.username} atualizado com sucesso!')
         else:
+            print("Erro: Formulário inválido.")
             messages.error(request, 'Erro ao atualizar o usuário.')
         
-        # Imprimir mensagens de feedback
-        for message in messages.get_messages(request):
+        print("Mensagens de feedback:")
+        for message in messages.post_messages(request):
             print(f"{message.level_tag.upper()}: {message.message}")
 
+    print("\n----- Finalizando update_user -----\n")
     return redirect('funcionarios:all_forms')
 
 
 # ----------------------------------------------------------------------------------------------------------------
-
-# views.py no app `funcionarios`
-from django.shortcuts import redirect
-from django.contrib import messages
-from apps.funcionarios.models import Empresa, Horario, Departamento, Cargo
-
-from django.http import HttpResponse
-from django.shortcuts import redirect
-from django.contrib import messages
-from .models import Empresa, Horario, Departamento, Cargo
-from django.utils.dateparse import parse_date
-
-def get_empresa(form_data):
+def post_empresa(form_data):
     """Cria uma nova empresa com os parâmetros fornecidos e retorna uma mensagem de sucesso ou erro."""
-    print("Função 'get_empresa' aberta\n")
+    print("\n\n----- Iniciando post_empresa -----\n")
+    print("Dados recebidos:", form_data)
 
-    # Captura os parâmetros da URL
     nome = form_data.get('nome')
     cnpj = form_data.get('cnpj')
     endereco = form_data.get('endereco')
+    print(f"Nome: {nome}, CNPJ: {cnpj}, Endereço: {endereco}")
 
-    # Verifica se todos os parâmetros necessários foram fornecidos
     if nome and cnpj and endereco:
         try:
-            Empresa.objects.create(nome=nome, cnpj=cnpj, endereco=endereco)
-            mensagem = f"Empresa '{nome}' foi adicionada com sucesso!"
-            print("Mensagem de sucesso:", mensagem, "\n")
+            print("Criando nova empresa...")
+            empresa = Empresa.objects.create(nome=nome, cnpj=cnpj, endereco=endereco)
+            print(f"Empresa criada com ID: {empresa.id}")
+            mensagem = {
+                'texto': f"Empresa '{nome}' foi adicionada com sucesso!",
+                'classe': 'success'
+            }
+            print("Mensagem de sucesso:", mensagem['texto'])
         except Exception as e:
-            mensagem = f"Erro ao adicionar a empresa. Detalhes: {e}"
-            print("Erro ao adicionar empresa:", e, "\n")
+            mensagem = {
+                'texto': f"Erro ao adicionar a empresa. Detalhes: {e}",
+                'classe': 'error'
+            }
+            print("Erro ao adicionar empresa:", str(e))
     else:
-        mensagem = "Faltam parâmetros para criar a empresa."
-        print("Mensagem de erro:", mensagem, "\n")
+        mensagem = {
+            'texto': "Faltam parâmetros para criar a empresa.",
+            'classe': 'error'
+        }
+        print("Mensagem de erro:", mensagem['texto'])
 
+    print("\n----- Finalizando post_empresa -----\n")
     return mensagem
 
-def get_horario(form_data):
+def post_horario(form_data):
     """Cria um novo horário com os parâmetros fornecidos e retorna uma mensagem de sucesso ou erro."""
-    print("Função 'get_horario' aberta\n")
+    print("\n\n----- Iniciando post_horario -----\n")
+    print("Dados recebidos:", form_data)
 
-    # Captura os parâmetros da URL
     nome = form_data.get('nome')
     horario_entrada = form_data.get('horario_entrada')
     horario_saida = form_data.get('horario_saida')
+    print(f"Nome: {nome}, Entrada: {horario_entrada}, Saída: {horario_saida}")
 
-    # Verifica se todos os parâmetros necessários foram fornecidos
     if nome and horario_entrada and horario_saida:
         try:
-            Horario.objects.create(nome=nome, horario_entrada=horario_entrada, horario_saida=horario_saida)
-            mensagem = f"Horário '{nome}' foi adicionado com sucesso!"
-            print("Mensagem de sucesso:", mensagem, "\n")
+            print("Criando novo horário...")
+            horario = Horario.objects.create(nome=nome, horario_entrada=horario_entrada, horario_saida=horario_saida)
+            print(f"Horário criado com ID: {horario.id}")
+            mensagem = {
+                'texto': f"Horário '{nome}' foi adicionado com sucesso!",
+                'classe': 'success'
+            }
+            print("Mensagem de sucesso:", mensagem['texto'])
         except Exception as e:
-            mensagem = f"Erro ao adicionar o horário. Detalhes: {e}"
-            print("Erro ao adicionar horário:", e, "\n")
+            mensagem = {
+                'texto': f"Erro ao adicionar o horário. Detalhes: {e}",
+                'classe': 'error'
+            }
+            print("Erro ao adicionar horário:", str(e))
     else:
-        mensagem = "Faltam parâmetros para criar o horário."
-        print("Mensagem de erro:", mensagem, "\n")
+        mensagem = {
+            'texto': "Faltam parâmetros para criar o horário.",
+            'classe': 'error'
+        }
+        print("Mensagem de erro:", mensagem['texto'])
 
+    print("\n----- Finalizando post_horario -----\n")
     return mensagem
 
-def get_departamento(form_data):
+def delete_loja(loja_id):
+    """Exclui uma loja com base no ID fornecido."""
+    print("\n\n----- Iniciando delete_loja -----\n")
+    print(f"Tentando excluir loja com ID: {loja_id}")
+    
+    try:
+        loja = Loja.objects.get(id=loja_id)
+        print(f"Loja encontrada: {loja.nome}")
+        
+        # Se houver uma logo, excluir o arquivo
+        if loja.logo:
+            loja.logo.delete()
+        
+        loja.delete()
+        mensagem = {
+            'texto': f'Loja "{loja.nome}" excluída com sucesso!',
+            'classe': 'success'
+        }
+        print("Loja excluída com sucesso")
+    except Loja.DoesNotExist:
+        mensagem = {
+            'texto': 'Loja não encontrada.',
+            'classe': 'error'
+        }
+        print("Erro: Loja não encontrada")
+    except Exception as e:
+        mensagem = {
+            'texto': f'Erro ao excluir loja: {str(e)}',
+            'classe': 'error'
+        }
+        print(f"Erro ao excluir loja: {str(e)}")
+
+    print("\n----- Finalizando delete_loja -----\n")
+    return mensagem
+
+def post_departamento(form_data):
     """Cria um novo departamento com os parâmetros fornecidos e retorna uma mensagem de sucesso ou erro."""
-    print("Função 'get_departamento' aberta\n")
+    print("\n\n----- Iniciando post_departamento -----\n")
+    print("Dados recebidos:", form_data)
 
-    # Captura os parâmetros da URL
     nome = form_data.get('nome')
+    print(f"Nome do departamento recebido: {nome}")
 
-    # Verifica se o parâmetro necessário foi fornecido
     if nome:
         try:
-            Departamento.objects.create(nome=nome)
-            mensagem = f"Departamento '{nome}' foi adicionado com sucesso!"
-            print("Mensagem de sucesso:", mensagem, "\n")
+            print("Criando novo grupo...")
+            grupo = Group.objects.create(name=nome)
+            print(f"Grupo criado com ID: {grupo.id}")
+            
+            print("Criando novo departamento...")
+            departamento = Departamento.objects.create(grupo=grupo)
+            print(f"Departamento criado com ID: {departamento.id}")
+            
+            mensagem = {
+                'texto': f"Departamento '{nome}' foi adicionado com sucesso! ID do Grupo: {grupo.id}, ID do Departamento: {departamento.id}",
+                'classe': 'success'
+            }
+            print("Mensagem de sucesso:", mensagem['texto'])
         except Exception as e:
-            mensagem = f"Erro ao adicionar o departamento. Detalhes: {e}"
-            print("Erro ao adicionar departamento:", e, "\n")
+            mensagem = {
+                'texto': f"Erro ao adicionar o departamento. Detalhes: {e}",
+                'classe': 'error'
+            }
+            print("Erro ao adicionar departamento:", str(e))
     else:
-        mensagem = "Faltam parâmetros para criar o departamento."
-        print("Mensagem de erro:", mensagem, "\n")
+        mensagem = {
+            'texto': "Faltam parâmetros para criar o departamento.",
+            'classe': 'error'
+        }
+        print("Mensagem de erro:", mensagem['texto'])
 
+    print("\n----- Finalizando post_departamento -----\n")
     return mensagem
 
-def get_cargo(form_data):
-    nome = form_data.get('nome')
-    nivel = form_data.get('nivel')
-    print(f'recebido {nome} e {nivel}!\n')
-    if not nome or not nivel:
-        return 'Faltam parâmetros para criar o cargo.'
+def post_loja(form_data):
+    """Cria uma nova loja com os parâmetros fornecidos e retorna uma mensagem de sucesso ou erro."""
+    print("\n\n----- Iniciando post_loja -----\n")
+    print("Dados recebidos:", form_data)
 
-    Cargo.objects.create(nome=nome, nivel=nivel)
-    return 'Cargo criado com sucesso.'
+    nome = form_data.get('nome')
+    empresa_id = form_data.get('empresa')
+    logo = form_data.get('logo')
+    print(f"Nome da loja: {nome}, ID da empresa: {empresa_id}")
+
+    if nome and empresa_id:
+        try:
+            print(f"Buscando empresa com ID: {empresa_id}")
+            empresa = Empresa.objects.get(id=empresa_id)
+            print(f"Empresa encontrada: {empresa.nome}")
+            
+            print("Criando nova loja...")
+            loja = Loja(
+                nome=nome, 
+                empresa=empresa,
+                logo=logo if logo else None
+            )
+            loja.save()
+            print(f"Loja criada com ID: {loja.id}")
+            
+            mensagem = {
+                'texto': f"Loja '{loja.nome}' foi adicionada com sucesso para a empresa '{empresa.nome}'!",
+                'classe': 'success'
+            }
+            print("Mensagem de sucesso:", mensagem['texto'])
+        except Empresa.DoesNotExist:
+            mensagem = {
+                'texto': "Erro: A empresa selecionada não existe.",
+                'classe': 'error'
+            }
+            print("Erro: Empresa não encontrada")
+        except Exception as e:
+            mensagem = {
+                'texto': f"Erro ao adicionar a loja. Detalhes: {e}",
+                'classe': 'error'
+            }
+            print("Erro ao adicionar loja:", str(e))
+    else:
+        mensagem = {
+            'texto': "Faltam parâmetros para criar a loja. Nome e empresa são obrigatórios.",
+            'classe': 'error'
+        }
+        print("Mensagem de erro:", mensagem['texto'])
+
+    print("\n----- Finalizando post_loja -----\n")
+    return mensagem
+
+from django.db import IntegrityError
+
+def post_cargo(cargo_data):
+    print("\n----- Iniciando post_cargo -----\n")
+    
+    nome = cargo_data.get('nome')
+    nivel = cargo_data.get('nivel')
+    
+    print(f"Dados recebidos: {cargo_data}")
+    print(f"Nome do cargo recebido: {nome}")
+    print(f"Nível do cargo: {nivel}")
+    
+    if not nome or not nivel:
+        mensagem = {'texto': 'Faltam parâmetros para criar o cargo.', 'classe': 'error'}
+        print(f"Mensagem de erro: {mensagem['texto']}")
+        print("\n----- Finalizando post_cargo -----\n")
+        return mensagem
+    
+    try:
+        # Verificar se já existe um grupo com este nome
+        grupo_nome = f"{nome} - {nivel}"
+        grupo, created = Group.objects.get_or_create(name=grupo_nome)
+        
+        if created:
+            print(f"Novo grupo criado: {grupo_nome}")
+        else:
+            print(f"Grupo existente encontrado: {grupo_nome}")
+
+        # Criar o cargo
+        cargo, created = Cargo.objects.get_or_create(
+            nome=nome,
+            nivel=nivel,
+            defaults={'grupo': grupo}
+        )
+
+        if created:
+            print(f"Novo cargo criado: {cargo}")
+            mensagem = {
+                'texto': f"Cargo '{nome}' (Nível: {nivel}) foi adicionado com sucesso! ID do Cargo: {cargo.id}",
+                'classe': 'success'
+            }
+        else:
+            print(f"Cargo já existente: {cargo}")
+            mensagem = {
+                'texto': f"O cargo '{nome}' (Nível: {nivel}) já existe.",
+                'classe': 'info'
+            }
+
+    except IntegrityError as e:
+        mensagem = {
+            'texto': f"Erro de integridade ao adicionar o cargo: {e}",
+            'classe': 'error'
+        }
+        print(f"Erro de integridade: {e}")
+    except Exception as e:
+        mensagem = {
+            'texto': f"Erro ao adicionar o cargo. Detalhes: {e}",
+            'classe': 'error'
+        }
+        print(f"Erro ao adicionar cargo: {e}")
+
+    print("\n----- Finalizando post_cargo -----\n")
+    return mensagem
 
 
 def delete_funcionario(funcionario_id):
+    print("\n\n----- Iniciando delete_funcionario -----\n")
+    print(f"Tentando excluir funcionário com ID: {funcionario_id}")
+    
     try:
         funcionario = Funcionario.objects.get(id=funcionario_id)
+        print(f"Funcionário encontrado: {funcionario.nome} {funcionario.sobrenome}")
         funcionario.delete()
-        return {'texto': 'Funcionário excluído com sucesso!', 'classe': 'success'}
+        mensagem = {'texto': 'Funcionário excluído com sucesso!', 'classe': 'success'}
+        print("Funcionário excluído com sucesso")
     except Funcionario.DoesNotExist:
-        return {'texto': 'Funcionário não encontrado.', 'classe': 'error'}
+        mensagem = {'texto': 'Funcionário não encontrado.', 'classe': 'error'}
+        print("Erro: Funcionário não encontrado")
     except Exception as e:
-        return {'texto': f'Erro ao excluir funcionário: {str(e)}', 'classe': 'error'}
+        mensagem = {'texto': f'Erro ao excluir funcionário: {str(e)}', 'classe': 'error'}
+        print(f"Erro ao excluir funcionário: {str(e)}")
 
-def get_all_forms_and_objects():
+    print("\n----- Finalizando delete_funcionario -----\n")
+    return mensagem
+
+def get_all_forms_and_objects(request):
     """
     Função para centralizar a obtenção de formulários e objetos utilizados em 'render_all_forms'.
     Retorna um dicionário com todos os formulários e objetos adicionais.
     """
-    # Definição dos formulários
+    print("\n\n----- Iniciando get_all_forms_and_objects -----\n")
+
+    '''
+    Formulários
+    '''
+    print("Definindo formulários...")
+    # Criação dos formulários necessários
     form_funcionario = FuncionarioForm()
     form_usuario = UserForm()
     form_grupo = UserGroupForm()
 
-    # Obter informações adicionais para o formulário de cadastro de funcionários
+    '''
+    Consultas ao banco de dados
+    '''
+    # Obtendo empresas
+    print("Obtendo empresas...")
     empresas = Empresa.objects.all()
-    cargos = Cargo.objects.all()
+    print(f"Número de empresas encontradas: {empresas.count()}")
+
+    # Obtendo horários
+    print("Obtendo horários...")
     horarios = Horario.objects.all()
-    departamentos = Departamento.objects.all()
+    print(f"Número de horários encontrados: {horarios.count()}")
 
-    # Lista todos os funcionários
-    funcionarios_list = Funcionario.objects.all()
+    # Obtendo lojas
+    print("Obtendo lojas...")
+    lojas = Loja.objects.all()
+    print(f"Número de lojas encontradas: {lojas.count()}")
 
-    # Criar o campo fullname para cada funcionário
-    for funcionario in funcionarios_list:
-        funcionario.fullname = f'{funcionario.nome}-{funcionario.sobrenome}' if funcionario.sobrenome else funcionario.nome
-        funcionario.fullname_slug = slugify(funcionario.fullname)
+    # Obtendo usuários e grupos
+    print("Obtendo usuários e grupos...")
+    usuarios = User.objects.prefetch_related('groups').all()
+    all_groups = Group.objects.all()
+    print(f"Número de usuários encontrados: {usuarios.count()}")
+    print(f"Número de grupos encontrados: {all_groups.count()}")
 
-    funcionarios = Funcionario.objects.all().values('id', 'nome', 'sobrenome')
-    print("Funcionários disponíveis:", list(funcionarios), "\n")
+    '''
+    Processamento de dados
+    '''
+    # Criando lista de cargos
+    print("Criando lista de cargos...")
+    cargo_list = [
+        {
+            'nome': cargo.grupo.name,
+            'id_grupo': cargo.grupo.id,
+            'id_cargo': cargo.id,
+            'nivel': cargo.nivel
+        } for cargo in Cargo.objects.select_related('grupo').all()
+    ]
+    print(f"Número de cargos encontrados: {len(cargo_list)}")
 
-    # Retorna um dicionário com todos os dados
-    return {
+    # Criando lista de departamentos
+    print("Criando lista de departamentos...")
+    departamento_list = [
+        {
+            'nome': departamento.grupo.name,
+            'id_grupo': departamento.grupo.id,
+            'id_departamento': departamento.id
+        } for departamento in Departamento.objects.select_related('grupo').all()
+    ]
+    print(f"Número de departamentos encontrados: {len(departamento_list)}")
+
+    # Obtendo lista de funcionários
+    print("Obtendo lista de funcionários...")
+    funcionarios = Funcionario.objects.all()
+    funcionarios_list = [
+        {
+            'id': f.id,
+            'fullname': f'{f.nome} {f.sobrenome}',
+            'cpf': f.cpf
+        } for f in funcionarios
+    ]
+    print(f"Número de funcionários encontrados: {len(funcionarios_list)}")
+
+    # Criando dicionário de grupos de usuários
+    user_groups_dict = {user.id: list(user.groups.values_list('id', flat=True)) for user in usuarios}
+    print(f"Dicionário de grupos de usuários criado")
+
+    '''
+    Preparação dos dados para formulários de departamento e cargo
+    '''
+    print("Preparando dados para formulários de departamento e cargo...")
+    
+    # Obtendo departamentos
+    departamentos = Departamento.objects.select_related('grupo').all()
+    departamentos_list = [
+        {
+            'id': dep.id,
+            'nome': dep.grupo.name
+        } for dep in departamentos
+    ]
+    print(f"Número de departamentos preparados: {len(departamentos_list)}")
+
+    # Obtendo cargos e níveis
+    cargos = Cargo.objects.select_related('grupo').all()
+    cargos_list = [
+        {
+            'id': cargo.id,
+            'nome': cargo.grupo.name,
+            'nivel': cargo.nivel
+        } for cargo in cargos
+    ]
+    niveis_list = sorted(set(cargo.nivel for cargo in cargos))
+    print(f"Número de cargos preparados: {len(cargos_list)}")
+    print(f"Níveis de cargo encontrados: {niveis_list}")
+
+    '''
+    Preparação do contexto
+    '''
+    # Montagem do dicionário de contexto com todos os dados obtidos
+    context_data = {
         'form_funcionario': form_funcionario,
         'form_usuario': form_usuario,
         'form_grupo': form_grupo,
         'empresas': empresas,
-        'cargos': cargos,
+        'cargo_list': cargo_list,
+        'departamento_list': departamento_list,
         'horarios': horarios,
-        'departamentos': departamentos,
         'funcionarios_list': funcionarios_list,
-        'funcionarios': funcionarios
+        'funcionarios': funcionarios,
+        'departamentos': departamento_list,
+        'cargos': cargo_list,
+        'lojas': lojas,
+        'usuarios': usuarios,
+        'groups': all_groups,
+        'user_groups': user_groups_dict,
+        'departamentos_form': departamentos_list,
+        'cargos_form': cargos_list,
+        'niveis_cargo': niveis_list,
     }
+
+    print("\n----- Finalizando get_all_forms_and_objects -----\n")
+    return context_data
 
 
 # ---------- RENDER ALL FORMS -----------------------
 def render_all_forms(request):
-    mensagem = {'texto': 'none', 'classe': ''}
-
-    # Definição dos formulários
-    context_data = get_all_forms_and_objects()
-
-    print("Método HTTP:", request.method, "\n")  # Verificar qual método HTTP está sendo utilizado
+    print("\n\n----- Iniciando render_all_forms -----\n")
+    
+    mensagem = {'texto': '', 'classe': ''}
+    
+    # Obter todos os formulários e objetos inicialmente
+    context_data = get_all_forms_and_objects(request)
+    
+    print("\nMétodo HTTP:", request.method)
 
     if request.method == 'POST':
+        print("\nProcessando requisição POST...")
         form_type = request.POST.get('form_type')
-        print("POST recebido com os dados:", request.POST, "\n")  # Exibir todos os dados POST recebidos
+        print(f"Tipo de formulário: {form_type}")
+        print("Dados POST recebidos:", request.POST)
+        print("Arquivos recebidos:", request.FILES)
 
         if form_type == 'cadastro_funcionario':
-            print("Formulário de Funcionário enviado\n")
+            print("\nProcessando cadastro de funcionário...")
             funcionario_data = {
                 'nome': request.POST.get('nome'),
                 'sobrenome': request.POST.get('sobrenome'),
@@ -487,81 +792,109 @@ def render_all_forms(request):
                 'horario': request.POST.get('horario'),
                 'cargo': request.POST.get('cargo'),
                 'departamento': request.POST.get('departamento'),
+                'loja': request.POST.get('loja'),
+                'foto': request.FILES.get('foto'),
             }
-            resultado = get_funcionario(funcionario_data)
-            if resultado == 'success':
-                mensagem = {'texto': 'Funcionário cadastrado com sucesso!', 'classe': 'success'}
-            else:
-                mensagem = {'texto': 'Erro ao cadastrar funcionário.', 'classe': 'error'}
-            print("Resultado do cadastro de funcionário:", mensagem, "\n")
+            
+            mensagem = post_funcionario(funcionario_data)
+            print("Resultado do cadastro de funcionário:", mensagem)
         
         elif form_type == 'cadastrar_usuario':
-            print("Formulário de Usuário enviado\n")
+            print("\nProcessando cadastro de usuário...")
             usuario_data = {
-                'nome': request.POST.get('nome'),
-                'sobrenome': request.POST.get('sobrenome'),
+                'username': request.POST.get('username'),
                 'email': request.POST.get('email'),
-                'senha': request.POST.get('senha'),
+                'password': request.POST.get('password'),
                 'funcionario': request.POST.get('funcionario'),
             }
             funcionario_id = usuario_data.get('funcionario')
             funcionario_id = int(funcionario_id) if funcionario_id else None
-            resultado = create_user(usuario_data, funcionario_id)
-            if resultado == 'success':
-                mensagem = {'texto': 'Usuário cadastrado com sucesso!', 'classe': 'success'}
-            else:
-                mensagem = {'texto': 'Erro ao cadastrar usuário.', 'classe': 'error'}
-            print("Resultado do cadastro de usuário:", mensagem, "\n")
+
+            mensagem = create_user(usuario_data, funcionario_id)
+            print("Resultado do cadastro de usuário:", mensagem)
         
         elif form_type == 'criar_empresa':
-            print("Formulário de Empresa enviado\n")
+            print("\nProcessando criação de empresa...")
             empresa_data = {
                 'nome': request.POST.get('nome'),
                 'cnpj': request.POST.get('cnpj'),
                 'endereco': request.POST.get('endereco'),
             }
-            mensagem = get_empresa(empresa_data)
-            print("Resultado do cadastro de empresa:", mensagem, "\n")
+            mensagem = post_empresa(empresa_data)
+            print("Resultado da criação de empresa:", mensagem)
         
         elif form_type == 'criar_horario':
-            print("Formulário de Horário enviado\n")
+            print("\nProcessando criação de horário...")
             horario_data = {
                 'nome': request.POST.get('nome'),
                 'horario_entrada': request.POST.get('horario_entrada'),
                 'horario_saida': request.POST.get('horario_saida'),
             }
-            mensagem = get_horario(horario_data)
-            print("Resultado do cadastro de horário:", mensagem, "\n")
+            mensagem = post_horario(horario_data)
+            print("Resultado da criação de horário:", mensagem)
         
         elif form_type == 'criar_departamento':
-            print("Formulário de Departamento enviado\n")
+            print("\nProcessando criação de departamento...")
             departamento_data = {
                 'nome': request.POST.get('nome'),
             }
-            mensagem = get_departamento(departamento_data)
-            print("Resultado do cadastro de departamento:", mensagem, "\n")
+            mensagem = post_departamento(departamento_data)
+            print("Resultado da criação de departamento:", mensagem)
         
         elif form_type == 'criar_cargo':
-            print("Formulário de Cargo enviado\n")
+            print("\nProcessando criação de cargo...")
             cargo_data = {
                 'nome': request.POST.get('nome'),
                 'nivel': request.POST.get('nivel'),
             }
-            mensagem = get_cargo(cargo_data)
-            print("Resultado do cadastro de cargo:", mensagem, "\n")
+            mensagem = post_cargo(cargo_data)
+            print("Resultado da criação de cargo:", mensagem)
 
         elif form_type == 'delete_funcionario':
-            print("Formulário de Exclusão de Funcionário enviado\n")
+            print("\nProcessando exclusão de funcionário...")
             funcionario_id = request.POST.get('funcionario_id')
             resultado = delete_funcionario(funcionario_id)
-            mensagem = resultado  # Recebe o resultado da função de exclusão
-        # Repetir o mesmo padrão para outros tipos de formulários
-        context_data = get_all_forms_and_objects()
+            mensagem = resultado
+            print("Resultado da exclusão de funcionário:", mensagem)
 
-    print(f'\nMensagem de alerta: {mensagem}\n')
-    context_data.update({
-        'mensagem': mensagem['texto'],
-        'classe_mensagem': mensagem['classe'],
-    })
-    # Renderiza o template com o contexto atualizado
+        elif form_type == 'criar_loja':
+            print("\nProcessando criação de loja...")
+            loja_data = {
+                'nome': request.POST.get('nome'),
+                'empresa': request.POST.get('empresa'),
+                'logo': request.FILES.get('logo'),  # Adicionando o campo logo
+            }
+            mensagem = post_loja(loja_data)
+            print("Resultado da criação de loja:", mensagem)
+
+        elif form_type == 'associar_grupos':
+            print("\nProcessando associação de grupos...")
+            form = UserGroupForm(request.POST)
+            mensagem = associar_grupos(form)
+            print("Resultado da associação de grupos:", mensagem)
+
+        elif form_type == 'delete_loja':
+            print("\nProcessando exclusão de loja...")
+            loja_id = request.POST.get('loja_id')
+            mensagem = delete_loja(loja_id)
+            print("Resultado da exclusão de loja:", mensagem)
+
+        # Atualizar context_data após o processamento do formulário
+        context_data = get_all_forms_and_objects(request)
+
+    else:
+        print("\nRequisição não é POST. Usando dados iniciais...")
+
+    # Adicionar mensagem ao contexto
+    context_data['mensagem'] = mensagem
+
+    print("\nContexto final dos dados:")
+    print(context_data)
+
+    print("\n----- Finalizando render_all_forms -----\n")
     return render(request, 'funcionarios/all_forms_cia.html', context_data)
+
+def get_lojas_by_empresa(request, empresa_id):
+    """Retorna as lojas de uma empresa específica"""
+    lojas = Loja.objects.filter(empresa_id=empresa_id).values('id', 'nome')
+    return JsonResponse(list(lojas), safe=False)

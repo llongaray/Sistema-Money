@@ -1,0 +1,9 @@
+.divider {
+    background-color: var(--azul-escuro-500); /* Fundo do cabeçalho do modal */
+    width: 2px; /* Largura ligeiramente maior para mais visibilidade */
+}
+main.darkmode .divider {
+    background-color: var(--azul-escuro-500); /* Fundo do cabeçalho do modal */
+    width: 3px; /* Largura ligeiramente maior para mais visibilidade */
+    height: 100%; /* Altura total do contêiner pai */
+}

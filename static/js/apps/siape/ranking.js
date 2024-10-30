@@ -28,7 +28,7 @@ function renderRanking(metaGeral, metaEquipe) {
                 <div class="progress-bar" style="height: ${metaPercentage}%">
                     <div class="scene">
                         <div class="rocket">
-                            <img src="/static/img/ranking/rocket.png" />
+                            <img src="/static/img/apps/siape/rocket.png" />
                         </div>
                     </div>
                 </div>
@@ -52,7 +52,7 @@ function renderRanking(metaGeral, metaEquipe) {
                 <div class="progress-bar" style="height: ${metaPercentage}%">
                     <div class="scene">
                         <div class="rocket">
-                            <img src="/static/img/ranking/rocket.png" />
+                            <img src="/static/img/apps/siape/rocket.png" />
                         </div>
                     </div>
                 </div>

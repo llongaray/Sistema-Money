@@ -8,6 +8,7 @@ from django.http import HttpResponse
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import Group
+from django.contrib import messages
 
 def criar_usuario_com_grupo(nome, sobrenome, email, senha, senha2, grupo_id):
     """
@@ -69,11 +70,17 @@ def login_view(request):
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
-            user = form.get_user()
-            login(request, user)
-            return redirect('siape:ranking')  # Substitua 'home' pela URL de destino após o login
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                login(request, user)
+                messages.success(request, f"Bem-vindo, {user.first_name}!")
+                return redirect('siape:ranking')  # ou qualquer outra página inicial
+            else:
+                messages.error(request, "Usuário ou senha inválidos.")
         else:
-            return render(request, 'usuarios/login.html', {'form': form, 'error': 'Usuário ou senha inválidos'})
+            messages.error(request, "Formulário inválido. Por favor, tente novamente.")
     else:
         form = AuthenticationForm()
     return render(request, 'usuarios/login.html', {'form': form})
@@ -90,4 +97,5 @@ def logout_view(request):
         HttpResponse: Redireciona para a URL de destino após o logout.
     """
     logout(request)
-    return redirect('siape:ranking')  # Substitua 'home' pela URL de destino após o logout
+    messages.info(request, "Você foi desconectado com sucesso.")
+    return redirect('usuarios:login')

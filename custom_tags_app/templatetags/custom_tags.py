@@ -1,5 +1,7 @@
 from django import template
 from django.urls import reverse
+from django.core.exceptions import ObjectDoesNotExist
+from ..permissions import get_user_info
 
 register = template.Library()
 
@@ -33,3 +35,17 @@ def get_user_permissions(user):
             return {'level': 1, 'setor': 'LOJAS'}
 
     return {'level': 0, 'setor': None}
+
+@register.simple_tag
+def get_user_cargo(user):
+    print(f"\n----- Obtendo cargo para o usuário: {user.username} -----")
+    funcionario, departamento_nome, cargo, nivel = get_user_info(user)
+    if funcionario:
+        print(f"Funcionário: {funcionario}")
+        print(f"Departamento: {departamento_nome}")
+        print(f"Cargo: {cargo}")
+        print(f"Nível: {nivel}")
+        return {'departamento': departamento_nome, 'nivel': nivel, 'cargo': str(cargo)}
+    else:
+        print(f"Aviso: Usuário {user.username} não tem um funcionário associado.")
+        return {'departamento': None, 'nivel': None, 'cargo': None}

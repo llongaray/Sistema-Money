@@ -1,0 +1,47 @@
+/* Estilos para o botão de modo escuro */
+.toggleWrapper {
+    margin: 20px;
+}
+
+.toggle-button {
+    padding: 10px 20px;
+    background-color: var(--azul-escuro-500);
+    color: var(--cor-branco);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    font-size: 16px;
+}
+
+/* Efeito de hover */
+.toggle-button:hover {
+    background-color: var(--azul-escuro-400);
+    transform: scale(1.05);
+}
+
+/* Modo escuro */
+.dark-mode {
+    --background-fundo: var(--dark-background-fundo);
+    --background-container: var(--dark-background-container);
+    --title-color: var(--dark-title-color);
+    --text-color: var(--dark-text-color);
+    --border-color: var(--dark-border-color);
+    --primary-color: var(--dark-primary-color);
+    --primary-color-dark: var(--dark-primary-color-dark);
+    --secondary-color: var(--dark-secondary-color);
+    --hover-color: var(--dark-hover-color);
+    --links-color: var(--dark-links-color);
+    --input-background: var(--dark-input-background);
+    --table-odd-row: var(--dark-table-odd-row);
+    --table-hover: var(--dark-table-hover);
+}
+/* Adicione ao seu CSS */
+.transition {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Adicione transições para o corpo */
+body.transition {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}

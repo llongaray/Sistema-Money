@@ -13,34 +13,36 @@
     <div id="menu">
         <ul>
             {% if user.is_authenticated %}
-                {% get_user_permissions user as permissions %}
+                {% get_user_cargo user as cargo %}
 
-                <!-- Menu Condicional Baseado nas Permissões do Usuário -->
-                {% if permissions.level == 4 %}
-                    <!-- Administrador: Acesso total -->
-                    <li><a href="{% url 'siape:consulta_cliente' %}">SIAPE</a></li>
-                    <li><a href="{% url 'siape:ranking' %}">Ranking</a></li>
+                {% if cargo.departamento == 'ADM' or user.is_superuser %}
+                    <!-- Administração: Acesso total -->
+                    <li><a href="{% url 'siape:all_forms' %}">SIAPE</a></li>
+                    <li><a href="{% url 'siape:ranking' %}">Ranking SIAPE</a></li>
                     <li><a href="{% url 'funcionarios:all_forms' %}">Recursos Humanos</a></li>
-                    <li><a href="{% url 'gerenciamento:gen_funcionarios' %}">Create</a></li>
-                {% elif permissions.level == 3 %}
-                    <!-- Suporte: Acesso ao ranking, SIAPE e INSS -->
-                    <li><a href="{% url 'siape:ranking' %}">Ranking</a></li>
-                    <li><a href="{% url 'siape:consulta_cliente' %}">SIAPE</a></li>
-                    <li><a href="#">INSS</a></li>
-                {% elif permissions.level == 2 and permissions.setor == 'SIAPE' %}
-                    <!-- Supervisor SIAPE -->
-                    <li><a href="{% url 'siape:ranking' %}">Ranking</a></li>
-                    <li><a href="{% url 'siape:consulta_cliente' %}">SIAPE</a></li>
-                {% elif permissions.level == 1 and permissions.setor == 'SIAPE' %}
-                    <!-- Atendente SIAPE -->
-                    <li><a href="{% url 'siape:ranking' %}">Ranking</a></li>
-                    <li><a href="{% url 'siape:consulta_cliente' %}">SIAPE</a></li>
-                {% elif permissions.level == 2 or permissions.level == 1 %}
-                    <!-- Supervisores e Atendentes de outros setores -->
-                    <li><a href="#">Sem Acessos</a></li>
+                    <li><a href="{% url 'inss:all_forms' %}">INSS</a></li>
+                    <li><a href="{% url 'inss:ranking' %}">Ranking INSS</a></li>
+                {% elif cargo.departamento == 'SIAPE' %}
+                    <li><a href="{% url 'siape:all_forms' %}">SIAPE</a></li>
+                    <li><a href="{% url 'siape:ranking' %}">Ranking SIAPE</a></li>
+                    {% if cargo.nivel in 'SUPERVISÃO,TOTAL' %}
+                        <li><a href="#">Relatórios SIAPE</a></li>
+                    {% endif %}
+                {% elif cargo.departamento == 'INSS' %}
+                    <li><a href="{% url 'inss:all_forms' %}">INSS</a></li>
+                    <li><a href="{% url 'inss:ranking' %}">Ranking INSS</a></li>
+                    {% if cargo.nivel in 'SUPERVISÃO,TOTAL' %}
+                        <li><a href="#">Relatórios INSS</a></li>
+                    {% endif %}
+                {% elif cargo.departamento == 'RH' %}
+                    <li><a href="{% url 'funcionarios:all_forms' %}">Recursos Humanos</a></li>
+                    {% if cargo.nivel in 'SUPERVISÃO,TOTAL' %}
+                        <li><a href="#">Relatórios RH</a></li>
+                    {% endif %}
                 {% endif %}
             {% else %}
                 <!-- Opções de menu para visitantes não autenticados -->
+                <li><a href="{% url 'usuarios:login' %}">Login</a></li>
             {% endif %}
         </ul>
     </div>

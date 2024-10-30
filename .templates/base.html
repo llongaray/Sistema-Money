@@ -17,6 +17,7 @@
     <!-- Estilos Globais -->
     <link rel="stylesheet" href="{% static 'base.css' %}">
     <link rel="stylesheet" href="{% static 'menu.css' %}">
+    <link rel="stylesheet" href="{% static 'footer.css' %}">
     <link rel="stylesheet" href="{% static 'fav-links.css' %}">
 
     <!-- Estilos Externos (Fontes e Ícones) -->
@@ -27,11 +28,10 @@
 </head>
 
 <body>
-    <!-- Menu de Navegação (Inclui o menu a partir de um partial) -->
     {% include 'partials/_menu.html' %}
 
-    <!-- Conteúdo Principal da Página -->
     <main>
+        {% block pre_content %}{% endblock %}  <!-- Novo bloco aqui -->
         {% block content %}{% endblock %}
     </main>
 
@@ -57,6 +57,7 @@
 
     <!-- Bloco para Scripts Adicionais -->
     {% block addjs_extra %}{% endblock %}
+    <script src="{% static 'mensagem.js' %}"></script>
 </body>
 
 </html>

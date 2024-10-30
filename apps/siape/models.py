@@ -1,80 +1,115 @@
 from django.db import models
 from decimal import Decimal
+from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
+from django.utils import timezone
+from apps.funcionarios.models import *
 
 class Cliente(models.Model):
     """
     Modelo que representa um cliente, que pode estar associado a uma ou mais matrículas de débitos.
     """
-    nome = models.CharField(max_length=100)  # Nome completo do cliente
-    cpf = models.CharField(max_length=11, unique=True)  # CPF do cliente, deve ser único
-    uf = models.CharField(max_length=2)  # Unidade Federativa (estado) onde o cliente reside
-    upag = models.CharField(max_length=50)  # Unidade pagadora associada ao cliente
+    nome = models.CharField(max_length=100, verbose_name="Nome")  # Nome completo do cliente
+    cpf = models.CharField(max_length=11, unique=True, validators=[RegexValidator(r'^\d{11}$')], verbose_name="CPF")  # CPF do cliente, deve ser único
+    uf = models.CharField(max_length=2, verbose_name="UF")  # Unidade Federativa (estado) onde o cliente reside
+    upag = models.CharField(max_length=50, verbose_name="UPAG")  # Unidade pagadora associada ao cliente
     matricula_instituidor = models.CharField(max_length=50, blank=True, null=True)  # Matrícula do instituidor, caso aplicável
-    situacao_funcional = models.CharField(max_length=50)  # Situação funcional do cliente (ativo, aposentado, etc.)
+    situacao_funcional = models.CharField(max_length=50, verbose_name="Situação Funcional")  # Situação funcional do cliente (ativo, aposentado, etc.)
     rjur = models.CharField(max_length=50)  # Representação jurídica ou setor jurídico associado ao cliente
+    data_nascimento = models.DateField(verbose_name="Data de Nascimento")  # Data de nascimento do cliente
+    sexo = models.CharField(max_length=1, choices=[('M', 'Masculino'), ('F', 'Feminino')], verbose_name="Sexo")  # Sexo do cliente
+    rf_situacao = models.CharField(max_length=50, blank=True, null=True, verbose_name="Situação RF")  # Opcional
+    numero_beneficio_1 = models.CharField(max_length=20, blank=True, null=True, verbose_name="Número do Benefício 1")
+    especie_beneficio_1 = models.CharField(max_length=100, blank=True, null=True, verbose_name="Espécie do Benefício 1")
+    siape_tipo_siape = models.CharField(max_length=50, blank=True, null=True, verbose_name="Tipo SIAPE")  # Opcional
+    siape_qtd_matriculas = models.PositiveIntegerField(default=0, null=True, blank=True, verbose_name="Quantidade de Matrículas SIAPE")  # Opcional
+    siape_qtd_contratos = models.PositiveIntegerField(default=0, null=True, blank=True, verbose_name="Quantidade de Contratos SIAPE")  # Opcional
+    flg_nao_perturbe = models.BooleanField(default=False, verbose_name="Não Perturbe")
     
     def __str__(self):
-        # Retorna o nome do cliente como representação em string do objeto
-        return self.nome
+        return f"{self.nome} - {self.cpf}"
 
+class Campanha(models.Model):
+    nome = models.CharField(max_length=100, verbose_name="Nome da Campanha")
+    data_criacao = models.DateTimeField(default=timezone.now, verbose_name="Data de Criação")
+    departamento = models.CharField(max_length=100, verbose_name="Departamento")
+    status = models.BooleanField(default=True, verbose_name="Status")  # True para Ativo, False para Inativo
 
-class MatriculaDebitos(models.Model):
-    """
-    Modelo que representa as informações de débitos associados a uma matrícula de um cliente.
-    """
-    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='matriculas')
-    # Relacionamento com o modelo Cliente, cada matrícula está associada a um cliente
-    matricula = models.CharField(max_length=50, null=True, blank=True)  # Número da matrícula associada ao débito
-    rubrica = models.CharField(max_length=50, null=True, blank=True)  # Rubrica relacionada ao débito
-    banco = models.CharField(max_length=100, null=True, blank=True)  # Nome do banco associado ao débito
-    orgao = models.CharField(max_length=100, null=True, blank=True)  # Órgão associado ao débito
-    pmt = models.FloatField(null=True, blank=True)  # Valor do pagamento
-    prazo = models.CharField(max_length=50, null=True, blank=True)  # Prazo associado ao contrato ou débito
-    tipo_contrato = models.CharField(max_length=50, null=True, blank=True)  # Tipo de contrato (ex.: consignado, pessoal)
-    contrato = models.CharField(max_length=50, null=True, blank=True)  # Número do contrato associado ao débito
-    exc_soma = models.FloatField(null=True, blank=True)  # Valor de exclusão de soma, se aplicável
-    margem = models.FloatField(null=True, blank=True)  # Margem disponível associada ao débito
-    base_calc = models.FloatField(null=True, blank=True)  # Base de cálculo para o débito
-    bruta_5 = models.FloatField(null=True, blank=True)  # Valor bruto da margem de 5%
-    utilz_5 = models.FloatField(null=True, blank=True)  # Valor utilizado da margem de 5%
-    saldo_5 = models.FloatField(null=True, blank=True)  # Saldo disponível na margem de 5%
-    beneficio_bruta_5 = models.FloatField(null=True, blank=True)  # Valor bruto do benefício na margem de 5%
-    beneficio_utilizado_5 = models.FloatField(null=True, blank=True)  # Valor utilizado do benefício na margem de 5%
-    beneficio_saldo_5 = models.FloatField(null=True, blank=True)  # Saldo disponível do benefício na margem de 5%
-    bruta_35 = models.FloatField(null=True, blank=True)  # Valor bruto da margem de 35%
-    utilz_35 = models.FloatField(null=True, blank=True)  # Valor utilizado da margem de 35%
-    saldo_35 = models.FloatField(null=True, blank=True)  # Saldo disponível na margem de 35%
-    bruta_70 = models.FloatField(null=True, blank=True)  # Valor bruto da margem de 70%
-    utilz_70 = models.FloatField(null=True, blank=True)  # Valor utilizado da margem de 70%
-    saldo_70 = models.FloatField(null=True, blank=True)  # Saldo disponível na margem de 70%
-    creditos = models.FloatField(null=True, blank=True)  # Valor total de créditos associados ao débito
-    debitos = models.FloatField(null=True, blank=True)  # Valor total de débitos associados à matrícula
-    liquido = models.FloatField(null=True, blank=True)  # Valor líquido após créditos e débitos
-    arq_upag = models.CharField(max_length=50, null=True, blank=True)  # Arquivo da unidade pagadora relacionado ao débito
-    exc_qtd = models.IntegerField(null=True, blank=True)  # Quantidade de exclusões aplicadas ao débito
-    
     def __str__(self):
-        # Retorna uma representação em string que inclui o cliente, a matrícula e a rubrica
-        return f"{self.cliente} - {self.matricula} - {self.rubrica}"
+        return f"{self.nome} - {'Ativo' if self.status else 'Inativo'}"
+
+class InformacoesPessoais(models.Model):
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='informacoes_pessoais')
+    uf = models.CharField(max_length=2, verbose_name="UF")
+    fne_celular_1 = models.CharField(max_length=20, blank=True, null=True, verbose_name="Celular 1")
+    fne_celular_1_flg_whats = models.BooleanField(default=False, verbose_name="Celular 1 tem WhatsApp")
+    fne_celular_2 = models.CharField(max_length=20, blank=True, null=True, verbose_name="Celular 2")
+    fne_celular_2_flg_whats = models.BooleanField(default=False, verbose_name="Celular 2 tem WhatsApp")
+    end_cidade_1 = models.CharField(max_length=100, verbose_name="Cidade")
+    email_1 = models.EmailField(blank=True, null=True, verbose_name="Email 1")
+    email_2 = models.EmailField(blank=True, null=True, verbose_name="Email 2")
+    email_3 = models.EmailField(blank=True, null=True, verbose_name="Email 3")
+    data_envio = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Informações de {self.cliente.nome} - {self.data_envio}"
+
+    class Meta:
+        ordering = ['-data_envio']  # Ordena do mais recente para o mais antigo
+
+class DebitoMargem(models.Model):
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='debitos_margens')
+    campanha = models.ForeignKey(Campanha, on_delete=models.CASCADE, related_name='debitos_margens')  # Nova chave estrangeira
+    banco = models.CharField(max_length=100, verbose_name="Banco")
+    orgao = models.CharField(max_length=50, verbose_name="Órgão")
+    matricula = models.CharField(max_length=50, verbose_name="Matrícula")
+    upag = models.PositiveIntegerField(verbose_name="UPAG")
+    pmt = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)], verbose_name="PMT")
+    prazo = models.PositiveIntegerField(verbose_name="Prazo")
+    contrato = models.CharField(max_length=50, verbose_name="Contrato")
+    saldo_5 = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Saldo 5")
+    beneficio_5 = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Benefício 5")
+    benef_util_5 = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Benefício Utilizado 5")
+    benef_saldo_5 = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Saldo Benefício 5")
+    bruta_35 = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Bruta 35")
+    util_35 = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Utilizado 35")
+    saldo_35 = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Saldo 35")
+    bruta_70 = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Bruta 70")
+    saldo_70 = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Saldo 70")
+    rend_bruto = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Rendimento Bruto")
+    data_envio = models.DateTimeField(blank=True, null=True)  # Remover auto_now_add
+
+    def __str__(self):
+        return f"Débito/Margem de {self.cliente.nome} - {self.contrato}"
+
+    class Meta:
+        ordering = ['-data_envio']  # Ordena do mais recente para o mais antigo
 
 class RegisterMoney(models.Model):
-    funcionario_id = models.PositiveIntegerField()  # Substitua por ForeignKey se tiver o modelo de Funcionario
+    funcionario = models.ForeignKey('funcionarios.Funcionario', on_delete=models.CASCADE)  # Referência correta
     cpf_cliente = models.CharField(max_length=11, blank=True, null=True)
     valor_est = models.FloatField()
-    status = models.BooleanField(default=False)
+    status = models.BooleanField(default=True)
     data = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
-        return f'{self.funcionario_id} - {self.cpf_cliente} - {self.valor_est}'
+        return f'{self.funcionario.nome} - {self.cpf_cliente} - {self.valor_est}'  # Atualizado para usar funcionario.nome
 
 class RegisterMeta(models.Model):
+    TIPO_CHOICES = [
+        ('GERAL', 'Geral - Todas as equipes'),
+        ('EQUIPE', 'Equipe - Setor específico')
+    ]
+    
     titulo = models.TextField(max_length=100, default="Ranking Geral")
-    valor = models.DecimalField(max_digits=10, decimal_places=2)  # Float com duas casas decimais (R$ {valor:.2f})
-    setor = models.CharField(max_length=100)  # Não aceita espaços, apenas uma palavra
-    range_data_inicio = models.DateField()  # Armazena o primeiro dia/data que a meta está valendo
-    range_data_final = models.DateField()  # Armazena o dia/data final que a meta está valendo
+    valor = models.DecimalField(max_digits=10, decimal_places=2)
+    tipo = models.CharField(max_length=6, choices=TIPO_CHOICES, default='GERAL')
+    setor = models.CharField(max_length=100, null=True, blank=True)
+    range_data_inicio = models.DateField()
+    range_data_final = models.DateField()
     status = models.BooleanField(default=False)
     descricao = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f'{self.valor:.2f} - {self.setor}'
+        if self.tipo == 'GERAL':
+            return f'Meta Geral: {self.valor:.2f}'
+        return f'Meta {self.setor}: {self.valor:.2f}'

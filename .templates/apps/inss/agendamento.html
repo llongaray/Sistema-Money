@@ -5,97 +5,131 @@
 
 {% block addcss_extra %}
 <link rel="stylesheet" href="{% static 'inss/inss_agendamento.css' %}">
+<link rel="stylesheet" href="{% static 'geral_forms.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="formulario container">
-    <form action="" method="post">
-        {% csrf_token %}
-        <div class="inputs">
-            <div class="box">
-                <input type="text" name="nome_cliente" placeholder="Nome do Cliente" value="{{ form.nome_cliente.value|default_if_none:'' }}" required>
-                <input type="text" name="cpf_cliente" placeholder="CPF do Cliente" value="{{ form.cpf_cliente.value|default_if_none:'' }}" required>
-                <input type="text" name="numero_celular" placeholder="Número Whatsapp" value="{{ form.numero_celular.value|default_if_none:'' }}" pattern="\d{11}">
-            </div>
-            <div class="box">
-                <input type="date" name="data_inicio" value="{{ form.data_inicio.value }}" required>
-                <input type="date" name="data_fim" value="{{ form.data_fim.value }}" required>
-            </div>
-            <div class="box">
-                <select name="loja_agendada" required>
-                    <option value="" disabled selected>Selecione a Loja</option>
-                    <option value="Porto Alegre" {% if form.loja_agendada.value == 'Porto Alegre' %}selected{% endif %}>Porto Alegre</option>
-                    <option value="São Leopoldo" {% if form.loja_agendada.value == 'São Leopoldo' %}selected{% endif %}>São Leopoldo</option>
-                    <option value="Santa Maria" {% if form.loja_agendada.value == 'Santa Maria' %}selected{% endif %}>Santa Maria</option>
-                </select>
-            </div>
-
-            {% if funcionario_logado %}
-                <div class="box">
-                    <select name="funcionario">
-                        <option value="{{ funcionario_logado.id }}">Para mim ({{ funcionario_logado.nome }})</option>
-                        {% for funcionario in funcionarios %}
-                            <option value="{{ funcionario.id }}">{{ funcionario.nome }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            {% else %}
-                <div class="box">
-                    <select name="funcionario" required>
-                        <option value="" disabled selected>Selecionar Funcionário</option>
-                        {% for funcionario in funcionarios %}
-                            <option value="{{ funcionario.id }}">{{ funcionario.nome }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            {% endif %}
-        </div>
-
-        <div class="button">
-            <button type="submit">Enviar</button>
-        </div>
-    </form>
+<div id="messageDiv" class="message {{ classe_mensagem }}">
+    {{ mensagem }}
 </div>
 
-<div class="tabela container">
-    <table>
-        <thead>
-            <tr>
-                <th>Nome</th>
-                <th>CPF</th>
-                <th>Contato</th>
-                <th>Data</th>
-                <th>Loja</th>
-                <th>Funcionário</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for agendamento in agendamentos %}
-            <tr>
-                <td>{{ agendamento.nome_cliente }}</td>
-                <td>{{ agendamento.cpf_cliente }}</td>
-                <td>{{ agendamento.numero_celular }}</td>
-                <td>{{ agendamento.data_inicio }} - {{ agendamento.data_fim }}</td>
-                <td>{{ agendamento.loja_agendada }}</td>
-                <td>{{ agendamento.funcionario.nome }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<!-- FORMULÁRIOS -->
+<div class="container">
+    <!-- Botões para abrir os modais -->
+    <div class="options_modais">
+        <button type="button" class="btn btn-primary" data-target="#modalTabela">
+            Agendamento Negociador
+        </button>
+        <button type="button" class="btn btn-primary" data-target="#modalReagendamento">
+            ReAgendamento Negociador
+        </button>
+    </div>
+
+    <!-- Modal para Agendamento Negociador -->
+    <div class="modal" id="modalTabela">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Agendamento Negociador</h5>
+                    <button type="button" class="btn-close" data-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="post" action="{% url 'inss:agendamento' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="cpf_cliente" class="form-label">CPF do Cliente:</label>
+                            <input type="text" class="form-control" id="cpf_cliente" name="cpf_cliente" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="numero_celular" class="form-label">Número de Celular:</label>
+                            <input type="text" class="form-control" id="numero_celular" name="numero_celular" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="data" class="form-label">Data (dd/mm/AAAA):</label>
+                            <input type="text" class="form-control" id="data" name="data" required placeholder="dd/mm/AAAA">
+                        </div>
+                        <div class="mb-3">
+                            <label for="loja_agendada" class="form-label">Loja Agendada:</label>
+                            <select class="form-select" id="loja_agendada" name="loja_agendada" required>
+                                <option value="">Selecione uma loja</option>
+                                {% for loja in lojas %}
+                                    <option value="{{ loja.id }}">{{ loja.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <input type="hidden" name="funcionario" value="{{ funcionario_logado.id }}">
+                        <div class="mb-3">
+                            <label class="form-label">Funcionário:</label>
+                            <input type="text" class="form-control" value="{{ funcionario_logado.nome }}" readonly>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Agendar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para ReAgendamento Negociador -->
+    <div class="modal" id="modalReagendamento">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">ReAgendamento Negociador</h5>
+                    <button type="button" class="btn-close" data-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>CPF</th>
+                                <th>Número</th>
+                                <th>Ação</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cliente in clientes %}
+                                <tr>
+                                    <form method="post" action="{% url 'inss:reagendamento' %}">
+                                        {% csrf_token %}
+                                        <td>{{ cliente.nome }}</td>
+                                        <td>{{ cliente.cpf }}</td>
+                                        <td>{{ cliente.numero }}</td>
+                                        <td>
+                                            <select name="acao" required>
+                                                <option value="">Selecione...</option>
+                                                <option value="Reagendou">Reagendou</option>
+                                                <option value="Desistencia">Desistência</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
+                                            <button type="submit" class="btn btn-success">
+                                                <i class="bi bi-check-circle"></i>
+                                            </button>
+                                        </td>
+                                    </form>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
+
 {% endblock %}
 
-{% block addjs %}
+{% block addjs_extra %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    // Lógica para exibir/esconder campo de seleção de funcionário
-    document.querySelectorAll('input[name="tipo_agendamento"]').forEach(function (radio) {
-        radio.addEventListener('change', function () {
-            if (this.value === 'outro') {
-                document.getElementById('funcionarios_select').style.display = 'block';
-            } else {
-                document.getElementById('funcionarios_select').style.display = 'none';
-            }
-        });
-    });
+    // Passando o user_groups do Django para uma variável global
+    window.userGroups = {{ user_groups|safe }};
 </script>
+
+<script src="{% static 'geral_forms.js' %}"></script>
+<script src="{% static 'mensagem.js' %}"></script>
 {% endblock %}

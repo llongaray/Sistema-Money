@@ -8,55 +8,135 @@ from django.contrib.auth.decorators import login_required
 from setup.utils import verificar_autenticacao
 from decimal import Decimal
 
-from .models import Cliente, MatriculaDebitos
-from apps.siape.models import RegisterMoney, RegisterMeta
-from apps.funcionarios.models import Funcionario
+from datetime import datetime
+
+from .models import *
+from apps.siape.models import *
+from apps.funcionarios.models import *
 
 import logging
 from datetime import timedelta
 
 from custom_tags_app.permissions import check_access
 
+import csv
+from django.contrib import messages
+import io
+import pandas as pd
+from django.conf import settings
+import os
 
 # Configurando o logger para registrar atividades e erros no sistema
 logger = logging.getLogger(__name__)
 
-#-------------------------- CONSULTA E FICHA CLIENTE ----------------------------------------------------
+# Funções auxiliares
+def normalize_cpf(cpf):
+    # Remove todos os caracteres não numéricos
+    cpf_digits = ''.join(filter(str.isdigit, str(cpf)))
+    
+    # Se o CPF tiver menos de 11 dígitos, adiciona zeros à esquerda
+    cpf_normalized = cpf_digits.zfill(11)
+    
+    # Verifica se o CPF tem exatamente 11 dígitos
+    if len(cpf_normalized) != 11:
+        print(f"Aviso: CPF {cpf} não possui 11 dígitos após normalização.")
+        return None  # Ou você pode escolher lançar uma exceção aqui
+    
+    return cpf_normalized
 
-@check_access(level=2, setor='SIAPE')
-def ficha_cliente(request, cpf):
-    """
-    Exibe a ficha completa de um cliente com base no CPF fornecido.
-    Inclui informações das matrículas e cálculos relacionados a saldos e margens.
-    """
-    # Obtém o cliente pelo CPF, ou retorna um erro 404 se não encontrado
-    cliente = get_object_or_404(Cliente, cpf=cpf)
-    logger.info(f"Cliente encontrado: {cliente.nome}")
+def parse_float(value):
+    try:
+        return float(str(value).replace(',', '.'))
+    except (ValueError, TypeError):
+        return 0.0
 
-    # Filtra as matrículas associadas ao cliente
-    matriculas_db = MatriculaDebitos.objects.filter(cliente=cliente)
-    logger.info(f"Total de matrículas encontradas: {matriculas_db.count()}")
+def parse_int(value):
+    try:
+        return int(float(str(value).replace(',', '.')))
+    except (ValueError, TypeError):
+        return 0
+
+def parse_date(value):
+    try:
+        # Tenta converter a data do formato DD-MM-AAAA para YYYY-MM-DD
+        day, month, year = value.split('-')
+        return datetime(int(year), int(month), int(day)).date()
+    except ValueError:
+        # Se falhar, tenta outros formatos como backup
+        date_formats = ['%d%m%Y', '%Y%m%d', '%d/%m/%Y', '%Y-%m-%d']
+        for fmt in date_formats:
+            try:
+                return datetime.strptime(str(value).strip(), fmt).date()
+            except ValueError:
+                continue
+    print(f"Aviso: Data inválida '{value}'. Usando None.")
+    return None
+def format_currency(value):
+    """Formata o valor para o padrão '1.000,00'."""
+    if value is None:
+        value = Decimal('0.00')
+    value = Decimal(value)
+    formatted_value = f'{value:,.2f}'.replace('.', 'X').replace(',', '.').replace('X', ',')
+    print(f"Valor formatado: {formatted_value}")
+    return formatted_value
+
+# ===== INÍCIO DA SEÇÃO DE FICHA CLIENTE =====
+
+def get_ficha_cliente(request, cliente_id):
+    """
+    Obtém os dados da ficha do cliente com base no ID fornecido e renderiza a página.
+    """
+    print(f"Iniciando get_ficha_cliente para cliente_id: {cliente_id}")
     
-    margens = {}  # Dicionário para armazenar margens de diferentes matrículas
-    cont_margem = 0  # Contador de margens processadas
+    # Obtém o cliente pelo ID, ou retorna um erro 404 se não encontrado
+    cliente = get_object_or_404(Cliente, id=cliente_id)
+    print(f"Cliente encontrado: {cliente.nome}")
+
+    # Dicionário com os dados do cliente
+    cliente_data = {
+        'nome': cliente.nome,
+        'cpf': cliente.cpf,
+        'uf': cliente.uf,
+        'upag': cliente.upag,
+        'situacao_funcional': cliente.situacao_funcional,
+        'rjur': cliente.rjur,
+        'data_nascimento': cliente.data_nascimento,
+        'sexo': cliente.sexo,
+        'rf_situacao': cliente.rf_situacao,
+        'siape_tipo_siape': cliente.siape_tipo_siape,
+        'siape_qtd_matriculas': cliente.siape_qtd_matriculas,
+        'siape_qtd_contratos': cliente.siape_qtd_contratos,
+    }
+    print("Dados do cliente coletados")
+
+    # Obtém as informações pessoais mais recentes do cliente
+    try:
+        info_pessoal = cliente.informacoes_pessoais.latest('data_envio')
+        info_pessoal_data = {
+            'fne_celular_1': info_pessoal.fne_celular_1,
+            'fne_celular_2': info_pessoal.fne_celular_2,
+            'end_cidade_1': info_pessoal.end_cidade_1,
+            'email_1': info_pessoal.email_1,
+            'email_2': info_pessoal.email_2,
+            'email_3': info_pessoal.email_3,
+        }
+        print("Informações pessoais coletadas")
+    except InformacoesPessoais.DoesNotExist:
+        info_pessoal_data = {}
+        print("Nenhuma informação pessoal encontrada")
     
-    matriculas = []  # Lista para armazenar as matrículas processadas
+    # Filtra os débitos e margens associados ao cliente com prazo maior que zero
+    debitos_margens = DebitoMargem.objects.filter(cliente=cliente, prazo__gt=0)
+    print(f"Total de débitos/margens encontrados: {debitos_margens.count()}")
     
-    for matricula in matriculas_db:
-        # Tentativa de conversão dos valores de `pmt` e `prazo` para float
-        try:
-            pmt = float(matricula.pmt)
-            prazo = float(matricula.prazo)
-        except (ValueError, TypeError):
-            logger.error(f"Erro ao converter pmt ou prazo para float. pmt: {matricula.pmt}, prazo: {matricula.prazo}")
-            pmt = 0.0
-            prazo = 0.0
-        logger.debug(f"Valores convertidos - PMT: {pmt}, Prazo: {prazo}")
+    debitos_margens_data = []
+    
+    for debito_margem in debitos_margens:
+        # Cálculo do saldo devedor
+        pmt = float(debito_margem.pmt)
+        prazo = float(debito_margem.prazo)
+        pr_pz = pmt * prazo
         
-        pr_pz = pmt * prazo  # Cálculo de pr_pz
-        logger.debug(f"Valor de pr_pz: {pr_pz}")
-        
-        # Calcular porcentagem de desconto com base no prazo
         if prazo < 10:
             porcentagem = 0
         elif 10 <= prazo <= 39:
@@ -73,145 +153,502 @@ def ficha_cliente(request, cpf):
             porcentagem = 0
         
         desconto = pr_pz * porcentagem
-        saldo_devedor = round(pr_pz - desconto, 2)  # Arredonda o saldo devedor para 2 casas decimais
-        logger.debug(f"Desconto: {desconto}, Saldo Devedor: {saldo_devedor}")
+        saldo_devedor = round(pr_pz - desconto, 2)
         
-        # Adiciona os detalhes da matrícula à lista de matrículas
-        matriculas.append({
-            'matricula': matricula.matricula,
-            'rubrica': matricula.rubrica,
-            'banco': matricula.banco,
-            'orgao': matricula.orgao,
-            'pmt': matricula.pmt,
-            'prazo': matricula.prazo,
-            'tipo_contrato': matricula.tipo_contrato,
-            'contrato': matricula.contrato,
-            'creditos': matricula.creditos,
-            'liquido': matricula.liquido,
-            'exc_soma': matricula.exc_soma,
-            'margem': matricula.margem,
-            'base_calc': matricula.base_calc,
-            'bruta_5': matricula.bruta_5,
-            'utilz_5': matricula.utilz_5,
-            'beneficio_bruta_5': matricula.beneficio_bruta_5,
-            'beneficio_utilizado_5': matricula.beneficio_utilizado_5,
-            'bruta_35': matricula.bruta_35,
-            'utilz_35': matricula.utilz_35,
-            'bruta_70': matricula.bruta_70,
-            'utilz_70': matricula.utilz_70,
-            'saldo_35': matricula.saldo_35,
-            'saldo_5': matricula.saldo_5,
-            'beneficio_saldo_5': matricula.beneficio_saldo_5,
-            'arq_upag': matricula.arq_upag,
-            'exc_qtd': matricula.exc_qtd,
-            'saldo_devedor': saldo_devedor,  # Saldo devedor calculado
+        # Cálculo da margem
+        margem = round(float(debito_margem.saldo_35), 2)  # Assumindo que saldo_35 representa a margem
+        
+        debitos_margens_data.append({
+            'matricula': debito_margem.matricula,
+            'banco': debito_margem.banco,
+            'orgao': debito_margem.orgao,
+            'pmt': debito_margem.pmt,
+            'prazo': debito_margem.prazo,
+            'contrato': debito_margem.contrato,
+            'margem': margem,
+            'saldo_devedor': saldo_devedor,
         })
-        
-        # Processa margens e verifica duplicidade
-        margem_chave = (matricula.saldo_35, matricula.saldo_5, matricula.beneficio_saldo_5)
-        
-        if cont_margem == 0:
-            margens[margem_chave] = {
-                'saldo_35': matricula.saldo_35,
-                'saldo_5': matricula.saldo_5,
-                'beneficio_saldo_5': matricula.beneficio_saldo_5,
-            }
-            cont_margem += 1
-        else:
-            if margem_chave not in margens:
-                margens[margem_chave] = {
-                    'saldo_35': matricula.saldo_35,
-                    'saldo_5': matricula.saldo_5,
-                    'beneficio_saldo_5': matricula.beneficio_saldo_5,
-                }
-        logger.debug(f"Margens acumuladas: {margens}")
-
-    # Verifica duplicatas nas margens, arredondando para 2 casas decimais
-    margens_unicas = {}
-    for chave, valor in margens.items():
-        chave_arredondada = (
-            round(valor['saldo_35'], 2),
-            round(valor['saldo_5'], 2),
-            round(valor['beneficio_saldo_5'], 2)
-        )
-        logger.debug(f"Chave arredondada: {chave_arredondada}, Valor: {valor}")
-        
-        if chave_arredondada not in margens_unicas:
-            margens_unicas[chave_arredondada] = valor
+    print(f"Processados {len(debitos_margens_data)} débitos/margens")
 
     context = {
-        'cliente': {
-            'nome': cliente.nome,
-            'cpf': cliente.cpf,
-            'uf': cliente.uf,
-            'upag': cliente.upag,
-            'matricula_instituidor': cliente.matricula_instituidor,
-            'situacao_funcional': cliente.situacao_funcional,
-            'rjur': cliente.rjur,
-        },
-        'margens': list(margens_unicas.values()),  # Lista de margens únicas
-        'matriculas': matriculas,  # Lista de matrículas processadas
+        'cliente': cliente_data,
+        'informacoes_pessoais': info_pessoal_data,
+        'debitos_margens': debitos_margens_data,
     }
-    logger.info("Fim da função ficha_cliente")
-    return render(request, 'consultas/ficha_cliente.html', context)
-
-@require_http_methods(["POST", "GET"])
-@check_access(level=1, setor='SIAPE')
-def consulta_cliente(request):
-    """
-    Consulta um cliente pelo CPF. Se o cliente for encontrado, redireciona para a ficha do cliente.
-    Caso contrário, exibe uma mensagem de erro.
-    """
-    mensagem = ""
-
-    if request.method == "POST":
-        cpf_cliente = request.POST.get('cpf_cliente', None)
-        if cpf_cliente:
-            cpf_cliente_limpo = cpf_cliente.replace('.', '').replace('-', '')
-            try:
-                cliente = Cliente.objects.get(cpf=cpf_cliente_limpo)
-                return redirect('consulta:ficha_cliente_cpf', cpf=cpf_cliente_limpo)
-            except Cliente.DoesNotExist:
-                mensagem = "Cliente não encontrado!"
-                logger.warning(f"Cliente com CPF {cpf_cliente_limpo} não encontrado.")
     
-    return render(request, 'siape/consulta_cliente.html', {'mensagem': mensagem})
+    print("Contexto da ficha do cliente montado")
+    print("Renderizando página da ficha do cliente")
+    return render(request, 'siape/ficha_cliente.html', context)
 
-#---------------------------------------------------- RANKING SISTEMA -----------------------------------------------------------------
+# ===== FIM DA SEÇÃO DE FICHA CLIENTE =====
 
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.utils import timezone
-from django.db.models import Sum, OuterRef, Subquery
-from setup.utils import verificar_autenticacao
-from decimal import Decimal
+# ===== INÍCIO DA SEÇÃO DOS POSTS =====
+def post_addMeta(form_data):
+    """Processa a adição de uma nova meta em RegisterMeta."""
+    print("\n\n----- Iniciando post_addMeta -----\n")
+    mensagem = {'texto': '', 'classe': ''}
 
-from .models import Cliente, MatriculaDebitos
-from apps.siape.models import RegisterMoney, RegisterMeta
-from apps.funcionarios.models import Funcionario
+    try:
+        # Converter o valor para Decimal
+        valor = Decimal(str(form_data.get('valor')).replace(',', '.'))
+        
+        # Determinar o setor baseado no tipo
+        tipo = form_data.get('tipo')
+        setor = form_data.get('setor') if tipo == 'EQUIPE' else None
+        
+        # Criar nova meta
+        meta = RegisterMeta.objects.create(
+            titulo=form_data.get('titulo'),
+            valor=valor,
+            tipo=tipo,
+            setor=setor,
+            range_data_inicio=form_data.get('range_data_inicio'),
+            range_data_final=form_data.get('range_data_final'),
+            status=form_data.get('status') == 'True',
+            descricao=form_data.get('descricao')
+        )
+        
+        mensagem['texto'] = f'Meta "{meta.titulo}" adicionada com sucesso!'
+        mensagem['classe'] = 'success'
+        print(f"Meta adicionada: {meta}")
 
-import logging
+    except ValueError as e:
+        mensagem['texto'] = 'Erro: Valor inválido para a meta'
+        mensagem['classe'] = 'error'
+        print(f"Erro de valor: {str(e)}")
+    except Exception as e:
+        mensagem['texto'] = f'Erro ao adicionar meta: {str(e)}'
+        mensagem['classe'] = 'error'
+        print(f"Erro: {str(e)}")
 
-from custom_tags_app.permissions import check_access
+    return mensagem
 
-import logging
-from decimal import Decimal
-from django.db.models import Sum, Subquery, OuterRef
-from django.utils import timezone
-from django.http import JsonResponse
-from django.shortcuts import render
+def post_addMoney(form_data):
+    """Processa a adição de um novo registro em RegisterMoney."""
+    print("\n\n----- Iniciando post_addMoney -----\n")
+    mensagem = {'texto': '', 'classe': ''}
 
-# Função para formatar valores monetários para o padrão '1.000,00'
-def format_currency(value):
-    """Formata o valor para o padrão '1.000,00'."""
-    if value is None:
-        value = Decimal('0.00')
-    value = Decimal(value)
-    formatted_value = f'{value:,.2f}'.replace('.', 'X').replace(',', '.').replace('X', ',')
-    print(f"Valor formatado: {formatted_value}")
-    return formatted_value
+    try:
+        funcionario_id = form_data.get('funcionario_id')
+        cpf_cliente = form_data.get('cpf_cliente')
+        valor_est = form_data.get('valor_est')
+        status = form_data.get('status') == 'True'  # Converte o valor do status para booleano
+        data_atual = timezone.now()  # Data e hora atuais
 
-# Função para calcular valores gerais dentro do intervalo de datas
+        # Cria um novo registro em RegisterMoney
+        registro = RegisterMoney.objects.create(
+            funcionario_id=funcionario_id,
+            cpf_cliente=cpf_cliente,
+            valor_est=valor_est,
+            status=status, 
+            data=data_atual  # Usando a data e hora atuais
+        )
+        mensagem['texto'] = 'Registro adicionado com sucesso!'
+        mensagem['classe'] = 'success'
+        print(f"Registro adicionado: {registro}")
+
+    except Exception as e:
+        mensagem['texto'] = f'Erro ao adicionar registro: {str(e)}'
+        mensagem['classe'] = 'error'
+        print(f"Erro: {str(e)}")
+
+    print(f"Mensagem final: {mensagem}\n\n")
+    print("\n----- Finalizando post_addMoney -----\n")
+    return mensagem
+
+# View para criar uma nova campanha
+def post_criar_campanha(form_data):
+    """Processa a criação de uma nova campanha."""
+    print("\n\n----- Iniciando post_criar_campanha -----\n")
+    mensagem = {'texto': '', 'classe': ''}
+
+    try:
+        nome_campanha = form_data.get('nome_campanha')
+        departamento = form_data.get('departamento')
+
+        if nome_campanha and departamento:
+            campanha = Campanha.objects.create(
+                nome=nome_campanha,
+                departamento=departamento,
+                data_criacao=timezone.now(),
+                status=True  # Status padrão é Ativo
+            )
+            mensagem['texto'] = f'Campanha "{campanha.nome}" criada com sucesso!'
+            mensagem['classe'] = 'success'
+            print(f"Campanha criada: {campanha.nome}")
+        else:
+            mensagem['texto'] = 'Por favor, preencha todos os campos obrigatórios.'
+            mensagem['classe'] = 'error'
+            print("Erro: Campos obrigatórios não preenchidos.")
+
+    except Exception as e:
+        mensagem['texto'] = f'Erro ao criar a campanha: {str(e)}'
+        mensagem['classe'] = 'error'
+        print(f"Erro ao criar a campanha: {str(e)}")
+
+    print(f"Mensagem final: {mensagem}\n\n")
+    print("\n----- Finalizando post_criar_campanha -----\n")
+    return mensagem
+
+@check_access(departamento='SIAPE', nivel_minimo='PADRÃO')
+def importar_dados_csv(request):
+    print("Iniciando função importar_dados_csv")
+
+    if 'csv_file' not in request.FILES:
+        message = 'Nenhum arquivo CSV foi enviado. Por favor, selecione um arquivo CSV para importar.'
+        messages.warning(request, message)
+        print(f"Aviso: {message}")
+        return redirect('siape:all_forms')
+
+    print("Arquivo CSV recebido")
+    csv_file = request.FILES['csv_file']
+    campanha_id = request.POST.get('campanha_id', '')  # Captura o ID da campanha
+    data_hora = request.POST.get('data_hora')  # Captura a data e hora do formulário
+    print(f"ID da campanha: {campanha_id}, Data e Hora: {data_hora}")
+
+    if not csv_file.name.endswith(('.csv', '.xlsx', '.xls')):
+        message = 'O arquivo deve ser um CSV ou Excel. Por favor, selecione um arquivo com extensão .csv, .xlsx ou .xls.'
+        messages.warning(request, message)
+        print(f"Aviso: {message}")
+        return redirect('siape:all_forms')
+
+    print("Lendo arquivo")
+    if csv_file.name.endswith('.csv'):
+        df = pd.read_csv(csv_file, encoding='utf-8-sig', sep=';')
+        print("Arquivo CSV lido com sucesso")
+    else:
+        df = pd.read_excel(csv_file)
+        print("Arquivo Excel lido com sucesso")
+
+    # Verifica se a campanha existe
+    try:
+        campanha = Campanha.objects.get(id=campanha_id)
+        print(f"Campanha encontrada: {campanha.nome}")
+    except Campanha.DoesNotExist:
+        message = f'Campanha com ID {campanha_id} não encontrada.'
+        messages.warning(request, message)
+        print(f"Aviso: {message}")
+        return redirect('siape:all_forms')
+
+    # Processamento dos dados
+    erros_processamento = 0
+    linhas_com_erro = []
+    clientes_criados = 0
+    clientes_atualizados = 0
+
+    print("Iniciando processamento de dados")
+    for index, row in df.iterrows():
+        print(f"\nProcessando linha {index + 1}")
+
+        # Normaliza o CPF
+        cpf_cliente = normalize_cpf(row['CPF'])
+        if not cpf_cliente:
+            print(f"CPF inválido na linha {index + 1}. Pulando linha.")
+            continue  # Pula para a próxima linha se o CPF for inválido
+
+        # 1. Verificar se o cliente já existe
+        try:
+            print(f"Verificando cliente com CPF: {cpf_cliente}")
+            cliente, created = Cliente.objects.update_or_create(
+                cpf=cpf_cliente,
+                defaults={
+                    'nome': row['NOME'],
+                    'uf': row['UF'],
+                    'upag': row['UPAG'],
+                    'situacao_funcional': row['Situacao Funcional'],
+                    'data_nascimento': parse_date(row['data_nascimento']),
+                    'sexo': row['sexo'],
+                    'rf_situacao': row['rf_situacao'],
+                    'numero_beneficio_1': row['numero_beneficio_1'],
+                    'especie_beneficio_1': row['especie_beneficio_1'],
+                    'siape_tipo_siape': row['siape_TipoSIAPE'],
+                    'siape_qtd_matriculas': parse_int(row['siape_Qtd_Matriculas']),
+                    'siape_qtd_contratos': parse_int(row['siape_Qtd_Contratos']),
+                    'flg_nao_perturbe': str(row['flg_NaoPerturbe_DoNotCall']).lower() in ['1', 'true', 'sim', 'yes'],
+                }
+            )
+
+            if created:
+                print(f"Cliente não encontrado. Criando cliente: {cliente.nome}")
+                clientes_criados += 1
+            else:
+                print(f"Cliente encontrado: {cliente.nome}. Atualizando cliente.")
+                # Não atualiza o nome e o CPF
+                cliente.uf = row['UF']
+                cliente.upag = row['UPAG']
+                cliente.situacao_funcional = row['Situacao Funcional']
+                cliente.data_nascimento = parse_date(row['data_nascimento'])
+                cliente.sexo = row['sexo']
+                cliente.rf_situacao = row['rf_situacao']
+                cliente.numero_beneficio_1 = row['numero_beneficio_1']
+                cliente.especie_beneficio_1 = row['especie_beneficio_1']
+                cliente.siape_tipo_siape = row['siape_TipoSIAPE']
+                cliente.siape_qtd_matriculas = parse_int(row['siape_Qtd_Matriculas'])
+                cliente.siape_qtd_contratos = parse_int(row['siape_Qtd_Contratos'])
+                cliente.flg_nao_perturbe = str(row['flg_NaoPerturbe_DoNotCall']).lower() in ['1', 'true', 'sim', 'yes']
+                cliente.save()  # Salva as alterações
+
+                clientes_atualizados += 1
+
+        except Exception as e:
+            erros_processamento += 1
+            erro_msg = f"Erro ao verificar cliente na linha {index + 1}, CPF: {row['CPF']}: {str(e)}"
+            linhas_com_erro.append(erro_msg)
+            print(erro_msg)
+            continue  # Continua para a próxima linha
+
+        # 2. Verificar informações pessoais
+        # Dentro do loop for, na seção de "Verificar informações pessoais"
+        try:
+            print("Verificando informações pessoais")
+
+            # Contar quantas informações pessoais já existem para o cliente
+            informacoes_existentes = InformacoesPessoais.objects.filter(cliente=cliente).count()
+            print(f"Cliente {cliente.nome} já possui {informacoes_existentes} registros de informações pessoais.")
+
+            # Criar um novo registro de informações pessoais
+            informacoes_pessoais = InformacoesPessoais.objects.create(
+                cliente=cliente,
+                uf=row['UF'],
+                fne_celular_1=row['fne_celular_1'],
+                fne_celular_1_flg_whats=str(row['fne_celular_1_flg_whats']).lower() in ['1', 'true', 'sim', 'yes'],
+                fne_celular_2=row['fne_celular_2'],
+                fne_celular_2_flg_whats=str(row['fne_celular_2_flg_whats']).lower() in ['1', 'true', 'sim', 'yes'],
+                end_cidade_1=row['end_cidade_1'],
+                email_1=row['email_1'],
+                email_2=row['email_2'],
+                email_3=row['email_3'],
+                # data_envio será preenchida automaticamente pelo `auto_now_add=True`
+            )
+
+            print(f"Nova informação pessoal adicionada para o cliente: {cliente.nome}. Agora totaliza {informacoes_existentes + 1} registros.")
+
+        except Exception as e:
+            erros_processamento += 1
+            erro_msg = f"Erro ao adicionar informações pessoais na linha {index + 1}, CPF: {row['CPF']}: {str(e)}"
+            linhas_com_erro.append(erro_msg)
+            print(erro_msg)
+            continue  # Continua para a próxima linha
+
+
+        # 3. Verificar débito/margem
+        try:
+            print("Verificando débito/margem")
+            debito_exists = DebitoMargem.objects.filter(
+                cliente=cliente,
+                pmt=parse_float(row['PMT']),
+                prazo=parse_int(row['PRAZO']),
+                bruta_35=parse_float(row['Bruta 35']),
+                campanha=campanha  # Verifica se a campanha é a correta
+            ).exists()
+
+            if not debito_exists:
+                debito = DebitoMargem.objects.create(
+                    cliente=cliente,
+                    campanha=campanha,  # Usar a campanha encontrada
+                    banco=row['BANCO'],
+                    orgao=row['ORGAO'],
+                    matricula=row['MATRICULA'],
+                    upag=parse_int(row['UPAG']),
+                    pmt=parse_float(row['PMT']),
+                    prazo=parse_int(row['PRAZO']),
+                    contrato=row['CONTRATO'],
+                    saldo_5=parse_float(row['Saldo 5']),
+                    beneficio_5=parse_float(row['Beneficio5']),
+                    benef_util_5=parse_float(row['BenefUtil5']),
+                    benef_saldo_5=parse_float(row['BenefSaldo5']),
+                    bruta_35=parse_float(row['Bruta 35']),
+                    util_35=parse_float(row['Util.35']),
+                    saldo_35=parse_float(row['Saldo 35']),
+                    bruta_70=parse_float(row['Bruta 70']),
+                    saldo_70=parse_float(row['Saldo 70']),
+                    rend_bruto=parse_float(row['Rend.Bruto']),
+                    data_envio=parse_datetime(data_hora),  # Usar a data e hora fornecidas
+                )
+                print(f"Débito/margem adicionado para o cliente: {cliente.nome}")
+            else:
+                print(f"Débito/margem já encontrado para o cliente: {cliente.nome}")
+
+        except Exception as e:
+            erros_processamento += 1
+            erro_msg = f"Erro ao adicionar débito/margem na linha {index + 1}, CPF: {row['CPF']}: {str(e)}"
+            linhas_com_erro.append(erro_msg)
+            print(erro_msg)
+            continue  # Continua para a próxima linha
+
+        print(f"Linha {index + 1} processada com sucesso")
+
+    message = f'Dados importados com sucesso! Campanha: {campanha.nome}. {clientes_criados} novos clientes criados, {clientes_atualizados} clientes atualizados e {erros_processamento} erros de processamento.'
+    messages.success(request, message)
+    print(f"Sucesso: {message}")
+
+    if linhas_com_erro:
+        error_message = "Erros encontrados nas seguintes linhas:\n" + "\n".join(linhas_com_erro)
+        messages.warning(request, error_message)
+        print(error_message)
+
+    print("Finalizando função importar_dados_csv")
+    return redirect('siape:all_forms')
+
+
+
+# ===== FIM DA SEÇÃO DOS POSTS =====
+
+# ===== INÍCIO DA SEÇÃO DE ALL FORMS =====
+
+def get_all_forms():
+    """
+    Obtém todos os parâmetros de models e forms necessários para all_forms.
+    """
+    campanhas_queryset = Campanha.objects.all()  # Obtém todas as campanhas
+    campanhas = {}  # Inicializa um dicionário para armazenar as campanhas
+    debitos_por_campanha = {}  # Dicionário para armazenar a contagem de débitos por campanha
+    funcionarios = Funcionario.objects.all()  # Obtém todos os funcionários
+    registros = []  # Inicializa uma lista para armazenar os registros de RegisterMoney
+
+    # Preenche o dicionário com as campanhas e conta os débitos
+    for campanha in campanhas_queryset:
+        campanhas[campanha.id] = {
+            'id': campanha.id,  # Adiciona o ID da campanha
+            'nome': campanha.nome,
+            'departamento': campanha.departamento,
+            'data_criacao': campanha.data_criacao,
+            'status': 'Ativo' if campanha.status else 'Inativo'
+        }
+        
+        # Contar quantos débitos estão associados a esta campanha
+        debitos_count = DebitoMargem.objects.filter(campanha=campanha).count()
+        debitos_por_campanha[campanha.id] = debitos_count
+
+    # Criando lista de departamentos
+    print("Criando lista de departamentos...")
+    departamento_list = [
+        {
+            'nome': departamento.grupo.name,
+            'id_grupo': departamento.grupo.id,
+            'id_departamento': departamento.id
+        } for departamento in Departamento.objects.select_related('grupo').all()
+    ]
+    print(f"Número de departamentos encontrados: {len(departamento_list)}")
+
+    # Modificando a obtenção dos registros de RegisterMoney
+    registros = []
+    for registro in RegisterMoney.objects.select_related('funcionario').all():
+        # Tenta encontrar o cliente pelo CPF
+        try:
+            cliente = Cliente.objects.get(cpf=registro.cpf_cliente)
+            nome_ou_cpf = cliente.nome
+        except Cliente.DoesNotExist:
+            nome_ou_cpf = registro.cpf_cliente
+
+        registros.append({
+            'nome': registro.funcionario.nome,  # Nome do funcionário relacionado
+            'valor': registro.valor_est,        # Valor estimado
+            'cliente': nome_ou_cpf,            # Nome do cliente ou CPF
+            'data': registro.data              # Data do registro
+        })
+
+    # Adicionar metas ao contexto
+    metas = RegisterMeta.objects.all().order_by('-range_data_inicio')
+    
+    context = {
+        'campanhas': campanhas,  # Adiciona o dicionário de campanhas ao contexto
+        'departamentos': departamento_list,  # Adiciona a lista de departamentos ao contexto
+        'debitos_por_campanha': debitos_por_campanha,  # Adiciona a contagem de débitos por campanha
+        'funcionarios': funcionarios,  # Adiciona a lista de funcionários ao contexto
+        'registros': registros,        # Adiciona a lista de registros ao contexto
+        'metas': metas,  # Adicionando metas ao contexto
+    }
+    return context
+
+@verificar_autenticacao
+@check_access(departamento='SIAPE', nivel_minimo='PADRÃO')
+def all_forms(request):
+    """
+    Renderiza a página com todos os formulários do SIAPE e processa os formulários enviados.
+    """
+    print("Iniciando função all_forms")
+    
+    # Inicializa a mensagem
+    mensagem = {'texto': '', 'classe': ''}
+    
+    if request.method == 'POST':
+        print("Request é POST. Processando formulário...")
+        form_type = request.POST.get('form_type')
+        print(f"Formulário recebido: {form_type}")
+        
+        if form_type == 'consulta_cliente':
+            cpf_cliente = request.POST.get('cpf_cliente')
+            print(f"CPF recebido para consulta: {cpf_cliente}")
+            if not cpf_cliente:
+                mensagem = {'texto': 'CPF não fornecido. Por favor, insira um CPF válido.', 'classe': 'warning'}
+                print("Aviso: CPF não fornecido")
+            else:
+                cpf_cliente_limpo = normalize_cpf(cpf_cliente)
+                print(f"CPF normalizado: {cpf_cliente_limpo}")
+                try:
+                    cliente = Cliente.objects.get(cpf=cpf_cliente_limpo)
+                    print(f"Cliente encontrado: {cliente.nome}")
+                    return get_ficha_cliente(request, cliente.id)
+                except Cliente.DoesNotExist:
+                    mensagem = {'texto': f"Cliente com CPF {cpf_cliente} não encontrado na base de dados.", 'classe': 'warning'}
+                    print(f"Aviso: Cliente com CPF {cpf_cliente} não encontrado")
+                except Exception as e:
+                    mensagem = {'texto': f"Ocorreu um erro ao processar sua solicitação: {str(e)}", 'classe': 'error'}
+                    print(f"Erro: {str(e)}")
+        
+        elif form_type == 'importar_csv':
+            print("Iniciando importação de CSV")
+            importar_dados_csv(request)
+
+        elif form_type == 'criar_campanha':
+            form_data = {
+                'nome_campanha': request.POST.get('nome_campanha'),
+                'departamento': request.POST.get('departamento')
+            }
+            mensagem = post_criar_campanha(form_data)
+
+        elif form_type == 'adicionar_registro':
+            mensagem = post_addMoney(request.POST)
+        
+        elif form_type == 'alterar_status_campanha':
+            campanha_id = request.POST.get('campanha_id')
+            campanha = get_object_or_404(Campanha, id=campanha_id)
+            campanha.status = not campanha.status
+            campanha.save()
+            mensagem = {'texto': f'Status da campanha "{campanha.nome}" alterado com sucesso!', 'classe': 'success'}
+        
+        elif form_type == 'adicionar_meta':
+            mensagem = post_addMeta(request.POST)
+        
+        elif form_type == 'alterar_status_meta':
+            meta_id = request.POST.get('meta_id')
+            meta = get_object_or_404(RegisterMeta, id=meta_id)
+            meta.status = not meta.status
+            meta.save()
+            mensagem = {'texto': f'Status da meta "{meta.titulo}" alterado com sucesso!', 'classe': 'success'}
+    
+    # Obtém o contexto atualizado APÓS processar o POST
+    context = get_all_forms()
+    context['title'] = 'SIAPE - Todos os Formulários'
+    context['mensagem'] = mensagem
+    
+    print("Renderizando página all_forms")
+    return render(request, 'siape/all_forms.html', context)
+
+# ===== FIM DA SEÇÃO DE ALL FORMS =====
+
+# ===== INÍCIO DA SEÇÃO DE RANKING =====
+
+def simplificar_nome_loja(nome_loja):
+    """
+    Simplifica o nome da loja extraindo a parte após o traço.
+    Ex: 'LOJA POA - SEDE' -> 'SEDE'
+    """
+    if ' - ' in nome_loja:
+        return nome_loja.split(' - ', 1)[1]
+    return nome_loja
+
 def calc_geral(valores_range, meta_geral):
     """Calcula o valor total geral e o percentual em relação à meta geral."""    
     soma_valores = sum(Decimal(venda.valor_est) for venda in valores_range)
@@ -225,15 +662,21 @@ def calc_geral(valores_range, meta_geral):
     
     return valor_total_geral, percentual_height_geral
 
-# Função para calcular valores específicos do departamento 'siape' dentro do intervalo de datas
 def calc_siape(valores_range, meta_equipe):
-    """Calcula o valor total e percentual específico para o departamento 'siape'."""
+    """Calcula o valor total e percentual específico para o departamento 'SIAPE'."""
     funcionarios_ids = valores_range.values_list('funcionario_id', flat=True)
-    funcionarios_range = Funcionario.objects.filter(id__in=funcionarios_ids, departamento='1')
     
+    # Filtra funcionários do departamento SIAPE
+    funcionarios_siape = Funcionario.objects.filter(
+        id__in=funcionarios_ids,
+        departamento__grupo__name='SIAPE'  # Usa o nome do grupo para filtrar
+    )
+    
+    # Filtra vendas apenas dos funcionários SIAPE
     valores_siape = [
-        Decimal(venda.valor_est) for venda in valores_range
-        if venda.funcionario_id in funcionarios_range.values_list('id', flat=True)
+        Decimal(venda.valor_est) 
+        for venda in valores_range
+        if venda.funcionario_id in funcionarios_siape.values_list('id', flat=True)
     ]
     
     soma_valores = sum(valores_siape)
@@ -242,15 +685,12 @@ def calc_siape(valores_range, meta_equipe):
     percentual_height_equipe = int((soma_valores / valor_total_meta_equipe) * 100) if valor_total_meta_equipe else 0
     valor_total_siape = format_currency(soma_valores)
     
+    print(f"Funcionários SIAPE encontrados: {funcionarios_siape.count()}")
     print(f"Soma dos valores SIAPE: {soma_valores}")
     print(f"Percentual em relação à meta da equipe: {percentual_height_equipe}%")
     
     return valor_total_siape, percentual_height_equipe
 
-# Configurando o logger para registrar atividades e erros no sistema
-logger = logging.getLogger(__name__)
-
-# Função para obter as informações de ranking
 def get_ranking_infos():
     today = timezone.now()
     first_day_of_month = today.replace(day=1)
@@ -258,57 +698,102 @@ def get_ranking_infos():
 
     valores_range = RegisterMoney.objects.filter(data__range=[first_day_of_month, last_day_of_month])
     
-    vendas_no_mes = valores_range.values('funcionario_id').annotate(valor_total=Sum('valor_est')).order_by('-valor_total')
-    top_funcionarios_ids = vendas_no_mes.values_list('funcionario_id', flat=True)[:5]
+    # Primeiro, vamos separar os valores por departamento
+    funcionarios_ids = valores_range.values_list('funcionario_id', flat=True).distinct()
+    funcionarios = Funcionario.objects.filter(id__in=funcionarios_ids).select_related('departamento', 'loja')
     
-    print(f"IDs dos top funcionários!")
-
-    top_vendedores = Funcionario.objects.filter(id__in=top_funcionarios_ids).annotate(
-        valor_total=Subquery(
-            RegisterMoney.objects.filter(
-                funcionario_id=OuterRef('id'),
-                data__range=[first_day_of_month, last_day_of_month]
-            ).values('funcionario_id').annotate(
-                total=Sum('valor_est')
-            ).values('total')[:1]
-        )
-    ).order_by('-valor_total')[:5]
-
-    # Montagem do ranking
-    ranking = {
-        f'top_{i+1}': {
-            'foto': vendedor.foto.url if vendedor.foto else '/static/img/geral/default_image.png',
-            'nome_completo': f'{vendedor.nome} {vendedor.sobrenome}',
-            'valor_total': format_currency(vendedor.valor_total or 0)
-        } for i, vendedor in enumerate(top_vendedores)
-    }
-
-    # Preenchendo posições vazias no ranking com valores padrão
+    # Dicionário para armazenar valores por loja (INSS)
+    valores_por_loja = {}
+    # Lista para armazenar valores individuais (não-INSS)
+    valores_individuais = []
+    
+    for venda in valores_range:
+        funcionario = next((f for f in funcionarios if f.id == venda.funcionario_id), None)
+        if not funcionario:
+            continue
+            
+        # Verifica se o funcionário é do departamento INSS
+        if funcionario.departamento and funcionario.departamento.grupo.name == 'INSS':
+            if funcionario.loja:
+                loja_id = funcionario.loja.id
+                if loja_id not in valores_por_loja:
+                    valores_por_loja[loja_id] = {
+                        'loja': funcionario.loja,
+                        'valor_total': Decimal('0')
+                    }
+                valores_por_loja[loja_id]['valor_total'] += Decimal(str(venda.valor_est))
+        else:
+            # Para outros departamentos, mantém o cálculo individual
+            valores_individuais.append({
+                'funcionario': funcionario,
+                'valor_total': Decimal(str(venda.valor_est))
+            })
+    
+    # Combina os resultados de lojas e funcionários
+    todos_resultados = []
+    
+    # Adiciona resultados das lojas (INSS)
+    for loja_info in valores_por_loja.values():
+        todos_resultados.append({
+            'tipo': 'loja',
+            'nome': simplificar_nome_loja(loja_info['loja'].nome),  # Simplifica o nome da loja
+            'nome_completo': loja_info['loja'].nome,  # Mantém o nome completo caso necessário
+            'foto': loja_info['loja'].logo.url if loja_info['loja'].logo else '/static/img/geral/default_image.png',
+            'valor_total': loja_info['valor_total']
+        })
+    
+    # Agrupa valores individuais por funcionário
+    from collections import defaultdict
+    valores_por_funcionario = defaultdict(Decimal)
+    for item in valores_individuais:
+        valores_por_funcionario[item['funcionario']] += item['valor_total']
+    
+    # Adiciona resultados dos funcionários (não-INSS)
+    for funcionario, valor_total in valores_por_funcionario.items():
+        nome_completo = f'{funcionario.nome} {funcionario.sobrenome}'
+        todos_resultados.append({
+            'tipo': 'funcionario',
+            'nome': nome_completo,  # Para funcionários, usa o nome completo
+            'nome_completo': nome_completo,  # Mantém consistência com o campo nome_completo
+            'foto': funcionario.foto.url if funcionario.foto else '/static/img/geral/default_image.png',
+            'valor_total': valor_total
+        })
+    
+    # Ordena todos os resultados por valor_total
+    todos_resultados.sort(key=lambda x: x['valor_total'], reverse=True)
+    top_5 = todos_resultados[:5]
+    
+    # Monta o ranking final
+    ranking = {}
+    for i, resultado in enumerate(top_5, 1):
+        ranking[f'top_{i}'] = {
+            'foto': resultado['foto'],
+            'nome_completo': resultado['nome'],  # Usa o nome já simplificado
+            'nome_original': resultado.get('nome_completo'),  # Mantém o nome original para referência
+            'valor_total': format_currency(resultado['valor_total']),
+            'tipo': resultado['tipo']
+        }
+    
+    # Preenche posições vazias
     for i in range(1, 6):
         ranking.setdefault(f'top_{i}', {
             'foto': '/static/img/geral/default_image.png',
             'nome_completo': f'Nome {i}',
-            'valor_total': format_currency(0.0)
+            'nome_original': f'Nome {i}',
+            'valor_total': format_currency(0.0),
+            'tipo': 'vazio'
         })
 
-    print(f"Ranking final!")
-
-    # Filtrando metas
-    metas_gerais = RegisterMeta.objects.filter(descricao='Geral', status=True)
-    metas_bônus = RegisterMeta.objects.filter(descricao='Bônus', status=True)
-    metas_equipe = RegisterMeta.objects.filter(descricao='Equipe', status=True)
+    # Resto do código permanece igual
+    metas_gerais = RegisterMeta.objects.filter(tipo='GERAL', status=True)
+    metas_equipe = RegisterMeta.objects.filter(tipo='EQUIPE', setor='SIAPE', status=True)
     
-    meta_geral = max(metas_bônus, default=max(metas_gerais, default=RegisterMeta(valor=Decimal('0.00'))), key=lambda x: x.valor)
+    meta_geral = max(metas_gerais, default=RegisterMeta(valor=Decimal('0.00')), key=lambda x: x.valor)
     meta_equipe = max(metas_equipe, default=RegisterMeta(valor=Decimal('0.00')), key=lambda x: x.valor)
-
-    print(f"Meta geral: {meta_geral}")
-    print(f"Meta equipe: {meta_equipe}")
-
-    # Cálculo dos valores gerais e específicos
+    
     valor_total_geral, percentual_height_geral = calc_geral(valores_range, meta_geral)
     valor_total_siape, percentual_height_equipe = calc_siape(valores_range, meta_equipe)
-
-    # Contexto final para renderização
+    
     context = {
         **ranking,
         'metaGeral': {
@@ -325,17 +810,14 @@ def get_ranking_infos():
         }
     }
     
-    print(f"Contexto final!\n\n")
-
     return context
 
 @verificar_autenticacao
-def ranking(request):
+def render_ranking(request):
     context = get_ranking_infos()
     return render(request, 'siape/ranking.html', context)
 
 @verificar_autenticacao
-@check_access(level=2, setor='SIAPE')
 def update_ranking(request):
     ranking_data = get_ranking_infos()
     ranking_data['metaGeral']['percentual_height'] = int(ranking_data['metaGeral']['percentual_height'])
@@ -343,3 +825,22 @@ def update_ranking(request):
     print(f"Dados de ranking para atualização...!\n\n")
 
     return JsonResponse(ranking_data)
+
+# ===== FIM DA SEÇÃO DE RANKING =====
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

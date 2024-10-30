@@ -4,81 +4,94 @@
 {% block title %}Ficha do Cliente{% endblock %}
 
 {% block addcss_extra %}
-<!-- Estilos adicionais específicos para esta página -->
-<link rel="stylesheet" href="{% static 'ficha.css' %}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-dX3JGqLDdPSQUAebWEmVz5u4yXlHnJv1hNwP1DF7GP4X8unL28l8LTeQojcNdgHesjx2F6D9wG4dGub1I4H0lw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="{% static 'siape/ficha.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 {% endblock %}
 
 {% block content %}
 <section class="container-ficha">
-    <!-- Informações do Cliente -->
-    <div id="info-clientes" class="box">
-        <div class="container-info">
-            <h2>Informações do Cliente</h2>
+    <h2>Ficha do Cliente</h2>
+
+    <div class="dashboard">
+        <!-- Informações do Cliente -->
+        <div id="info-clientes" class="box">
+            <h3>Informações do Cliente</h3>
             <div class="box-info">
-                <p>Nome: {{ cliente.nome }}</p>
-                <p>CPF: {{ cliente.cpf }}</p>
-                <p>UF: {{ cliente.uf }}</p>
-            </div>
-            <div class="box-info">
-                <p>Matrícula Instituidor: {{ cliente.matricula_instituidor }}</p>
-                <p>UPAG: {{ cliente.upag }}</p>
-                <p>Situação Funcional: {{ cliente.situacao_funcional }}</p>
-                <p>RJUR: {{ cliente.rjur }}</p>
+                <p><strong>Nome:</strong> {{ cliente.nome }}</p>
+                <p><strong>CPF:</strong> {{ cliente.cpf }}</p>
+                <p><strong>UF:</strong> {{ cliente.uf }}</p>
+                <p><strong>UPAG:</strong> {{ cliente.upag }}</p>
+                <p><strong>Situação Funcional:</strong> {{ cliente.situacao_funcional }}</p>
+                <p><strong>RJUR:</strong> {{ cliente.rjur }}</p>
+                <p><strong>Data de Nascimento:</strong> {{ cliente.data_nascimento|date:"d/m/Y" }}</p>
+                <p><strong>Sexo:</strong> {% if cliente.sexo == 'M' %}<i class="fas fa-male"></i>{% else %}<i class="fas fa-female"></i>{% endif %}</p>
+                <p><strong>RF Situação:</strong> {{ cliente.rf_situacao }}</p>
+                <p><strong>Tipo SIAPE:</strong> {{ cliente.siape_tipo_siape }}</p>
+                <p><strong>Quantidade de Matrículas:</strong> {{ cliente.siape_qtd_matriculas }}</p>
+                <p><strong>Quantidade de Contratos:</strong> {{ cliente.siape_qtd_contratos }}</p>
             </div>
         </div>
+
+        <!-- Informações Pessoais -->
+        <div id="info-pessoal" class="box">
+            <h3>Informações de Contato</h3>
+            <div class="box-info">
+                {% if informacoes_pessoais.fne_celular_1 %}
+                    <p><strong>Celular 1:</strong> {{ informacoes_pessoais.fne_celular_1 }}</p>
+                {% endif %}
+                {% if informacoes_pessoais.fne_celular_2 %}
+                    <p><strong>Celular 2:</strong> {{ informacoes_pessoais.fne_celular_2 }}</p>
+                {% endif %}
+                {% if informacoes_pessoais.end_cidade_1 %}
+                    <p><strong>Cidade:</strong> {{ informacoes_pessoais.end_cidade_1 }}</p>
+                {% endif %}
+                <ul>
+                    {% if informacoes_pessoais.email_1 and informacoes_pessoais.email_1 != '0' %}
+                        <li><strong>Email 1:</strong> {{ informacoes_pessoais.email_1 }}</li>
+                    {% endif %}
+                    {% if informacoes_pessoais.email_2 and informacoes_pessoais.email_2 != '0' %}
+                        <li><strong>Email 2:</strong> {{ informacoes_pessoais.email_2 }}</li>
+                    {% endif %}
+                    {% if informacoes_pessoais.email_3 and informacoes_pessoais.email_3 != '0' %}
+                        <li><strong>Email 3:</strong> {{ informacoes_pessoais.email_3 }}</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Tabela de Contratos -->
+        <div id="contratos" class="box">
+            <h3>Débitos e Margens</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Matrícula</th>
+                        <th>Banco</th>
+                        <th>Órgão</th>
+                        <th>PMT</th>
+                        <th>Prazo</th>
+                        <th>Contrato</th>
+                        <th>Margem</th>
+                        <th>Saldo Devedor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for debito in debitos_margens %}
+                    <tr>
+                        <td>{{ debito.matricula }}</td>
+                        <td>{{ debito.banco }}</td>
+                        <td>{{ debito.orgao }}</td>
+                        <td>{{ debito.pmt }}</td>
+                        <td>{{ debito.prazo }}</td>
+                        <td>{{ debito.contrato }}</td>
+                        <td>R$ {{ debito.margem|floatformat:2 }}</td>
+                        <td>R$ {{ debito.saldo_devedor|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div> 
     </div>
-
-    <!-- Margens do Cliente -->
-    <div id="margens" class="box-cards">
-        {% for margem in margens %}
-        <div class="card">
-            <h3>Margem Empréstimo 35%</h3>
-            <span><p>{{ margem.saldo_35 }}</p></span>
-        </div>
-        <div class="card">
-            <h3>Margem Cartão 5%</h3>
-            <span><p>{{ margem.saldo_5 }}</p></span>
-        </div>
-        <div class="card">
-            <h3>Margem Benefício 5%</h3>
-            <span><p>{{ margem.beneficio_saldo_5 }}</p></span>
-        </div>
-        {% endfor %}
-    </div>  
-
-    <!-- Tabela de Contratos -->
-    <div id="contratos" class="box" data-tab="debitos">
-        <h2>Débitos</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Matrícula</th>
-                    <th>BANCO</th>
-                    <th>Orgão</th>
-                    <th>PMT</th>
-                    <th>PRAZO</th>
-                    <th>TIPO CONTRATO</th>
-                    <th>Margem</th>
-                    <th>Saldo Devedor</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for contrato in matriculas %}
-                <tr>
-                    <td>{{ contrato.matricula }}</td>
-                    <td>{{ contrato.banco }}</td>
-                    <td>{{ contrato.orgao }}</td>
-                    <td>{{ contrato.pmt }}</td>
-                    <td>{{ contrato.prazo }}</td>
-                    <td>{{ contrato.tipo_contrato }}</td>
-                    <td>{{ contrato.margem }}</td>
-                    <td>{{ contrato.saldo_devedor }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div> 
 
     <!-- Barra de Navegação para as Calculadoras -->
     <div class="tab-navigation">
@@ -100,7 +113,7 @@
                 <input type="text" id="coeficiente"><br>
                 <label for="valor-liberado">Valor liberado:</label>
                 <input type="text" id="valor-liberado" disabled><br>
-                <button onclick="calcularMargem()">Calcular</button>
+                <button onclick="calcularMargem('margem', 'coeficiente', 'valor-liberado')">Calcular</button>
             </div>
         </div>
         
@@ -117,8 +130,8 @@
                 <input type="text" id="prestacao"><br>
                 <label for="financiado">Valor do Financiado:</label>
                 <input type="text" id="financiado"><br>
-                <button onclick="calcularBancoCentral()">Calcular</button>
-                <button onclick="limparBancoCentral()">Limpar</button>
+                <button onclick="calcularBancoCentral('meses', 'taxa-juros', 'prestacao', 'financiado')">Calcular</button>
+                <button onclick="limparBancoCentral('meses', 'taxa-juros', 'prestacao', 'financiado')">Limpar</button>
                 <button onclick="imprimirBancoCentral()">Imprimir</button>
             </div>
         </div>
@@ -134,8 +147,8 @@
                 <input type="text" id="numero-parcelas"><br>
                 <label for="saldo-devedor">Saldo Devedor:</label>
                 <input type="text" id="saldo-devedor" disabled><br>
-                <button onclick="calcularSaldoDevedor()">Calcular</button>
-                <button onclick="limparSaldoDevedor()">Limpar</button>
+                <button onclick="calcularSaldoDevedor('capital-inicial', 'numero-parcelas', 'saldo-devedor')">Calcular</button>
+                <button onclick="limparSaldoDevedor('capital-inicial', 'numero-parcelas', 'saldo-devedor')">Limpar</button>
             </div>
         </div>
     </div>
@@ -149,7 +162,7 @@
 <!-- Slick Carousel JS -->
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
 
-<script src="{% static 'ficha.js' %}"></script>
+<script src="{% static 'siape/ficha.js' %}"></script>
 <script>
     // Função para exibir o modal e adicionar a classe 'active'
     function showModal(tabId) {
@@ -163,7 +176,7 @@
     // Função para fechar o modal
     function fecharModal(tabId) {
         document.getElementById(tabId).classList.remove('active');
-        document.querySelector('.container-ccalc').classList.remove('active');
+        document.querySelector('.container-calc').classList.remove('active');
     }
 
     // Fecha o modal ao clicar fora dele

@@ -6,46 +6,61 @@
 {% endblock %}
 
 {% block addcss_extra %}
-<link rel="stylesheet" href="{% static 'funcionarios/all_forms.css' %}">
-<link rel="stylesheet" href="{% static 'mensagem.css' %}">
+<link rel="stylesheet" href="{% static 'modais.css' %}">
+<link rel="stylesheet" href="{% static 'divider.css' %}">
+<link rel="stylesheet" href="{% static 'geral_forms.css' %}">
+<link rel="stylesheet" href="{% static 'mensagens.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+{% endblock %}
+
+
+{% block pre_content %}
+{% include 'partials/_dark_mode_toggle.html' %}
+{% include 'partials/_messages.html' %}
 {% endblock %}
 
 {% block content %}
-<div id="messageDiv" class="message {{ classe_mensagem }}">
-    {{ mensagem }}
-</div>
+
+
 <!-- FORMULARIOS -->
 <div class="container">
     <!-- Botões para abrir os modais -->
     <div class="options_modais">
-        <button type="button" class="btn btn-primary" data-target="#modalCadastroFuncionario">
-            Novo Funcionário
+        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalCadastroFuncionario')">
+            Cadastro de Funcionário
         </button>
-        <button type="button" class="btn btn-primary" data-target="#modalCadastrarUsuario">
-            Cadastro de Usuário
+        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalCadastrarUsuario')">
+            Cadastrar Usuário
         </button>
-        <button type="button" class="btn btn-primary" data-target="#modalAssociarGrupos">
+        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalAssociarGrupos')">
             Associar Grupos a Usuário
         </button>
-        <button type="button" class="btn btn-primary" data-target="#modalEmpresa">
+        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalEmpresa')">
             Cadastro de Empresa
         </button>
-        <button type="button" class="btn btn-primary" data-target="#modalDepartamento">
+        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalLoja')">
+            Cadastro de Loja
+        </button>
+        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalDepartamento')">
             Cadastro de Departamento
         </button>
-        <button type="button" class="btn btn-primary" data-target="#modalCargo">
+        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalCargo')">
             Cadastro de Cargo
         </button>
-        <button type="button" class="btn btn-primary" data-target="#modalHorario">
+        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalHorario')">
             Cadastro de Horário
         </button>
-        <button type="button" class="btn btn-primary" data-target="#modalTabela">
+        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalTabela')">
             Lista de Funcionários
         </button>
     </div>
-    
+
+    <div class="divider"></div>
+
+<!--***************************MODAIS***************************-->
+
     <!-- Modal para Cadastro de Funcionário -->
-    <div class="modal" id="modalCadastroFuncionario">
+    <div class="modal active" id="modalCadastroFuncionario">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -107,7 +122,18 @@
                                 {% endfor %}
                             </select>
                         </div>
-                    
+                        
+                        <!-- Novo campo de seleção para a Loja -->
+                        <div class="form-group">
+                            <label for="loja">Loja:</label>
+                            <select name="loja" id="loja" class="form-control">
+                                <option value="">-- Selecione uma Loja --</option>
+                                {% for loja in lojas %}
+                                    <option value="{{ loja.id }}">{{ loja.id }} | {{ loja.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                            
                         <div class="form-group">
                             <label for="horario">Horário:</label>
                             <select name="horario" id="horario" class="form-control">
@@ -122,8 +148,8 @@
                             <label for="cargo">Cargo:</label>
                             <select name="cargo" id="cargo" class="form-control">
                                 <option value="">-- Selecione um Cargo --</option>
-                                {% for cargo in cargos %}
-                                    <option value="{{ cargo.id }}">{{ cargo.id }} | {{ cargo.nome }}</option>
+                                {% for cargo in cargos_form %}
+                                    <option value="{{ cargo.id }}">{{ cargo.nome }} (Nível: {{ cargo.nivel }})</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -132,13 +158,12 @@
                             <label for="departamento">Departamento:</label>
                             <select name="departamento" id="departamento" class="form-control">
                                 <option value="">-- Selecione um Departamento --</option>
-                                {% for departamento in departamentos %}
-                                    <option value="{{ departamento.id }}">{{ departamento.id }} | {{ departamento.nome }}</option>
+                                {% for departamento in departamentos_form %}
+                                    <option value="{{ departamento.id }}">{{ departamento.nome }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                    
-                        <button type="submit" class="btn btn-primary">Salvar</button>
+                        <button type="submit" class="btn btn-primary btn-submit">Salvar</button>
                     </form>                    
                 </div>
             </div>
@@ -165,7 +190,7 @@
                                 <option value="{{ funcionario.id }}">{{ funcionario.nome }} {{ funcionario.sobrenome }}</option>
                             {% endfor %}
                         </select>
-                        <button type="submit" class="btn btn-primary">Cadastrar Usuário</button>
+                        <button type="submit" class="btn btn-primary btn-submit">Cadastrar Usuário</button>
                     </form>
                 </div>
             </div>
@@ -183,9 +208,29 @@
                     <form method="post" action="{% url 'funcionarios:all_forms' %}">
                         <input type="hidden" name="form_type" value="associar_grupos">
                         {% csrf_token %}
-                        {{ form_grupo.as_p }}
-                        <button type="submit" class="btn btn-primary">Associar</button>
-                    </form>
+                        
+                        <!-- Campo para selecionar o usuário -->
+                        <h5>Usuário:</h5>
+                        <select name="user" id="user-select" class="form-select">
+                            <option value="">Selecione um usuário</option>
+                            {% for usuario in usuarios %}
+                                <option value="{{ usuario.id }}">{{ usuario.username }}</option>
+                            {% endfor %}
+                        </select>
+                        
+                        <!-- Grupos -->
+                        <h5>Grupos:</h5>
+                        <div id="groups-container">
+                            {% for group in groups %}
+                                <div class="form-check">
+                                    <input class="form-check-input group-checkbox" type="checkbox" name="groups" value="{{ group.id }}" id="group-{{ group.id }}">
+                                    <label class="form-check-label" for="group-{{ group.id }}">{{ group.name }}</label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-submit">Associar</button>
+                    </form>                        
                 </div>
             </div>
         </div>
@@ -216,9 +261,97 @@
                         </div>
                         <div class="modal-footer">
                             
-                            <button type="submit" class="btn btn-primary">Cadastrar</button>
+                            <button type="submit" class="btn btn-primary btn-submit">Cadastrar</button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para Cadastro de Empresa -->
+    <div class="modal" id="modalLoja">
+        <div class="modal-dialog modal-lg"> <!-- Aumentei para modal-lg para ter mais espaço -->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Cadastro de Loja</h5>
+                </div>
+                <div class="modal-body">
+                    <!-- Formulário existente -->
+                    <form method="POST" action="{% url 'funcionarios:all_forms' %}" enctype="multipart/form-data">
+                        <input type="hidden" name="form_type" value="criar_loja">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label for="empresa">Empresa</label>
+                            <select class="form-control" id="empresa" name="empresa" required>
+                                <option value="">-- Selecione uma Empresa --</option>
+                                {% for empresa in empresas %}
+                                    <option value="{{ empresa.id }}">{{ empresa.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+    
+                        <div class="form-group">
+                            <label for="nome_loja">Nome da Loja</label>
+                            <input type="text" class="form-control" id="nome_loja" name="nome" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="logo_loja">Logo da Loja (Opcional)</label>
+                            <input type="file" class="form-control" id="logo_loja" name="logo" accept="image/*">
+                        </div>
+    
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-primary btn-submit">Cadastrar</button>
+                        </div>
+                    </form>
+
+                    <!-- Nova tabela de lojas existentes -->
+                    <div class="mt-4">
+                        <h6>Lojas Cadastradas</h6>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Empresa</th>
+                                        <th>Nome da Loja</th>
+                                        <th>Logo</th>
+                                        <th>Ações</th>  <!-- Nova coluna -->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for loja in lojas %}
+                                    <tr>
+                                        <td>{{ loja.empresa.nome }}</td>
+                                        <td>{{ loja.nome }}</td>
+                                        <td>
+                                            {% if loja.logo %}
+                                                <img src="{{ loja.logo.url }}" alt="Logo {{ loja.nome }}" style="max-height: 30px;">
+                                            {% else %}
+                                                <span class="text-muted">Sem logo</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <form method="POST" action="{% url 'funcionarios:all_forms' %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="form_type" value="delete_loja">
+                                                <input type="hidden" name="loja_id" value="{{ loja.id }}">
+                                                <button type="submit" class="btn btn-link text-danger" title="Excluir Loja">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center">Nenhuma loja cadastrada</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -232,16 +365,24 @@
                     <h5 class="modal-title">Cadastro de Departamento</h5>
                 </div>
                 <div class="modal-body">
-                    <form method="POST" action="{% url 'funcionarios:all_forms' %}">
+                    <form method="POST" action="{% url 'funcionarios:all_forms' %}" id="formDepartamento">
                         <input type="hidden" name="form_type" value="criar_departamento">
                         {% csrf_token %}
                         <div class="form-group">
                             <label for="nome_departamento">Nome do Departamento</label>
                             <input type="text" class="form-control" id="nome_departamento" name="nome" required>
+                            <small id="departamentoFeedback" class="form-text text-danger"></small>
+                        </div>
+                        <div class="form-group">
+                            <label>Departamentos existentes:</label>
+                            <ul id="listaDepartamentos">
+                                {% for departamento in departamentos_form %}
+                                    <li>{{ departamento.nome }}</li>
+                                {% endfor %}
+                            </ul>
                         </div>
                         <div class="modal-footer">
-                            
-                            <button type="submit" class="btn btn-primary">Cadastrar</button>
+                            <button type="submit" class="btn btn-primary btn-submit" id="btnCadastrarDepartamento">Cadastrar</button>
                         </div>
                     </form>
                 </div>
@@ -257,22 +398,32 @@
                     <h5 class="modal-title">Cadastro de Cargo</h5>
                 </div>
                 <div class="modal-body">
-                    <form method="POST" action="{% url 'funcionarios:all_forms' %}">
-                        <input type="hidden" name="form_type" value="criar_cargo">
+                    <form id="formCargo" method="POST" action="{% url 'funcionarios:all_forms' %}">
                         {% csrf_token %}
+                        <input type="hidden" name="form_type" value="criar_cargo">
                         <div class="form-group">
-                            <label for="nome_cargo">Nome do Cargo</label>
+                            <label for="nome_cargo">Nome do Cargo:</label>
                             <input type="text" class="form-control" id="nome_cargo" name="nome" required>
                         </div>
+                        
                         <div class="form-group">
-                            <label for="nivel_cargo">Nível</label>
+                            <label for="nivel_cargo">Nível do Cargo:</label>
                             <input type="text" class="form-control" id="nivel_cargo" name="nivel" required>
                         </div>
-                        <div class="modal-footer">
-                            
-                            <button type="submit" class="btn btn-primary">Cadastrar</button>
-                        </div>
+                        
+                        <div id="cargoFeedback" class="feedback"></div>
+                        
+                        <button type="submit" class="btn btn-primary btn-submit" id="btnCadastrarCargo">Cadastrar Cargo</button>
                     </form>
+                    
+                    <hr>
+                    
+                    <h6>Cargos Existentes:</h6>
+                    <ul id="listaCargos">
+                        {% for cargo in cargos_form %}
+                            <li>{{ cargo.nome }} ({{ cargo.nivel }})</li>
+                        {% endfor %}
+                    </ul>
                 </div>
             </div>
         </div>
@@ -303,7 +454,7 @@
                         </div>
                         <div class="modal-footer">
                             
-                            <button type="submit" class="btn btn-primary">Cadastrar</button>
+                            <button type="submit" class="btn btn-primary btn-submit">Cadastrar</button>
                         </div>
                     </form>
                 </div>
@@ -334,8 +485,8 @@
                                 <tr>
                                     <td>{{ funcionario.id }}</td>
                                     <td>
-                                        <a href="{% url 'funcionarios:render_ficha_funcionario' funcionario.id funcionario.fullname|default:''|slugify %}" target="_blank">
-                                            {{ funcionario.fullname|default:funcionario.nome }}
+                                        <a href="{% url 'funcionarios:render_ficha_funcionario' funcionario.id funcionario.fullname|slugify %}" target="_blank">
+                                            {{ funcionario.fullname }}
                                         </a>
                                     </td>
                                     <td>{{ funcionario.cpf }}</td>
@@ -368,56 +519,42 @@
 
 {% block addjs_extra %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
 <script>
-    $(document).ready(function () {
-        // Mostrar o primeiro modal por padrão
-        var $modals = $('.modal');
-        if ($modals.length > 0) {
-            $modals.first().show().addClass('active');
-        }
-    
-        // Adicionar eventos de clique aos botões para mostrar o modal correspondente
-        $('.options_modais .btn').on('click', function () {
-            var targetModal = $($(this).data('target'));
-    
-            $modals.each(function () {
-                if ($(this).is(targetModal)) {
-                    $(this).show().addClass('active');
-                } else {
-                    $(this).hide().removeClass('active');
-                }
-            });
-        });
-    
-        // Fechar modais quando o botão de fechar é clicado
-        $('.btn-close').on('click', function () {
-            $(this).closest('.modal').hide().removeClass('active');
-        });
-    
-        // Ajuste de altura para o container, excluindo a tabela
-        function adjustContainerHeight() {
-            // Encontrar a altura do maior modal
-            var maxHeight = 0;
-            $('.modal').each(function () {
-                var modalHeight = $(this).outerHeight();
-                if (modalHeight > maxHeight) {
-                    maxHeight = modalHeight;
-                }
-            });
-    
-            // Definir a altura do .container com base no maior modal, excluindo a tabela
-            var containerHeight = maxHeight;
-            $('.container').not('.tabela').css('height', containerHeight + 'px');
-        }
-    
-        // Ajusta a altura ao carregar a página
-        adjustContainerHeight();
-    
-        // Ajusta a altura sempre que um modal é mostrado
-        $('.btn-primary').on('click', function () {
-            setTimeout(adjustContainerHeight, 100); // Ajusta a altura após o modal ser exibido
-        });
-    });
+    const userGroups = {{ user_groups|safe }}; // Certifique-se que 'user_groups' seja renderizado corretamente
+    console.log("Grupos de usuários carregados:", userGroups); // Log para verificar se userGroups foi carregado corretamente
 </script>
-<script src="{% static 'mensagem.js' %}"></script>
+
+<script>
+document.getElementById('formCargo').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = this;
+    const nivelSelect = form.querySelector('#nivel_cargo');
+    const novoNivelInput = form.querySelector('#novo_nivel_cargo');
+
+    // Log para verificar o estado do formulário antes do envio
+    console.log("Formulário de cargo enviado. Estado atual:", {
+        nivelSelectVisible: nivelSelect.style.display !== 'none',
+        novoNivelInputDisabled: novoNivelInput.disabled
+    });
+
+    if (nivelSelect.style.display !== 'none') {
+        novoNivelInput.disabled = true;
+    } else {
+        nivelSelect.disabled = true;
+    }
+
+    form.submit();
+});
+</script>
+
+<script src="{% static 'conjunto/groups.js' %}"></script> <!-- Carregue o groups.js aqui -->
+<script src="{% static 'conjunto/initialConfig.js' %}"></script> <!-- Carregue o groups.js aqui -->
+<script src="{% static 'darkmode.js' %}"></script>
+<script src="{% static 'modais.js' %}"></script>
 {% endblock %}
+
+
+

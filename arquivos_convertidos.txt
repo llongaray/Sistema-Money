@@ -1,0 +1,7 @@
+Arquivos Originais:
+paleta de cores.png
+Sem título.png
+
+Arquivos Convertidos:
+Convertido: paleta de cores.png para C:\Users\PC\Pictures\convertidos\paleta de cores.jpg
+Convertido: Sem título.png para C:\Users\PC\Pictures\convertidos\Sem título.jpg
