@@ -2,74 +2,173 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block addtitle %}<title>Ranking</title>{% endblock %}
+{% block addtitle %}<title>Ranking INSS</title>{% endblock %}
 
 {% block addcss_extra %}
-<link rel="stylesheet" href="{% static '/siape/ranking.css' %}">
-<link rel="stylesheet" href="{% static 'rocket-ani.css' %}">
+<link rel="stylesheet" href="{% static '/inss/ranking.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    console.log("{{ item.percentual_conf }}");
+</script>
 {% endblock %}
 
 {% block content %}
-<section id="metaGeral" class="progress-meta">
-    <!-- Pode adicionar conteúdo ou elementos específicos aqui -->
-</section>
-<section id="ranking">
-    <!-- Classificação dos Top 5 -->
-    <div class="container-bar" id="top-5">
-        <div class="info-box">
-            <img src="{{ top_5.foto }}" alt="Foto de {{ top_5.nome_completo }}">
-            <h4 class="name">{{ top_5.nome_completo }}</h4>
-            <p class="value">R$ {{ top_5.valor_total }}</p>
-        </div>
-        <div class="progress-bar"><h2 class="numb">5º</h2></div>
+<header>
+    <div class="theme-switch-wrapper">
+        <label class="theme-switch" for="checkbox">
+            <input type="checkbox" id="checkbox" />
+            <div class="slider round">
+                <i class="fas fa-sun"></i>
+                <i class="fas fa-moon"></i>
+            </div>
+        </label>
     </div>
-
-    <div class="container-bar" id="top-3">
-        <div class="info-box">
-            <img src="{{ top_3.foto }}" alt="Foto de {{ top_3.nome_completo }}">
-            <h4 class="name">{{ top_3.nome_completo }}</h4>
-            <p class="value">R$ {{ top_3.valor_total }}</p>
+    <h2 class="ranking-title">
+        RANKING LOJAS
+    </h2>
+    <div class="container__cards">
+        <div class="card faturamento">
+            <div class="icon">
+                <i class="fas fa-bullseye"></i>
+            </div>
+            <div class="info__valores">
+                <h3 class="title">Meta Geral</h3>
+                <h5 class="valor">{{ cards.valor_total }}</h5>
+                <span class="percentual">
+                    <p class="porcentagem">{{ cards.percentual }}%</p><p class="txt"> da Meta</p>
+                </span>
+            </div>
         </div>
-        <div class="progress-bar"><h2 class="numb">3º</h2></div>
-    </div>
-
-    <div class="container-bar" id="top-1">
-        <div class="info-box">
-            <img src="{{ top_1.foto }}" alt="Foto de {{ top_1.nome_completo }}">
-            <h4 class="name">{{ top_1.nome_completo }}</h4>
-            <p class="value">R$ {{ top_1.valor_total }}</p>
+        <div class="card quantidade">
+            <div class="icon">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <div class="info__valores">
+                <h3 class="title">Qtd Vendas</h3>
+                <h5 class="valor">{{ cards.qtd_vendas }}</h5>
+            </div>
         </div>
-        <div class="progress-bar"><h2 class="numb">1º</h2></div>
-    </div>
-
-    <div class="container-bar" id="top-2">
-        <div class="info-box">
-            <img src="{{ top_2.foto }}" alt="Foto de {{ top_2.nome_completo }}">
-            <h4 class="name">{{ top_2.nome_completo }}</h4>
-            <p class="value">R$ {{ top_2.valor_total }}</p>
+        <div class="card agendamentos">
+            <div class="icon">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+            <div class="info__valores">
+                <h3 class="title">Qtd Agendamentos</h3>
+                <h5 class="valor">{{ cards.qtd_agendamentos }}</h5>
+            </div>
         </div>
-        <div class="progress-bar"><h2 class="numb">2º</h2></div>
     </div>
-
-    <div class="container-bar" id="top-4">
-        <div class="info-box">
-            <img src="{{ top_4.foto }}" alt="Foto de {{ top_4.nome_completo }}">
-            <h4 class="name">{{ top_4.nome_completo }}</h4>
-            <p class="value">R$ {{ top_4.valor_total }}</p>
+</header>
+<section>
+    <div class="container__ranking">
+        <div class="container__top3 container">
+            <div class="top2 box__ranking">
+                <div class="info__foto">
+                    <div class="foto__pos">
+                        <img src="{{ podium.1.logo|default:'/static/img/default-store.png' }}" alt="{{ podium.1.nome|default:'Posição Disponível' }}">
+                        <div class="circle__position">2</div>
+                    </div>
+                    <div class="valor">{{ podium.1.total_fechamentos|default:"0" }}</div>
+                </div>
+                <div class="bar">
+                    <div class="nome">{{ podium.1.nome|default:"Posição Disponível" }}</div>
+                    <div class="icon"><i class="fa fa-medal"></i></div>
+                </div>
+            </div>
+            <div class="top1 box__ranking">
+                <div class="info__foto">
+                    <div class="foto__pos">
+                        <img src="{{ podium.0.logo|default:'/static/img/default-store.png' }}" alt="{{ podium.0.nome|default:'Posição Disponível' }}">
+                        <div class="circle__position">1</div>
+                    </div>
+                    <div class="valor">{{ podium.0.total_fechamentos|default:"0" }}</div>
+                </div>
+                <div class="bar">
+                    <div class="nome">{{ podium.0.nome|default:"Posição Disponível" }}</div>
+                    <div class="icon"><i class="fa fa-trophy"></i></div>
+                </div>
+            </div>
+            <div class="top3 box__ranking">
+                <div class="info__foto">
+                    <div class="foto__pos">
+                        <img src="{{ podium.2.logo|default:'/static/img/default-store.png' }}" alt="{{ podium.2.nome|default:'Posição Disponível' }}">
+                        <div class="circle__position">3</div>
+                    </div>
+                    <div class="valor">{{ podium.2.total_fechamentos|default:"0" }}</div>
+                </div>
+                <div class="bar">
+                    <div class="nome">{{ podium.2.nome|default:"Posição Disponível" }}</div>
+                    <div class="icon"><i class="fa fa-medal"></i></div>
+                </div>
+            </div>
         </div>
-        <div class="progress-bar"><h2 class="numb">4º</h2></div>
+        <div class="container__lista container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>
+                            Rank
+                            <span class="sort-icon" data-column="rank">
+                                <i class="fas fa-sort"></i>
+                            </span>
+                        </th>
+                        <th>Foto</th>
+                        <th>
+                            Nome
+                            <span class="sort-icon" data-column="nome">
+                                <i class="fas fa-sort"></i>
+                            </span>
+                        </th>
+                        <th>Confirmação</th>
+                        <th>
+                            Efetividade
+                            <span class="sort-icon" data-column="taxa">
+                                <i class="fas fa-sort"></i>
+                            </span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in ranking_data %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            {% if item.foto %}
+                                <img src="{{ item.foto }}" alt="{{ item.nome }}" class="ranking-foto">
+                            {% else %}
+                                <img src="/static/img/default-user.png" alt="{{ item.nome }}" class="ranking-foto">
+                            {% endif %}
+                        </td>
+                        <td>{{ item.nome }}</td>
+                        <td class="progress-cell">
+                            <div class="progress-container">
+                                <!-- Barra de progresso com largura fixa baseada em percentual_conf -->
+                                <div class="progress-bar" style="width: {{ item.percentual_conf}}%;">
+                                    <span class="progress-text">
+                                        {{ item.confirmados }}/{{ item.total_agendamentos }}
+                                    </span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="valor">{{ item.taxa_efetividade }}% </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center">Nenhum dado disponível para o período</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-</section>
-<section id="metaEquipe" class="progress-meta">
-    <!-- Pode adicionar conteúdo ou elementos específicos aqui -->
 </section>
 {% endblock %}
 
 {% block addjs_extra %}
+<script src="{% static '/inss/ranking.js' %}"></script>
 <script>
-    // URL para atualização do ranking
-    const rankingUrl = "{% url 'inss:update_ranking' %}";
+        console.log("{{ item.percentual_conf }}");
 </script>
-<script src="{% static 'siape/ranking.js' %}"></script>
-<script src="{% static 'rocket-ani.js' %}"></script>
 {% endblock %}

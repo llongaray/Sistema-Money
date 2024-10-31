@@ -13,34 +13,48 @@
     <div id="menu">
         <ul>
             {% if user.is_authenticated %}
-                {% get_user_permissions user as permissions %}
-
-                <!-- Menu Condicional Baseado nas Permissões do Usuário -->
-                {% if permissions.level == 4 %}
-                    <!-- Administrador: Acesso total -->
-                    <li><a href="{% url 'siape:consulta_cliente' %}">SIAPE</a></li>
-                    <li><a href="{% url 'siape:ranking' %}">Ranking</a></li>
+                {% get_user_groups user as user_access %}
+                
+                {% if user_access.is_admin %}
+                    <!-- Administração: Acesso total -->
+                    <li><a href="{% url 'siape:all_forms' %}">SIAPE</a></li>
+                    <li><a href="{% url 'siape:ranking' %}">Ranking SIAPE</a></li>
                     <li><a href="{% url 'funcionarios:all_forms' %}">Recursos Humanos</a></li>
-                    <li><a href="{% url 'gerenciamento:gen_funcionarios' %}">Create</a></li>
-                {% elif permissions.level == 3 %}
-                    <!-- Suporte: Acesso ao ranking, SIAPE e INSS -->
-                    <li><a href="{% url 'siape:ranking' %}">Ranking</a></li>
-                    <li><a href="{% url 'siape:consulta_cliente' %}">SIAPE</a></li>
-                    <li><a href="#">INSS</a></li>
-                {% elif permissions.level == 2 and permissions.setor == 'SIAPE' %}
-                    <!-- Supervisor SIAPE -->
-                    <li><a href="{% url 'siape:ranking' %}">Ranking</a></li>
-                    <li><a href="{% url 'siape:consulta_cliente' %}">SIAPE</a></li>
-                {% elif permissions.level == 1 and permissions.setor == 'SIAPE' %}
-                    <!-- Atendente SIAPE -->
-                    <li><a href="{% url 'siape:ranking' %}">Ranking</a></li>
-                    <li><a href="{% url 'siape:consulta_cliente' %}">SIAPE</a></li>
-                {% elif permissions.level == 2 or permissions.level == 1 %}
-                    <!-- Supervisores e Atendentes de outros setores -->
-                    <li><a href="#">Sem Acessos</a></li>
+                    <li><a href="{% url 'inss:all_forms' %}">INSS</a></li>
+                    <li><a href="{% url 'inss:ranking' %}">Ranking INSS</a></li>
+                {% else %}
+                    <!-- Menu SIAPE -->
+                    {% if 'SIAPE' in user_access.groups %}
+                        <li><a href="{% url 'siape:all_forms' %}">SIAPE</a></li>
+                        <li><a href="{% url 'siape:ranking' %}">Ranking SIAPE</a></li>
+                        {% get_user_cargo user as cargo %}
+                        {% if cargo.nivel in 'SUPERVISOR GERAL,TOTAL' %}
+                            <li><a href="#">Relatórios SIAPE</a></li>
+                        {% endif %}
+                    {% endif %}
+                    
+                    <!-- Menu INSS -->
+                    {% if 'INSS' in user_access.groups %}
+                        <li><a href="{% url 'inss:all_forms' %}">INSS</a></li>
+                        <li><a href="{% url 'inss:ranking' %}">Ranking INSS</a></li>
+                        {% get_user_cargo user as cargo %}
+                        {% if cargo.nivel in 'SUPERVISOR GERAL,TOTAL' %}
+                            <li><a href="#">Relatórios INSS</a></li>
+                        {% endif %}
+                    {% endif %}
+                    
+                    <!-- Menu RH -->
+                    {% if 'RH' in user_access.groups %}
+                        <li><a href="{% url 'funcionarios:all_forms' %}">Recursos Humanos</a></li>
+                        {% get_user_cargo user as cargo %}
+                        {% if cargo.nivel in 'SUPERVISOR GERAL,TOTAL' %}
+                            <li><a href="#">Relatórios RH</a></li>
+                        {% endif %}
+                    {% endif %}
                 {% endif %}
             {% else %}
                 <!-- Opções de menu para visitantes não autenticados -->
+                <li><a href="{% url 'usuarios:login' %}">Login</a></li>
             {% endif %}
         </ul>
     </div>

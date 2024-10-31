@@ -6,11 +6,15 @@ from .models import Funcionario, Empresa, Horario, Cargo, Departamento
 
 from django.contrib.auth.models import Group
 
+from django import forms
+from .models import Funcionario, Empresa, Horario, Cargo, Departamento, Loja  # Importa o modelo Loja
+
 class FuncionarioForm(forms.ModelForm):
     empresa = forms.ModelChoiceField(queryset=Empresa.objects.all(), label='Empresa')
     horario = forms.ModelChoiceField(queryset=Horario.objects.all(), label='Horário')
     cargo = forms.ModelChoiceField(queryset=Cargo.objects.all(), label='Cargo')
     departamento = forms.ModelChoiceField(queryset=Departamento.objects.all(), label='Departamento')
+    loja = forms.ModelChoiceField(queryset=Loja.objects.all(), label='Loja')  # Adiciona o campo Loja
 
     class Meta:
         model = Funcionario
@@ -27,6 +31,7 @@ class FuncionarioForm(forms.ModelForm):
             'horario',
             'cargo',
             'departamento',
+            'loja',  # Inclui o campo loja nos fields
             'foto'
         ]
         widgets = {
@@ -40,14 +45,15 @@ class FuncionarioForm(forms.ModelForm):
             'estado': forms.TextInput(attrs={'placeholder': 'Estado'}),
             'foto': forms.ClearableFileInput(attrs={'class': 'form-control-file', 'placeholder': 'Escolha uma foto'})
         }
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Configura labels e atributos
-        for field_name in ['nome', 'sobrenome', 'cpf', 'empresa', 'horario', 'cargo', 'departamento']:
+        for field_name in ['nome', 'sobrenome', 'cpf', 'empresa', 'horario', 'cargo', 'departamento', 'loja']:  # Adiciona 'loja' à lista
             if field_name in self.fields:
                 self.fields[field_name].label = field_name.capitalize()
                 self.fields[field_name].widget.attrs.update({'class': 'form-control'})
+
 
 
 
@@ -70,12 +76,47 @@ class UserForm(forms.ModelForm):
             raise ValidationError("As senhas não coincidem.")
 
 class UserGroupForm(forms.Form):
-    user = forms.ModelChoiceField(queryset=User.objects.all(), label="Usuário")
-    groups = forms.ModelMultipleChoiceField(queryset=Group.objects.all(), widget=forms.CheckboxSelectMultiple, label="Grupos")
+    user = forms.ModelChoiceField(queryset=User.objects.all(), required=True)
+    groups = forms.ModelMultipleChoiceField(queryset=Group.objects.all(), required=True)
+
 
 
 
 class FuncionarioFullForm(forms.ModelForm):
+    STATUS_CHOICES = [
+        ('Ativo', 'Ativo'),
+        ('Inativo', 'Inativo'),
+    ]
+
+    status = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'mobileToggle',
+            'id': 'toggle_status'
+        })
+    )
+
+    departamento = forms.ModelChoiceField(
+        queryset=Departamento.objects.filter(grupo__isnull=False),
+        label='Departamento',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        empty_label="Selecione um departamento"
+    )
+    cargo = forms.ModelChoiceField(
+        queryset=Cargo.objects.filter(grupo__isnull=False),
+        label='Cargo',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        empty_label="Selecione um cargo"
+    )
+
+    loja = forms.ModelChoiceField(
+        queryset=Loja.objects.all(),
+        label='Loja',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        empty_label="Selecione uma loja",
+        required=False
+    )
+
     class Meta:
         model = Funcionario
         fields = [
@@ -84,29 +125,59 @@ class FuncionarioFullForm(forms.ModelForm):
             'estado', 'celular', 'celular_sms', 'celular_ligacao', 
             'celular_whatsapp', 'nome_do_pai', 'nome_da_mae', 'genero', 
             'nacionalidade', 'naturalidade', 'estado_civil', 'matricula', 
-            'empresa', 'status', 'data_de_admissao', 'horario', 'departamento', 
+            'empresa', 'loja', 'status', 'data_de_admissao', 'horario', 'departamento', 
             'cargo', 'numero_da_folha', 'ctps', 'superior_direto', 'foto', 
             'identidade', 'carteira_de_trabalho', 'comprovante_de_escolaridade', 
             'pdf_contrato', 'certidao_de_nascimento'
         ]
         widgets = {
-            'data_de_nascimento': forms.TextInput(attrs={'type': 'text', 'placeholder': 'dd/mm/aaaa'}),
-            'data_de_admissao': forms.TextInput(attrs={'type': 'text', 'placeholder': 'dd/mm/aaaa'}),
-            'foto': forms.ClearableFileInput(attrs={'class': 'form-control-file'}),
-            # Adicione outros widgets conforme necessário
+            'data_de_nascimento': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'data_de_admissao': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'foto': forms.FileInput(attrs={'class': 'form-control-file'}),
+            'empresa': forms.Select(attrs={'class': 'form-control'}),
+            'horario': forms.Select(attrs={'class': 'form-control'}),
+            'genero': forms.Select(attrs={'class': 'form-control'}),
+            'estado_civil': forms.Select(attrs={'class': 'form-control'}),
+            'loja': forms.Select(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Adiciona labels e placeholders personalizados
         for field in self.fields:
-            if field != 'foto':
+            if field != 'foto' and field != 'status':
                 self.fields[field].label = field.replace('_', ' ').capitalize()
-            else:
-                self.fields[field].label = 'Foto'
-            self.fields[field].widget.attrs.update({
-                'placeholder': f'Insira {self.fields[field].label.lower()}'
-            })
+            elif field == 'foto':
+                self.fields[field].label = 'Atualizar foto'
+            
+            if isinstance(self.fields[field].widget, forms.TextInput) or isinstance(self.fields[field].widget, forms.NumberInput):
+                self.fields[field].widget.attrs.update({
+                    'class': 'form-control',
+                    'placeholder': f'Insira {self.fields[field].label.lower()}'
+                })
+            elif isinstance(self.fields[field].widget, forms.CheckboxInput):
+                self.fields[field].widget.attrs.update({'class': 'form-check-input'})
+        
+        # Atualiza os querysets para departamento e cargo
+        self.fields['departamento'].queryset = Departamento.objects.filter(grupo__isnull=False)
+        self.fields['cargo'].queryset = Cargo.objects.filter(grupo__isnull=False)
+
+        # Adiciona opções de exibição personalizadas para departamento e cargo
+        self.fields['departamento'].label_from_instance = lambda obj: f"{obj.grupo.name}"
+        self.fields['cargo'].label_from_instance = lambda obj: f"{obj.nome} (Nível: {obj.nivel})"
+
+        # Adiciona opção de exibição personalizada para loja
+        self.fields['loja'].label_from_instance = lambda obj: f"{obj.nome}"
+
+        # Filtra as lojas baseado na empresa selecionada (se houver)
+        if self.instance and self.instance.empresa:
+            self.fields['loja'].queryset = Loja.objects.filter(empresa=self.instance.empresa)
+        else:
+            self.fields['loja'].queryset = Loja.objects.none()
+
+    def clean_status(self):
+        status = self.cleaned_data.get('status')
+        return 'Ativo' if status else 'Inativo'
 
 class CustomUserForm(forms.ModelForm):
     confirma_password = forms.CharField(widget=forms.PasswordInput, label='Confirme a Senha')
@@ -155,19 +226,37 @@ class HorarioForm(forms.ModelForm):
 
 # Formulário para Departamento
 class DepartamentoForm(forms.ModelForm):
+    nome = forms.CharField(max_length=255)  # Campo para o nome do grupo
+
     class Meta:
         model = Departamento
-        fields = ['nome']
-        widgets = {
-            'nome': forms.TextInput(attrs={'class': 'form-control'}),
-        }
+        fields = []  # Não incluímos nenhum campo do modelo Departamento
+
+    def save(self, commit=True):
+        nome = self.cleaned_data.get('nome')
+        grupo = Group.objects.create(name=f"Departamento - {nome}")
+        departamento = super().save(commit=False)
+        departamento.grupo = grupo
+        if commit:
+            departamento.save()
+        return departamento
 
 # Formulário para Cargo
 class CargoForm(forms.ModelForm):
+    nome = forms.CharField(max_length=255)  # Campo para o nome do grupo
+    nivel = forms.CharField(max_length=50)  # Campo para o nível do cargo
+
     class Meta:
         model = Cargo
-        fields = ['nome', 'nivel']
-        widgets = {
-            'nome': forms.TextInput(attrs={'class': 'form-control'}),
-            'nivel': forms.TextInput(attrs={'class': 'form-control'}),
-        }
+        fields = []  # Não incluímos nenhum campo do modelo Cargo
+
+    def save(self, commit=True):
+        nome = self.cleaned_data.get('nome')
+        nivel = self.cleaned_data.get('nivel')
+        grupo = Group.objects.create(name=f"Cargo - {nome}")
+        cargo = super().save(commit=False)
+        cargo.grupo = grupo
+        cargo.nivel = nivel
+        if commit:
+            cargo.save()
+        return cargo
