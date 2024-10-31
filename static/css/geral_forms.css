@@ -194,8 +194,10 @@ thead {
 th, td {
     padding: 12px;
     border: 1px solid var(--cor-branco-200);
-    text-align: left;
     transition: background-color 0.3s ease; /* Transição suave para o fundo */
+}
+td {
+    text-align: center;
 }
 
 tbody tr {

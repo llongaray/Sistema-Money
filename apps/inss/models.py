@@ -28,6 +28,38 @@ class Agendamento(models.Model):
     # Novo campo para observação do atendente
     observacao_atendente = models.TextField(blank=True, null=True)  # Observação do atendente
 
+    # Campos para FECHOU NEGOCIO
+    tipo_negociacao = models.CharField(max_length=100, blank=True, null=True)
+    banco = models.CharField(max_length=100, blank=True, null=True)
+    subsidio = models.CharField(max_length=20, blank=True, null=True, 
+                              choices=[('VIDEO', 'VIDEO'), ('SELFIE', 'SELFIE')])
+    tac = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    acao = models.CharField(max_length=20, blank=True, null=True,
+                          choices=[('COM AÇÃO', 'COM AÇÃO'), ('SEM AÇÃO', 'SEM AÇÃO')])
+    associacao = models.CharField(max_length=20, blank=True, null=True,
+                                choices=[('COM ASSOCIAÇÃO', 'COM ASSOCIAÇÃO'), 
+                                       ('SEM ASSOCIAÇÃO', 'SEM ASSOCIAÇÃO')])
+    aumento = models.CharField(max_length=20, blank=True, null=True,
+                             choices=[('COM AUMENTO', 'COM AUMENTO'), 
+                                    ('SEM AUMENTO', 'SEM AUMENTO')])
+
+    # Campo para status do TAC
+    STATUS_TAC_CHOICES = [
+        ('PAGO', 'PAGO'),
+        ('NAO_PAGO', 'NÃO PAGO'),
+        ('EM_ESPERA', 'EM ESPERA')
+    ]
+    status_tac = models.CharField(
+        max_length=20,
+        choices=STATUS_TAC_CHOICES,
+        default='EM_ESPERA',
+        blank=True,
+        null=True
+    )
+
+    # Registro de quando o TAC foi pago
+    data_pagamento_tac = models.DateTimeField(null=True, blank=True)
+
     def __str__(self):
         return f'{self.nome_cliente} - {self.loja_agendada} ({self.dia_agendado})'
 

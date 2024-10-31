@@ -32,29 +32,78 @@ logger = logging.getLogger(__name__)
 
 # Funções auxiliares
 def normalize_cpf(cpf):
-    # Remove todos os caracteres não numéricos
-    cpf_digits = ''.join(filter(str.isdigit, str(cpf)))
-    
-    # Se o CPF tiver menos de 11 dígitos, adiciona zeros à esquerda
-    cpf_normalized = cpf_digits.zfill(11)
-    
-    # Verifica se o CPF tem exatamente 11 dígitos
-    if len(cpf_normalized) != 11:
-        print(f"Aviso: CPF {cpf} não possui 11 dígitos após normalização.")
-        return None  # Ou você pode escolher lançar uma exceção aqui
-    
-    return cpf_normalized
+    """
+    Normaliza o CPF para uma string de 11 dígitos
+    """
+    try:
+        # Se for float, converte para inteiro primeiro para remover decimais
+        if isinstance(cpf, float):
+            cpf = str(int(cpf))
+        else:
+            cpf = str(cpf)
+        
+        # Remove todos os caracteres não numéricos
+        cpf_digits = ''.join(filter(str.isdigit, cpf))
+        
+        # Preenche com zeros à esquerda se necessário
+        cpf_normalized = cpf_digits.zfill(11)
+        
+        # Verifica se tem exatamente 11 dígitos
+        if len(cpf_normalized) != 11:
+            print(f"Aviso: CPF {cpf} não possui 11 dígitos após normalização.")
+            return None
+            
+        return cpf_normalized
+        
+    except Exception as e:
+        print(f"Erro ao normalizar CPF {cpf}: {str(e)}")
+        return None
 
 def parse_float(value):
+    """
+    Converte um valor string para float, tratando diferentes formatos de número
+    """
     try:
-        return float(str(value).replace(',', '.'))
-    except (ValueError, TypeError):
+        # Se já for float, retorna o valor
+        if isinstance(value, float):
+            return value
+            
+        # Remove espaços em branco e verifica se está vazio
+        if not value or str(value).strip() in ['', ' ', '-']:
+            return 0.0
+            
+        # Converte para string e substitui vírgula por ponto
+        value_str = str(value).strip().replace(',', '.')
+        
+        # Remove caracteres não numéricos (exceto ponto e sinal negativo)
+        value_str = ''.join(c for c in value_str if c.isdigit() or c in '.-')
+        
+        return float(value_str)
+    except (ValueError, TypeError) as e:
+        print(f"Aviso: Valor inválido '{value}' convertido para 0.0: {str(e)}")
         return 0.0
 
 def parse_int(value):
+    """
+    Converte um valor para inteiro puro
+    """
     try:
-        return int(float(str(value).replace(',', '.')))
-    except (ValueError, TypeError):
+        # Se for float, converte para inteiro
+        if isinstance(value, float):
+            return int(value)
+            
+        # Se for string vazia ou traço
+        if not value or str(value).strip() in ['', '-']:
+            return 0
+            
+        # Remove espaços e vírgulas
+        value_clean = str(value).strip().replace(',', '')
+        
+        # Converte para inteiro
+        return int(float(value_clean))
+        
+    except (ValueError, TypeError) as e:
+        print(f"Aviso: Valor inválido '{value}' convertido para 0: {str(e)}")
         return 0
 
 def parse_date(value):
@@ -289,7 +338,6 @@ def post_criar_campanha(form_data):
     print("\n----- Finalizando post_criar_campanha -----\n")
     return mensagem
 
-@check_access(departamento='SIAPE', nivel_minimo='PADRÃO')
 def importar_dados_csv(request):
     print("Iniciando função importar_dados_csv")
 
@@ -349,55 +397,57 @@ def importar_dados_csv(request):
         try:
             print(f"Verificando cliente com CPF: {cpf_cliente}")
             cliente, created = Cliente.objects.update_or_create(
-                cpf=cpf_cliente,
+                cpf=cpf_cliente,  # CPF já normalizado como string
                 defaults={
-                    'nome': row['NOME'],
-                    'uf': row['UF'],
-                    'upag': row['UPAG'],
-                    'situacao_funcional': row['Situacao Funcional'],
+                    'nome': str(row['NOME']).strip(),
+                    'uf': str(row['UF']).strip(),
+                    'upag': str(row['UPAG']).strip(),
+                    'situacao_funcional': str(row['Situacao Funcional']).strip(),
                     'data_nascimento': parse_date(row['data_nascimento']),
-                    'sexo': row['sexo'],
-                    'rf_situacao': row['rf_situacao'],
-                    'numero_beneficio_1': row['numero_beneficio_1'],
-                    'especie_beneficio_1': row['especie_beneficio_1'],
-                    'siape_tipo_siape': row['siape_TipoSIAPE'],
+                    'sexo': str(row['sexo']).strip(),
+                    'rf_situacao': str(row['rf_situacao']).strip(),
+                    'numero_beneficio_1': str(row['numero_beneficio_1']).strip(),
+                    'especie_beneficio_1': str(row['especie_beneficio_1']).strip(),
+                    'siape_tipo_siape': str(row['siape_TipoSIAPE']).strip(),
                     'siape_qtd_matriculas': parse_int(row['siape_Qtd_Matriculas']),
                     'siape_qtd_contratos': parse_int(row['siape_Qtd_Contratos']),
                     'flg_nao_perturbe': str(row['flg_NaoPerturbe_DoNotCall']).lower() in ['1', 'true', 'sim', 'yes'],
                 }
             )
 
+            # Garante que temos o ID do cliente
+            cliente_id = cliente.id
+            print(f"ID do cliente: {cliente_id}")
+
             if created:
-                print(f"Cliente não encontrado. Criando cliente: {cliente.nome}")
+                print(f"Cliente não encontrado. Criando cliente: {cliente.nome} (ID: {cliente_id})")
                 clientes_criados += 1
             else:
-                print(f"Cliente encontrado: {cliente.nome}. Atualizando cliente.")
-                # Não atualiza o nome e o CPF
-                cliente.uf = row['UF']
-                cliente.upag = row['UPAG']
-                cliente.situacao_funcional = row['Situacao Funcional']
+                print(f"Cliente encontrado: {cliente.nome} (ID: {cliente_id}). Atualizando cliente.")
+                # Atualiza os campos do cliente existente
+                cliente.uf = str(row['UF']).strip()
+                cliente.upag = str(row['UPAG']).strip()
+                cliente.situacao_funcional = str(row['Situacao Funcional']).strip()
                 cliente.data_nascimento = parse_date(row['data_nascimento'])
-                cliente.sexo = row['sexo']
-                cliente.rf_situacao = row['rf_situacao']
-                cliente.numero_beneficio_1 = row['numero_beneficio_1']
-                cliente.especie_beneficio_1 = row['especie_beneficio_1']
-                cliente.siape_tipo_siape = row['siape_TipoSIAPE']
+                cliente.sexo = str(row['sexo']).strip()
+                cliente.rf_situacao = str(row['rf_situacao']).strip()
+                cliente.numero_beneficio_1 = str(row['numero_beneficio_1']).strip()
+                cliente.especie_beneficio_1 = str(row['especie_beneficio_1']).strip()
+                cliente.siape_tipo_siape = str(row['siape_TipoSIAPE']).strip()
                 cliente.siape_qtd_matriculas = parse_int(row['siape_Qtd_Matriculas'])
                 cliente.siape_qtd_contratos = parse_int(row['siape_Qtd_Contratos'])
                 cliente.flg_nao_perturbe = str(row['flg_NaoPerturbe_DoNotCall']).lower() in ['1', 'true', 'sim', 'yes']
-                cliente.save()  # Salva as alterações
-
+                cliente.save()
                 clientes_atualizados += 1
 
         except Exception as e:
             erros_processamento += 1
-            erro_msg = f"Erro ao verificar cliente na linha {index + 1}, CPF: {row['CPF']}: {str(e)}"
+            erro_msg = f"Erro ao verificar cliente na linha {index + 1}, CPF: {cpf_cliente}: {str(e)}"
             linhas_com_erro.append(erro_msg)
             print(erro_msg)
             continue  # Continua para a próxima linha
 
         # 2. Verificar informações pessoais
-        # Dentro do loop for, na seção de "Verificar informações pessoais"
         try:
             print("Verificando informações pessoais")
 
@@ -424,53 +474,87 @@ def importar_dados_csv(request):
 
         except Exception as e:
             erros_processamento += 1
-            erro_msg = f"Erro ao adicionar informações pessoais na linha {index + 1}, CPF: {row['CPF']}: {str(e)}"
+            erro_msg = f"Erro ao adicionar informações pessoais na linha {index + 1}, CPF: {cpf_cliente}: {str(e)}"
             linhas_com_erro.append(erro_msg)
             print(erro_msg)
             continue  # Continua para a próxima linha
 
-
         # 3. Verificar débito/margem
         try:
             print("Verificando débito/margem")
-            debito_exists = DebitoMargem.objects.filter(
+            
+            # Preparar os valores numéricos
+            pmt_valor = parse_float(row.get('PMT', 0))
+            prazo_valor = parse_int(row.get('PRAZO', 0))
+            bruta_35_valor = parse_float(row.get('Bruta 35', 0))
+            
+            print(f"Valores após parse: PMT={pmt_valor}, Prazo={prazo_valor}, Bruta 35={bruta_35_valor}")
+            
+            debito = DebitoMargem.objects.create(
                 cliente=cliente,
-                pmt=parse_float(row['PMT']),
-                prazo=parse_int(row['PRAZO']),
-                bruta_35=parse_float(row['Bruta 35']),
-                campanha=campanha  # Verifica se a campanha é a correta
-            ).exists()
-
-            if not debito_exists:
-                debito = DebitoMargem.objects.create(
-                    cliente=cliente,
-                    campanha=campanha,  # Usar a campanha encontrada
-                    banco=row['BANCO'],
-                    orgao=row['ORGAO'],
-                    matricula=row['MATRICULA'],
-                    upag=parse_int(row['UPAG']),
-                    pmt=parse_float(row['PMT']),
-                    prazo=parse_int(row['PRAZO']),
-                    contrato=row['CONTRATO'],
-                    saldo_5=parse_float(row['Saldo 5']),
-                    beneficio_5=parse_float(row['Beneficio5']),
-                    benef_util_5=parse_float(row['BenefUtil5']),
-                    benef_saldo_5=parse_float(row['BenefSaldo5']),
-                    bruta_35=parse_float(row['Bruta 35']),
-                    util_35=parse_float(row['Util.35']),
-                    saldo_35=parse_float(row['Saldo 35']),
-                    bruta_70=parse_float(row['Bruta 70']),
-                    saldo_70=parse_float(row['Saldo 70']),
-                    rend_bruto=parse_float(row['Rend.Bruto']),
-                    data_envio=parse_datetime(data_hora),  # Usar a data e hora fornecidas
-                )
-                print(f"Débito/margem adicionado para o cliente: {cliente.nome}")
-            else:
-                print(f"Débito/margem já encontrado para o cliente: {cliente.nome}")
+                campanha=campanha,
+                banco=str(row.get('BANCO', '')).strip(),
+                orgao=str(row.get('ORGAO', '')).strip(),
+                matricula=str(row.get('MATRICULA', '')).strip(),
+                upag=parse_int(row.get('UPAG', 0)),
+                pmt=pmt_valor,
+                prazo=prazo_valor,
+                contrato=str(row.get('CONTRATO', '')).strip(),
+                saldo_5=parse_float(row.get('Saldo 5', 0)),
+                beneficio_5=parse_float(row.get('Beneficio5', 0)),
+                benef_util_5=parse_float(row.get('BenefUtil5', 0)),
+                benef_saldo_5=parse_float(row.get('BenefSaldo5', 0)),
+                bruta_35=bruta_35_valor,
+                util_35=parse_float(row.get('Util.35', 0)),
+                saldo_35=parse_float(row.get('Saldo 35', 0)),
+                bruta_70=parse_float(row.get('Bruta 70', 0)),
+                saldo_70=parse_float(row.get('Saldo 70', 0)),
+                rend_bruto=parse_float(row.get('Rend.Bruto', 0)),
+                data_envio=data_hora if data_hora else timezone.now()  # Usa diretamente o data_hora do formulário
+            )
+            print(f"Débito/margem criado com sucesso: ID={debito.id}")
 
         except Exception as e:
             erros_processamento += 1
-            erro_msg = f"Erro ao adicionar débito/margem na linha {index + 1}, CPF: {row['CPF']}: {str(e)}"
+            
+            # Garante que temos o ID correto do cliente
+            cliente_id = cliente.id if cliente else None
+            
+            valores_debug = {
+                'PMT': {'valor': row.get('PMT'), 'tipo': type(row.get('PMT')).__name__, 'processado': pmt_valor},
+                'PRAZO': {'valor': row.get('PRAZO'), 'tipo': type(row.get('PRAZO')).__name__, 'processado': prazo_valor},
+                'Bruta 35': {'valor': row.get('Bruta 35'), 'tipo': type(row.get('Bruta 35')).__name__, 'processado': bruta_35_valor},
+                'data_envio': {'valor': data_hora, 'tipo': type(data_hora).__name__},
+                'cliente_id': {'valor': cliente_id, 'tipo': type(cliente_id).__name__},  # Adicionado tipo do cliente_id
+                'campanha_id': {'valor': campanha.id if campanha else None}
+            }
+            
+            erro_detalhado = {
+                'erro': str(e),
+                'tipo_erro': type(e).__name__,
+                'valores': valores_debug,
+                'cliente_info': {  # Adicionando mais informações do cliente para debug
+                    'nome': cliente.nome if cliente else None,
+                    'cpf': cpf_cliente,
+                    'id': cliente_id
+                }
+            }
+            
+            erro_msg = (
+                f"Erro ao adicionar débito/margem na linha {index + 1}, CPF: {cpf_cliente}\n"
+                f"Tipo do erro: {erro_detalhado['tipo_erro']}\n"
+                f"Mensagem: {erro_detalhado['erro']}\n"
+                f"Valores que causaram erro:\n"
+                f"PMT: {valores_debug['PMT']['valor']} (tipo: {valores_debug['PMT']['tipo']}, processado: {valores_debug['PMT']['processado']})\n"
+                f"PRAZO: {valores_debug['PRAZO']['valor']} (tipo: {valores_debug['PRAZO']['tipo']}, processado: {valores_debug['PRAZO']['processado']})\n"
+                f"Bruta 35: {valores_debug['Bruta 35']['valor']} (tipo: {valores_debug['Bruta 35']['tipo']}, processado: {valores_debug['Bruta 35']['processado']})\n"
+                f"Data Envio: {valores_debug['data_envio']['valor']} (tipo: {valores_debug['data_envio']['tipo']})\n"
+                f"Cliente ID: {valores_debug['cliente_id']['valor']} (tipo: {valores_debug['cliente_id']['tipo']})\n"
+                f"Cliente Nome: {erro_detalhado['cliente_info']['nome']}\n"
+                f"Cliente CPF: {erro_detalhado['cliente_info']['cpf']}\n"
+                f"Campanha ID: {valores_debug['campanha_id']['valor']}"
+            )
+            
             linhas_com_erro.append(erro_msg)
             print(erro_msg)
             continue  # Continua para a próxima linha

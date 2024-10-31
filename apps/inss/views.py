@@ -50,63 +50,83 @@ def calcular_status_dias(agendamento, hoje):
     
 # Funções auxiliares e de processamento
 def post_venda_tabulacao(form_data, funcionario):
-    '''Processa a tabulação de vendas para um agendamento.'''
     print("\n\n----- Iniciando post_venda_tabulacao -----\n")
     mensagem = {'texto': '', 'classe': ''}
 
-    print("\n\nIniciando o processamento da tabulação de vendas.")
-    print(f"\nDados recebidos: {form_data}")
-
     try:
-        # Extraindo dados do formulário para um dicionário
+        # Extraindo dados do formulário
         tabulacao_data = {
             'agendamento_id': form_data.get('agendamento_id'),
             'vendedor_id': form_data.get('vendedor_id'),
             'tabulacao_vendedor': form_data.get('tabulacao_vendedor'),
-            'observacao': form_data.get('observacao'),
+            'observacao_vendedor': form_data.get('observacao_vendedor'),
             'nome_cliente': form_data.get('nome_cliente'),
-            'cpf_cliente': form_data.get('cpf_cliente'),
-            'numero_cliente': form_data.get('numero_cliente'),
-            'dia_agendado': form_data.get('dia_agendado'),
-            'tabulacao_atendente': form_data.get('tabulacao_atendente')
         }
-        if not tabulacao_data['agendamento_id']:
-            print("Agendamento ID está vazio. O formulário não será processado.")
-            mensagem = {'texto': 'Erro: O ID do agendamento não pode estar vazio.', 'classe': 'error'}
-            return mensagem  # Ou outra ação apropriada
 
-        print(f"\nDados extraídos para processamento: {tabulacao_data}")
+        # Dados específicos para FECHOU NEGOCIO
+        if tabulacao_data['tabulacao_vendedor'] == 'FECHOU NEGOCIO':
+            tabulacao_data.update({
+                'tipo_negociacao': form_data.get('tipo_negociacao'),
+                'banco': form_data.get('banco'),
+                'subsidio': form_data.get('subsidio'),
+                'tac': form_data.get('tac'),
+                'acao': form_data.get('acao'),
+                'associacao': form_data.get('associacao'),
+                'aumento': form_data.get('aumento')
+            })
 
-        # Obtém o agendamento correspondente
+        # Validações dos campos obrigatórios para FECHOU NEGOCIO
+        if tabulacao_data['tabulacao_vendedor'] == 'FECHOU NEGOCIO':
+            campos_obrigatorios = [
+                'tipo_negociacao', 'banco', 'subsidio', 'tac', 
+                'acao', 'associacao', 'aumento'
+            ]
+            campos_faltantes = [campo for campo in campos_obrigatorios 
+                              if not tabulacao_data.get(campo)]
+            
+            if campos_faltantes:
+                mensagem = {
+                    'texto': f'Campos obrigatórios não preenchidos: {", ".join(campos_faltantes)}',
+                    'classe': 'error'
+                }
+                return mensagem
+
+        # Obtém e atualiza o agendamento
         agendamento = Agendamento.objects.get(id=tabulacao_data['agendamento_id'])
-        print(f"Agendamento encontrado: {agendamento}")
-
-        # Verifica e atualiza a tabulacao_atendente se necessário
-        if agendamento.tabulacao_atendente != 'CONFIRMADO':
-            agendamento.tabulacao_atendente = 'CONFIRMADO'
-            print("Tabulação do atendente atualizada para CONFIRMADO")
-
-        # Obtém o vendedor responsável
         vendedor_loja = Funcionario.objects.get(id=tabulacao_data['vendedor_id'])
-        print(f"Vendedor encontrado: {vendedor_loja}")
 
-        # Atualiza os dados de venda no agendamento
+        # Atualiza campos básicos
         agendamento.vendedor_loja = vendedor_loja
         agendamento.tabulacao_vendedor = tabulacao_data['tabulacao_vendedor']
+        agendamento.observacao_vendedor = tabulacao_data.get('observacao_vendedor')
 
-        if tabulacao_data.get('observacao'):
-            agendamento.observacao_vendedor = tabulacao_data['observacao']
+        # Atualiza campos específicos se FECHOU NEGOCIO
+        if tabulacao_data['tabulacao_vendedor'] == 'FECHOU NEGOCIO':
+            agendamento.tipo_negociacao = tabulacao_data['tipo_negociacao'].upper()
+            agendamento.banco = tabulacao_data['banco'].upper()
+            agendamento.subsidio = tabulacao_data['subsidio']
+            # Converte o valor TAC para decimal
+            tac_valor = tabulacao_data['tac'].replace('R$', '').replace('.', '').replace(',', '.')
+            agendamento.tac = Decimal(tac_valor)
+            agendamento.acao = tabulacao_data['acao']
+            agendamento.associacao = tabulacao_data['associacao']
+            agendamento.aumento = tabulacao_data['aumento']
 
-        print("Dados do agendamento atualizados.")
-
-        # Salva as alterações
         agendamento.save()
-        print("Agendamento salvo com sucesso.")
 
         # Criar log de alteração
+        log_mensagem = (f"Tabulação de vendas atualizada. "
+                       f"Vendedor: {vendedor_loja.nome}, "
+                       f"Tabulação: {tabulacao_data['tabulacao_vendedor']}")
+        
+        if tabulacao_data['tabulacao_vendedor'] == 'FECHOU NEGOCIO':
+            log_mensagem += (f". Negócio: {tabulacao_data['tipo_negociacao']}, "
+                           f"Banco: {tabulacao_data['banco']}, "
+                           f"TAC: R$ {tabulacao_data['tac']}")
+
         LogAlteracao.objects.create(
             agendamento_id=str(agendamento.id),
-            mensagem=f"Tabulação de vendas atualizada. Vendedor: {vendedor_loja.nome}, Tabulação: {tabulacao_data['tabulacao_vendedor']}. Tabulação do atendente atualizada para CONFIRMADO.",
+            mensagem=log_mensagem,
             status=True,
             funcionario=funcionario
         )
@@ -114,39 +134,17 @@ def post_venda_tabulacao(form_data, funcionario):
         mensagem['texto'] = 'Tabulação de vendas atualizada com sucesso!'
         mensagem['classe'] = 'success'
 
-    except Agendamento.DoesNotExist:
-        mensagem['texto'] = 'Erro: Agendamento não encontrado.'
-        mensagem['classe'] = 'error'
-        print("Erro: Agendamento não encontrado.")
-        LogAlteracao.objects.create(
-            agendamento_id="N/A",
-            mensagem=f"Erro ao atualizar tabulação de vendas: Agendamento não encontrado",
-            status=False,
-            funcionario=funcionario
-        )
-    except Funcionario.DoesNotExist:
-        mensagem['texto'] = 'Erro: Vendedor não encontrado.'
-        mensagem['classe'] = 'error'
-        print("Erro: Vendedor não encontrado.")
-        LogAlteracao.objects.create(
-            agendamento_id=str(agendamento.id) if 'agendamento' in locals() else "N/A",
-            mensagem=f"Erro ao atualizar tabulação de vendas: Vendedor não encontrado",
-            status=False,
-            funcionario=funcionario
-        )
     except Exception as e:
         mensagem['texto'] = f'Erro ao atualizar a tabulação: {str(e)}'
         mensagem['classe'] = 'error'
-        print(f"Erro ao atualizar a tabulação: {str(e)}")
+        print(f"Erro: {str(e)}")
         LogAlteracao.objects.create(
-            agendamento_id=str(agendamento.id) if 'agendamento' in locals() else "N/A",
+            agendamento_id=str(tabulacao_data.get('agendamento_id', 'N/A')),
             mensagem=f"Erro ao atualizar tabulação de vendas: {str(e)}",
             status=False,
             funcionario=funcionario
         )
 
-    print(f"Mensagem final: {mensagem}\n\n")
-    print("\n----- Finalizando post_venda_tabulacao -----\n")
     return mensagem
 
 
@@ -562,6 +560,52 @@ def render_all_forms(request):
                     'classe': 'error'
                 }
                 print("Erro no formulário de lista de clientes.")
+
+        elif form_type == 'status_tac':
+            print("\nProcessando atualização de status TAC...")
+            status_data = {
+                'agendamento_id': request.POST.get('agendamento_id'),
+                'status': request.POST.get('status_tac')
+            }
+            
+            if not status_data['agendamento_id']:
+                mensagem = {
+                    'texto': 'Erro: ID do agendamento não fornecido',
+                    'classe': 'error'
+                }
+            else:
+                try:
+                    agendamento = Agendamento.objects.get(id=status_data['agendamento_id'])
+                    agendamento.status_tac = status_data['status']
+                    
+                    # Se foi marcado como pago, registra a data
+                    if status_data['status'] == 'PAGO':
+                        agendamento.data_pagamento_tac = timezone.now()
+                    
+                    agendamento.save()
+
+                    # Registra o log
+                    LogAlteracao.objects.create(
+                        agendamento_id=str(agendamento.id),
+                        mensagem=f"Status do TAC atualizado para {status_data['status']}",
+                        status=True,
+                        funcionario=funcionario_logado
+                    )
+
+                    mensagem = {
+                        'texto': 'Status do TAC atualizado com sucesso!',
+                        'classe': 'success'
+                    }
+                except Agendamento.DoesNotExist:
+                    mensagem = {
+                        'texto': 'Erro: Agendamento não encontrado',
+                        'classe': 'error'
+                    }
+                except Exception as e:
+                    mensagem = {
+                        'texto': f'Erro ao atualizar status: {str(e)}',
+                        'classe': 'error'
+                    }
     else:
         print("\nRequest não é POST. Carregando formulários vazios...")
 

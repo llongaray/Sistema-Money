@@ -129,25 +129,20 @@ main.darkmode tbody tr:hover {
     position: relative;
     width: 90%;
     max-width: 600px;
-    margin: auto; /* Permite centralização automática */
+    margin: auto;
     animation: modalFadeIn 0.3s ease-in-out;
-    height: fit-content;
-    
-    /* Evita que modais muito altos ultrapassem a viewport */
-    max-height: calc(100vh - 40px);
-    overflow-y: auto;
+    min-height: fit-content;
+    max-height: 90vh;
+    overflow: hidden;
 }
 
 .modal-sec .modal-content {
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    height: fit-content;
+    height: 100%;
     display: flex;
     flex-direction: column;
-    
-    /* Remove max-height daqui pois já está no modal-dialog */
-    position: relative;
 }
 
 .modal-sec .modal-header {
@@ -185,6 +180,7 @@ main.darkmode tbody tr:hover {
     padding: 1.5rem;
     overflow-y: auto;
     flex: 1;
+    max-height: calc(90vh - 120px); /* Altura máxima considerando header e padding */
 }
 
 .modal-sec .form-label {
@@ -243,6 +239,10 @@ main.darkmode tbody tr:hover {
     .modal-sec .modal-dialog {
         margin: auto;
         max-height: calc(100vh - 20px);
+    }
+
+    .modal-sec .modal-body {
+        max-height: calc(100vh - 140px); /* Ajuste para mobile */
     }
 }
 
@@ -390,4 +390,59 @@ main.darkmode tbody tr:hover {
     outline: none;
     border-color: #007bff;
     box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #007bff;
+    text-decoration: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.btn-link:hover {
+    text-decoration: underline;
+    color: #0056b3;
+}
+
+/* Ajuste para o container de FECHOU NEGOCIO */
+#fechouNegocioContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin-bottom: 1rem;
+}
+
+/* Ajustes específicos para campos dentro do fechouNegocioContainer */
+#fechouNegocioContainer .mb-3 {
+    flex: 1 1 auto;
+    min-width: 200px;
+    margin: 0 !important;
+}
+
+/* Ajustes específicos por tipo de campo */
+#fechouNegocioContainer .mb-3:has(#tipoNegociacao) {
+    min-width: 250px; /* Campo maior para tipo negociação */
+}
+
+#fechouNegocioContainer .mb-3:has(#banco) {
+    min-width: 200px;
+}
+
+#fechouNegocioContainer .mb-3:has(#tac) {
+    min-width: 150px; /* Campo menor para TAC */
+}
+
+#fechouNegocioContainer .mb-3:has(select) {
+    min-width: 180px; /* Tamanho padrão para selects */
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    #fechouNegocioContainer .mb-3 {
+        width: 100%;
+        min-width: 100%;
+    }
 }

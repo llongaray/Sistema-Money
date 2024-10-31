@@ -46,14 +46,31 @@
         <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalReagendamentoTabela')">
             Reagendamento
         </button>
-        {% get_user_cargo user as user_cargo %}
-        {% if user_cargo.cargo == 'VENDEDOR(A)' or user.is_superuser %}
+        {% if user.is_superuser %}
             <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalListaClientes')">
                 Clientes Presentes na Loja
             </button>
             <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalTodosAgendamentos')">
                 Todos os Agendamentos
             </button>
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalAgendamentosTAC')">
+                Agendamentos com TAC
+            </button>
+        {% else %}
+            {% get_user_cargo user as user_cargo %}
+            {% if user_cargo.cargo == 'VENDEDOR(A)' %}
+                <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalListaClientes')">
+                    Clientes Presentes na Loja
+                </button>
+                <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalTodosAgendamentos')">
+                    Todos os Agendamentos
+                </button>
+            {% endif %}
+            {% if user_cargo.cargo == 'SUPERVISOR GERAL' %}
+                <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalAgendamentosTAC')">
+                    Agendamentos com TAC
+                </button>
+            {% endif %}
         {% endif %}
     </div>
 
@@ -150,12 +167,9 @@
                             {% for agendamento in agendamentos_confirmacao %}
                             <tr>
                                 <td>
-                                    <a href="#" 
-                                       class="abrir-sub-modal" 
-                                       data-agendamento-id="{{ agendamento.id }}"
-                                       onclick="abrirSubModal('#modalConfirmacaoAgendamento', 'confirmacao', {{ agendamento.id }})">
+                                    <button type="button" class="btn-link abrir-sub-modal" data-agendamento-id="{{ agendamento.id }}" onclick="abrirSubModal('#modalConfirmacaoAgendamento', 'confirmacao', {{ agendamento.id }})">
                                         {{ agendamento.nome_cliente }}
-                                    </a>
+                                    </button>
                                 </td>
                                 <td>{{ agendamento.numero_cliente }}</td>
                                 <td>{{ agendamento.dia_agendado }}</td>
@@ -198,12 +212,9 @@
                             {% for agendamento in agendamentos_reagendamento %}
                             <tr>
                                 <td>
-                                    <a href="#" 
-                                       class="abrir-sub-modal" 
-                                       data-agendamento-id="{{ agendamento.id }}"
-                                       onclick="abrirSubModal('#modalConfirmacaoAgendamento', 'confirmacao', {{ agendamento.id }})">
+                                    <button type="button" class="btn-link abrir-sub-modal" data-agendamento-id="{{ agendamento.id }}" onclick="abrirSubModal('#modalConfirmacaoAgendamento', 'confirmacao', {{ agendamento.id }})">
                                         {{ agendamento.nome_cliente }}
-                                    </a>
+                                    </button>
                                 </td>
                                 <td>{{ agendamento.numero_cliente }}</td>
                                 <td>{{ agendamento.dia_agendado }}</td>
@@ -288,6 +299,59 @@
         </div>
     </div>
 
+    <!-- Modal para Agendamentos com TAC -->
+    <div class="modal" id="modalAgendamentosTAC">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Agendamentos com TAC</h5>
+                    <button type="button" class="btn-close" data-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="wp-style-table">
+                        <thead>
+                            <tr>
+                                <th>Nome Cliente</th>
+                                <th>CPF</th>
+                                <th>Valor TAC</th>
+                                <th>Status</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for agendamento in agendamentos_tac %}
+                            <tr data-agendamento-id="{{ agendamento.id }}">
+                                <td>{{ agendamento.nome_cliente }}</td>
+                                <td>{{ agendamento.cpf_cliente }}</td>
+                                <td>{{ agendamento.tac }}</td>
+                                <td class="status-tac">{{ agendamento.status_tac }}</td>
+                                <td>
+                                    <form method="POST" action="{% url 'inss:all_forms' %}" class="status-tac-form">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="form_type" value="status_tac">
+                                        <input type="hidden" name="agendamento_id" value="{{ agendamento.id }}">
+                                        <select class="status-tac-select form-select" name="status_tac" 
+                                                onchange="this.form.submit()">
+                                            <option value="">Selecione...</option>
+                                            <option value="PAGO" {% if agendamento.status_tac == 'PAGO' %}selected{% endif %}>PAGO</option>
+                                            <option value="NAO_PAGO" {% if agendamento.status_tac == 'NAO_PAGO' %}selected{% endif %}>NÃO PAGO</option>
+                                            <option value="EM_ESPERA" {% if agendamento.status_tac == 'EM_ESPERA' %}selected{% endif %}>EM ESPERA</option>
+                                        </select>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center">Nenhum agendamento com TAC encontrado</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
 <!--***************************SUB MODAIS***************************-->
 
     <!-- Modal de Edição dos Detalhes do Cliente -->
@@ -352,6 +416,61 @@
                                 <option value="NÃO QUIS OUVIR">NÃO QUIS OUVIR</option>
                             </select>
                         </div>
+
+                        <!-- Grupo de campos para FECHOU NEGOCIO -->
+                        <div id="fechouNegocioContainer" style="display: none;">
+                            <div class="mb-3">
+                                <label for="tipoNegociacao" class="form-label">Tipo Negociação</label>
+                                <input type="text" class="form-control text-uppercase" id="tipoNegociacao" name="tipo_negociacao">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="banco" class="form-label">Banco</label>
+                                <input type="text" class="form-control text-uppercase" id="banco" name="banco">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="subsidio" class="form-label">Subsídio</label>
+                                <select class="form-select" id="subsidio" name="subsidio">
+                                    <option value="">Selecione uma opção</option>
+                                    <option value="VIDEO">VIDEO</option>
+                                    <option value="SELFIE">SELFIE</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="tac" class="form-label">TAC</label>
+                                <input type="text" class="form-control money" id="tac" name="tac">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="acao" class="form-label">Ação</label>
+                                <select class="form-select" id="acao" name="acao">
+                                    <option value="">Selecione uma opção</option>
+                                    <option value="COM AÇÃO">COM AÇÃO</option>
+                                    <option value="SEM AÇÃO">SEM AÇÃO</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="associacao" class="form-label">Associação</label>
+                                <select class="form-select" id="associacao" name="associacao">
+                                    <option value="">Selecione uma opção</option>
+                                    <option value="COM ASSOCIAÇÃO">COM ASSOCIAÇÃO</option>
+                                    <option value="SEM ASSOCIAÇÃO">SEM ASSOCIAÇÃO</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="aumento" class="form-label">Aumento</label>
+                                <select class="form-select" id="aumento" name="aumento">
+                                    <option value="">Selecione uma opção</option>
+                                    <option value="COM AUMENTO">COM AUMENTO</option>
+                                    <option value="SEM AUMENTO">SEM AUMENTO</option>
+                                </select>
+                            </div>
+                        </div>
+
                         <div class="mb-3" id="observacaoVendedorContainer" style="display: none;">
                             <label for="observacaoVendedor" class="form-label">Observação do Vendedor</label>
                             <textarea class="form-control" id="observacaoVendedor" name="observacao_vendedor" rows="3"></textarea>
@@ -435,6 +554,9 @@
 <!-- ========================= BIBLIOTECAS E ARQUIVOS EXTERNOS ========================= -->
 <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />
+<script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+<script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
 
 <!-- Arquivos estáticos próprios -->
 <script src="{% static 'darkmode.js' %}"></script>

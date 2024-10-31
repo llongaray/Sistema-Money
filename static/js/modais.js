@@ -160,6 +160,7 @@ function preencherDadosSubModal(subModal, tipoModal, id) {
             const tabulacaoVendedor = subModal.querySelector('#tabulacaoVendedor');
             const observacaoVendedor = subModal.querySelector('#observacaoVendedor');
             const observacaoContainer = subModal.querySelector('#observacaoVendedorContainer');
+            const fechouNegocioContainer = subModal.querySelector('#fechouNegocioContainer');
 
             if (tabulacaoVendedor && dados.tabulacaoVendedor) {
                 tabulacaoVendedor.value = dados.tabulacaoVendedor;
@@ -169,6 +170,9 @@ function preencherDadosSubModal(subModal, tipoModal, id) {
                     observacaoVendedor.value = dados.observacaoVendedor;
                     if (observacaoContainer) {
                         observacaoContainer.style.display = 'block';
+                    }
+                    if (fechouNegocioContainer && dados.tabulacaoVendedor === 'FECHOU NEGOCIO') {
+                        fechouNegocioContainer.style.display = 'block';
                     }
                 }
             }
@@ -228,7 +232,7 @@ function preencherTabelaClientes() {
         clientes.forEach((cliente, index) => {
             const isRecente = index === 0;
             const nomeElement = isRecente ? 
-                `<a href="#" class="abrir-sub-modal" onclick="abrirSubModal('#modalEdicaoCliente', 'listaClientes', ${cliente.id})">${cliente.nome}</a>` :
+                `<button type="button" class="btn-link abrir-sub-modal" onclick="abrirSubModal('#modalEdicaoCliente', 'listaClientes', ${cliente.id})">${cliente.nome}</button>` :
                 `<p class="text-muted">${cliente.nome}</p>`;
 
             const row = `
@@ -305,7 +309,7 @@ function preencherTabelaTodosAgendamentos() {
         agendamentos.forEach((agendamento, index) => {
             const isRecente = index === 0;
             const nomeElement = isRecente ? 
-                `<a href="#" class="abrir-sub-modal" onclick="abrirSubModal('#modalEdicaoCliente', 'listaClientes', '${agendamento.id}')">${agendamento.nome_cliente}</a>` :
+                `<button type="button" class="btn-link abrir-sub-modal" onclick="abrirSubModal('#modalEdicaoCliente', 'listaClientes', '${agendamento.id}')">${agendamento.nome_cliente}</button>` :
                 `<p class="text-muted">${agendamento.nome_cliente}</p>`;
 
             const dataCompleta = new Date(agendamento.dia_agendado);
@@ -361,17 +365,17 @@ function handleTabulacaoVendedorChange() {
     const tabulacaoSelect = modal.querySelector('#tabulacaoVendedor');
     const selectedValue = tabulacaoSelect.value;
     
-    console.log('Select dropdown vendedor:', tabulacaoSelect); 
-    console.log('Valor selecionado no dropdown vendedor:', selectedValue);
-    
     const observacaoContainer = modal.querySelector('#observacaoVendedorContainer');
-    observacaoContainer.style.display = 'none';
+    const fechouNegocioContainer = modal.querySelector('#fechouNegocioContainer');
     
-    if (selectedValue && selectedValue !== '') {
-        console.log('Tabulação selecionada, mostrando campo de observação');
+    observacaoContainer.style.display = 'none';
+    fechouNegocioContainer.style.display = 'none';
+    
+    if (selectedValue === 'FECHOU NEGOCIO') {
         observacaoContainer.style.display = 'block';
-    } else {
-        console.log('Nenhuma tabulação selecionada');
+        fechouNegocioContainer.style.display = 'block';
+    } else if (selectedValue && selectedValue !== '') {
+        observacaoContainer.style.display = 'block';
     }
 }
 
@@ -429,6 +433,16 @@ document.addEventListener('DOMContentLoaded', function() {
             closeSubModal(modalId);
         });
     });
+
+    // Adiciona o evento de clique em todos os modal-sec
+    document.querySelectorAll('.modal-sec').forEach(modalSec => {
+        modalSec.addEventListener('click', function(event) {
+            // Se o clique foi diretamente no .modal-sec (backdrop)
+            if (event.target === this) {
+                closeSubModal(this.id);
+            }
+        });
+    });
 });
 
 document.querySelectorAll('.modal').forEach(modal => {
@@ -474,6 +488,11 @@ $(document).ready(function() {
 
     // Estilo para cursor pointer na coluna ordenável
     $('.sortable').css('cursor', 'pointer');
+
+    // Formatação para caixa alta
+    $('.text-uppercase').on('input', function() {
+        this.value = this.value.toUpperCase();
+    });
 });
 
 // Funções de Controle de Modal
@@ -489,18 +508,20 @@ function closeSubModal(modalId) {
     }
 }
 
-// Atualizar a função handleModalClick para não fechar modais principais quando clicando em sub-modais
+// Atualizar a função handleModalClick para lidar corretamente com cliques fora do modal
 function handleModalClick(event) {
-    const modal = event.target.closest('.modal, .modal-sec');
-    if (!modal) return;
+    // Verifica se o clique foi em um modal-sec
+    const modalSec = event.target.closest('.modal-sec');
+    if (modalSec && event.target === modalSec) {
+        // Se clicou no backdrop do modal-sec
+        closeSubModal(modalSec.id);
+        return;
+    }
 
-    // Se o clique foi no backdrop (fora do conteúdo do modal)
-    if (event.target === modal) {
-        if (modal.classList.contains('modal-sec')) {
-            closeSubModal(modal.id);
-        } else {
-            closeAllModals();
-        }
+    // Verifica se o clique foi em um modal normal
+    const modal = event.target.closest('.modal');
+    if (modal && event.target === modal) {
+        closeAllModals();
     }
 }
 
@@ -530,4 +551,55 @@ function handleSubModalFormSubmit(event) {
             console.error('Erro ao enviar formulário:', error);
         }
     });
+}
+
+// Função para atualizar status TAC
+function atualizarStatusTAC(selectElement, agendamentoId) {
+    const novoStatus = selectElement.value;
+    if (!novoStatus) return;
+
+    const row = $(selectElement).closest('tr');
+    const statusCell = row.find('.status-tac');
+
+    $.ajax({
+        url: '/inss/atualizar_status_tac/',
+        method: 'POST',
+        data: {
+            agendamento_id: agendamentoId,
+            status: novoStatus,
+            csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                // Atualiza o status na tabela
+                statusCell.text(novoStatus);
+                
+                // Feedback visual
+                mostrarMensagem('Status atualizado com sucesso!', 'success');
+                
+                // Se foi marcado como PAGO, atualiza a interface
+                if (novoStatus === 'PAGO') {
+                    row.addClass('tac-pago');
+                } else {
+                    row.removeClass('tac-pago');
+                }
+            } else {
+                mostrarMensagem('Erro ao atualizar status: ' + response.error, 'error');
+                // Reverte a seleção em caso de erro
+                $(selectElement).val(statusCell.text());
+            }
+        },
+        error: function() {
+            mostrarMensagem('Erro ao comunicar com o servidor', 'error');
+            // Reverte a seleção em caso de erro
+            $(selectElement).val(statusCell.text());
+        }
+    });
+}
+
+// Função auxiliar para mostrar mensagens
+function mostrarMensagem(texto, tipo) {
+    const mensagem = $(`<div class="alert alert-${tipo}">${texto}</div>`);
+    $('#mensagens').append(mensagem);
+    setTimeout(() => mensagem.fadeOut('slow', function() { $(this).remove(); }), 3000);
 }
