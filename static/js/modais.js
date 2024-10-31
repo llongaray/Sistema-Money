@@ -248,6 +248,24 @@ function preencherTabelaClientes() {
     console.log('Preenchimento da tabela concluído');
 }
 
+// Variável global para controlar a direção da ordenação
+let sortDirection = 'desc'; // Começa com mais recente
+
+// Função para converter o formato dos dados
+function converterParaFormatoClienteLoja(agendamento) {
+    return {
+        id: agendamento.id,
+        nome: agendamento.nome_cliente,
+        cpf: agendamento.cpf_cliente,
+        numero: agendamento.numero_cliente,
+        diaAgendado: agendamento.dia_agendado,
+        diaAgendadoFormatado: agendamento.diaAgendadoFormatado,
+        tabulacaoAtendente: agendamento.tabulacao_atendente,
+        atendenteAgendou: agendamento.atendente_nome,
+        lojaAgendada: agendamento.loja_nome
+    };
+}
+
 function preencherTabelaTodosAgendamentos() {
     console.log('Iniciando preenchimento da tabela de todos os agendamentos');
     
@@ -261,8 +279,22 @@ function preencherTabelaTodosAgendamentos() {
     $tabela.empty();
     console.log('Tabela limpa');
 
+    // Ordenar o dicionário por data
+    todosAgendamentos.sort((a, b) => {
+        const dateA = new Date(a.dia_agendado);
+        const dateB = new Date(b.dia_agendado);
+        return sortDirection === 'desc' ? dateB - dateA : dateA - dateB;
+    });
+
+    // Converter e armazenar dados no formato correto
+    todosAgendamentos.forEach(agendamento => {
+        window.clientesLoja = window.clientesLoja || {};
+        window.clientesLoja[agendamento.id] = converterParaFormatoClienteLoja(agendamento);
+    });
+
+    // Agrupar por CPF
     const agendamentosPorCPF = {};
-    todosAgendamentosData.forEach(agendamento => {
+    todosAgendamentos.forEach(agendamento => {
         if (!agendamentosPorCPF[agendamento.cpf_cliente]) {
             agendamentosPorCPF[agendamento.cpf_cliente] = [];
         }
@@ -270,20 +302,21 @@ function preencherTabelaTodosAgendamentos() {
     });
 
     Object.values(agendamentosPorCPF).forEach(agendamentos => {
-        agendamentos.sort((a, b) => new Date(b.dia_agendado) - new Date(a.dia_agendado));
-
         agendamentos.forEach((agendamento, index) => {
             const isRecente = index === 0;
             const nomeElement = isRecente ? 
-                `<a href="#" class="abrir-sub-modal" onclick="abrirSubModal('#modalEdicaoCliente', 'listaClientes', ${agendamento.id})">${agendamento.nome_cliente}</a>` :
+                `<a href="#" class="abrir-sub-modal" onclick="abrirSubModal('#modalEdicaoCliente', 'listaClientes', '${agendamento.id}')">${agendamento.nome_cliente}</a>` :
                 `<p class="text-muted">${agendamento.nome_cliente}</p>`;
+
+            const dataCompleta = new Date(agendamento.dia_agendado);
+            const dataFormatada = dataCompleta.toISOString().split('T')[0];
 
             const row = `
                 <tr>
                     <td>${nomeElement}</td>
                     <td>${agendamento.cpf_cliente}</td>
                     <td>${agendamento.numero_cliente}</td>
-                    <td>${agendamento.diaAgendadoFormatado}</td>
+                    <td data-date="${agendamento.dia_agendado}">${dataFormatada}</td>
                     <td>${agendamento.atendente_nome}</td>
                     <td>${agendamento.loja_nome}</td>
                     <td>${agendamento.status_dias}</td>
@@ -291,7 +324,6 @@ function preencherTabelaTodosAgendamentos() {
             `;
             
             $tabela.append(row);
-            console.log(`Linha adicionada para agendamento ${agendamento.id}`);
         });
     });
     
@@ -384,6 +416,19 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.error('Modal de edição cliente não encontrado');
     }
+
+    // Adicionar listeners para os formulários em sub-modais
+    document.querySelectorAll('.modal-sec form').forEach(form => {
+        form.addEventListener('submit', handleSubModalFormSubmit);
+    });
+
+    // Atualizar os listeners de botões close em sub-modais
+    document.querySelectorAll('.modal-sec .btn-close').forEach(button => {
+        button.addEventListener('click', function() {
+            const modalId = this.closest('.modal-sec').id;
+            closeSubModal(modalId);
+        });
+    });
 });
 
 document.querySelectorAll('.modal').forEach(modal => {
@@ -409,4 +454,80 @@ $(document).ready(function() {
         openModal('modalListaClientes');
         return false;
     });
+
+    // Listener para o filtro de CPF
+    $("#filtroCPF").on("keyup", function() {
+        const value = $(this).val().toLowerCase();
+        $("#tabelaTodosAgendamentos tbody tr").filter(function() {
+            $(this).toggle($(this).children("td:eq(1)").text().toLowerCase().indexOf(value) > -1);
+        });
+    });
+
+    // Listener para ordenação por data
+    $('.sortable[data-sort="data"]').on('click', function() {
+        sortDirection = sortDirection === 'desc' ? 'asc' : 'desc';
+        const icon = $(this).find('i');
+        icon.removeClass('fa-sort-down fa-sort-up')
+            .addClass(sortDirection === 'desc' ? 'fa-sort-down' : 'fa-sort-up');
+        preencherTabelaTodosAgendamentos();
+    });
+
+    // Estilo para cursor pointer na coluna ordenável
+    $('.sortable').css('cursor', 'pointer');
 });
+
+// Funções de Controle de Modal
+function closeSubModal(modalId) {
+    const cleanedModalId = modalId.replace('#', '');
+    const modal = document.getElementById(cleanedModalId);
+    
+    if (modal && modal.classList.contains('modal-sec')) {
+        modal.classList.remove('active');
+        console.log(`Sub-modal com ID: ${cleanedModalId} fechado com sucesso`);
+    } else {
+        console.error(`Sub-modal com ID: ${cleanedModalId} não encontrado ou não é um modal secundário`);
+    }
+}
+
+// Atualizar a função handleModalClick para não fechar modais principais quando clicando em sub-modais
+function handleModalClick(event) {
+    const modal = event.target.closest('.modal, .modal-sec');
+    if (!modal) return;
+
+    // Se o clique foi no backdrop (fora do conteúdo do modal)
+    if (event.target === modal) {
+        if (modal.classList.contains('modal-sec')) {
+            closeSubModal(modal.id);
+        } else {
+            closeAllModals();
+        }
+    }
+}
+
+// Adicionar função para lidar com o submit dos formulários em sub-modais
+function handleSubModalFormSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const subModal = form.closest('.modal-sec');
+    
+    // Enviar o formulário via AJAX
+    $.ajax({
+        url: form.action,
+        method: form.method,
+        data: new FormData(form),
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            console.log('Formulário enviado com sucesso');
+            // Fechar apenas o sub-modal após o sucesso
+            if (subModal) {
+                closeSubModal(subModal.id);
+            }
+            // Atualizar a página ou fazer outras ações necessárias
+            location.reload();
+        },
+        error: function(xhr, status, error) {
+            console.error('Erro ao enviar formulário:', error);
+        }
+    });
+}

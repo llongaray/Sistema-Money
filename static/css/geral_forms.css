@@ -152,7 +152,6 @@ form input[type="checkbox"], form input[type="radio"] {
 /* ESTILOS PARA TOOLTIP NO BOTÃO */
 /* ========================= */
 form button:hover::after {
-    content: attr(data-tooltip);
     background-color: rgba(0, 0, 0, 0.8);
     color: #fff;
     padding: 5px;
@@ -332,4 +331,72 @@ main.darkmode .form-control:focus,
 main.darkmode select:focus {
     border-color: var(--azul-escuro-500); /* Cor da borda ao focar */
     box-shadow: 0 0 4px rgba(54, 143, 251, 0.4); /* Sombra ao focar */
+}
+
+/* ========================= */
+/* ESTILOS PARA LISTA DE CARGOS */
+/* ========================= */
+#listaCargos {
+    margin-top: 15px;
+    padding: 0;
+    width: 100%;
+}
+
+#listaCargos .list-group-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    background-color: var(--cor-branco-50);
+    border: 1px solid var(--cor-cinza-claro);
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+#listaCargos .list-group-item:hover {
+    background-color: var(--cor-branco-100);
+    transform: translateX(5px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+#listaCargos .list-group-item span {
+    font-size: 14px;
+    color: var(--cor-cinza);
+}
+
+#listaCargos .btn-danger {
+    padding: 6px 10px;
+    background-color: transparent;
+    border: none;
+    color: var(--cor-cinza);
+    transition: all 0.3s ease;
+}
+
+#listaCargos .btn-danger:hover {
+    color: var(--vermelho-500);
+    transform: scale(1.1);
+}
+
+#listaCargos .fa-trash {
+    font-size: 16px;
+}
+
+/* Estilo para o modo escuro */
+main.darkmode #listaCargos .list-group-item {
+    background-color: var(--dark-container-background);
+    border-color: var(--dark-border-color);
+    color: var(--dark-text-color);
+}
+
+main.darkmode #listaCargos .list-group-item:hover {
+    background-color: var(--dark-modal-background);
+}
+
+main.darkmode #listaCargos .btn-danger {
+    color: var(--cor-branco-300);
+}
+
+main.darkmode #listaCargos .btn-danger:hover {
+    color: var(--vermelho-400);
 }

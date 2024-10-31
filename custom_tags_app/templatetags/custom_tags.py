@@ -49,7 +49,6 @@ def get_user_cargo(user):
     else:
         print(f"Aviso: Usuário {user.username} não tem um funcionário associado.")
         return {'departamento': None, 'nivel': None, 'cargo': None}
-<<<<<<< HEAD
 
 @register.simple_tag
 def can_view_button(user, button_type):
@@ -109,5 +108,3 @@ def get_user_groups(user):
         'groups': grupos,
         'is_admin': is_admin
     }
-=======
->>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5

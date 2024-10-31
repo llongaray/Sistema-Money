@@ -10,11 +10,6 @@ urlpatterns = [
     # Rota para a consulta de cliente
     # path('consulta-cliente/', consulta_cliente, name='consulta_cliente'),
 
-<<<<<<< HEAD
-=======
-    #ranking
-    path('update/', update_ranking, name='update_ranking'),
->>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
 
     # Rota para a ficha de cliente
     path('ficha-cliente/<int:id>/', get_ficha_cliente, name='ficha_cliente'),

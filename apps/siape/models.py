@@ -104,10 +104,7 @@ class RegisterMeta(models.Model):
     valor = models.DecimalField(max_digits=10, decimal_places=2)
     tipo = models.CharField(max_length=6, choices=TIPO_CHOICES, default='GERAL')
     setor = models.CharField(max_length=100, null=True, blank=True)
-<<<<<<< HEAD
     loja = models.CharField(max_length=100, null=True, blank=True)  # Novo campo
-=======
->>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
     range_data_inicio = models.DateField()
     range_data_final = models.DateField()
     status = models.BooleanField(default=False)
@@ -116,8 +113,4 @@ class RegisterMeta(models.Model):
     def __str__(self):
         if self.tipo == 'GERAL':
             return f'Meta Geral: {self.valor:.2f}'
-<<<<<<< HEAD
         return f'Meta {self.setor} {self.loja or ""}: {self.valor:.2f}'
-=======
-        return f'Meta {self.setor}: {self.valor:.2f}'
->>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5

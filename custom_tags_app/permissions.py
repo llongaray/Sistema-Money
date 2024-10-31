@@ -47,7 +47,6 @@ def check_access(departamento, nivel_minimo):
                 print(f"Acesso negado. Usuário não pertence ao departamento {departamento}.")
                 return HttpResponse(f"Acesso negado. Você não pertence ao departamento {departamento}.", status=403)
 
-<<<<<<< HEAD
             niveis_hierarquia = {
                 'TOTAL': 5,
                 'SUPERVISOR GERAL': 4,
@@ -62,11 +61,6 @@ def check_access(departamento, nivel_minimo):
             
             if nivel_usuario < nivel_minimo_req:
                 print(f"Acesso negado. Nível do usuário ({nivel}) é inferior ao requerido ({nivel_minimo}).")
-=======
-            niveis = ['ESTÁGIO', 'PADRÃO', 'SUPERVISÃO', 'TOTAL']
-            if nivel and niveis.index(nivel) < niveis.index(nivel_minimo):
-                print(f"Acesso negado. Nível do usuário é inferior ao requerido.")
->>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
                 return HttpResponse(f"Acesso negado. Nível mínimo requerido: {nivel_minimo}.", status=403)
 
             print(f"Acesso concedido para {user.username}.")
