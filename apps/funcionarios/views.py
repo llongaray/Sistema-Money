@@ -763,6 +763,7 @@ def get_all_forms_and_objects(request):
     print("\n----- Finalizando get_all_forms_and_objects -----\n")
     return context_data
 
+<<<<<<< HEAD
 def delete_cargo(cargo_id):
     """Exclui um cargo com base no ID fornecido."""
     print("\n\n----- Iniciando delete_cargo -----\n")
@@ -810,6 +811,8 @@ def delete_cargo(cargo_id):
 
     print("\n----- Finalizando delete_cargo -----\n")
     return mensagem
+=======
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
 
 # ---------- RENDER ALL FORMS -----------------------
 def render_all_forms(request):
@@ -926,10 +929,13 @@ def render_all_forms(request):
             mensagem = delete_loja(loja_id)
             print("Resultado da exclusão de loja:", mensagem)
 
+<<<<<<< HEAD
         elif form_type == 'excluir_cargo':
             cargo_id = request.POST.get('cargo_id')
             mensagem = delete_cargo(cargo_id)
 
+=======
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
         # Atualizar context_data após o processamento do formulário
         context_data = get_all_forms_and_objects(request)
 

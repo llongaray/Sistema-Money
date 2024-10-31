@@ -1,0 +1,808 @@
+/* Reset global */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Coolvetica", sans-serif;
+}
+
+body {
+    background: #F6F0FA;
+}
+
+/* Container principal */
+main {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #F6F0FA;
+    gap: 1rem;
+    padding-top: 15px;
+}
+
+/* Cabeçalho */
+main header {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    height: 130px;
+    padding: 2.5rem 3rem 2.5rem 5rem;
+    background-color: #FFFFFF;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.08);
+}
+
+/* Título do Ranking */
+.ranking-title {
+    position: relative;
+    font-family: 'Russo One', sans-serif;
+    font-size: 3.5rem;
+    font-weight: 900;
+    color: #4F21A9;  /* Cor roxa padrão do seu tema */
+    text-transform: uppercase;
+    text-align: center;
+    padding: 20px;
+    display: inline-block;
+    margin: 0 auto;
+}
+
+.letter {
+    display: inline-block;
+    transform-origin: bottom;
+    opacity: 0;
+}
+
+/* Container de Cards */
+.container__cards {
+    display: flex;
+    flex-direction: row;
+    gap: 1.5rem;
+    flex: 1;
+    justify-content: flex-end;
+}
+
+.card {
+    background-color: #F6F0FA;
+    padding: 1rem;
+    border-radius: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 200px;
+    max-width: 280px;
+}
+
+/* Estilos específicos dos cards */
+.card.faturamento {
+    background-color: #E8F5E9;
+}
+
+.card.faturamento .icon {
+    background-color: #2E7D32;
+}
+
+.card.faturamento .valor,
+.card.faturamento .porcentagem {
+    color: #2E7D32;
+}
+
+.card.quantidade {
+    background-color: #E3F2FD;
+}
+
+.card.quantidade .icon {
+    background-color: #1565C0;
+}
+
+.card.quantidade .valor,
+.card.quantidade .porcentagem {
+    color: #1565C0;
+}
+
+.card.agendamentos {
+    background-color: #FFF3E0;
+}
+
+.card.agendamentos .icon {
+    background-color: #EF6C00;
+}
+
+.card.agendamentos .valor,
+.card.agendamentos .porcentagem {
+    color: #EF6C00;
+}
+
+/* Elementos internos dos cards */
+.card .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    background-color: #4F21A9;
+    border-radius: 0.5rem;
+}
+
+.card .icon i {
+    font-size: 1.8rem;
+    color: #FFFFFF;
+}
+
+.info__valores {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.info__valores .title {
+    font-size: 0.9rem;
+    color: #574A63;
+}
+
+.info__valores .valor {
+    font-size: 1.2rem;
+    color: #4F21A9;
+}
+
+.percentual {
+    display: flex;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+}
+
+.porcentagem {
+    color: #4F21A9;
+    font-weight: bold;
+}
+
+.txt {
+    color: #574A63;
+}
+
+/* Seção principal */
+main section {
+    width: 100%;
+    flex: 1;
+    padding: 0.2rem 2.5rem 1rem;
+    display: flex;
+    flex-direction: row;
+    gap: 2rem;
+}
+
+/* Container do Ranking */
+.container__ranking {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 2rem;
+}
+
+.container {
+    width: 50%;
+    height: 100%;
+    padding: 1.5rem;
+    display: flex;
+    background-color: #FFFFFF;
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* Box de Ranking */
+.box__ranking {
+    width: 200px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.foto__pos {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.foto__pos img {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    border: 4px solid #4F21A9;
+    object-fit: cover;
+}
+
+.info__foto {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 15px;
+}
+
+.valor {
+    font-weight: bold;
+    color: #574A63;
+    font-size: 1.1rem;
+}
+
+.circle__position {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 35px;
+    height: 35px;
+    background-color: #F20505;
+    border: 3px solid #F20505;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2;
+    font-weight: bold;
+    color: #FFFFFF;
+    transform: translate(5%, 5%);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Barras de posição */
+.bar {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    font-family: "Coolvetica", sans-serif;
+}
+
+.bar .nome {
+    font-family: "Coolvetica", sans-serif;
+    font-weight: bold;
+}
+
+.top1 .bar {
+    height: 300px;
+    background-color: #FFBF11;
+    padding: 10px 10px 25px;
+    border-radius: 15px;
+}
+
+.top2 .bar {
+    height: 250px;
+    background-color: #C0C0C0;
+    padding: 10px 10px 25px;
+    border-radius: 15px;
+}
+
+.top3 .bar {
+    height: 200px;
+    background-color: #CD7F32;
+    padding: 10px 10px 25px;
+    border-radius: 15px;
+}
+
+.icon i {
+    font-size: 6.5rem;
+    color: #FFFFFF;
+}
+
+/* Tabela */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #FFFFFF;
+}
+
+th, td {
+    padding: 0.5rem;
+    
+    text-align: center;
+    border-bottom: 1px solid #E0E0E0;
+}
+
+th {
+    font-weight: bold;
+    color: #4F21A9;
+    background-color: #F8F8F8;
+}
+
+td {
+    color: #574A63;
+    font-size: 0.9rem;
+}
+
+tbody {
+    display: block;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+thead, tbody tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+tr:hover {
+    background-color: #F6F0FA;
+}
+
+td img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.sort-icon {
+    cursor: pointer;
+    margin-left: 5px;
+}
+
+.sort-icon i {
+    color: #4F21A9;
+    font-size: 0.8rem;
+}
+
+.fa-sort-up,
+.fa-sort-down {
+    color: #4F21A9;
+}
+
+td.valor {
+    color: #7549DD;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+/* Media Queries */
+@media screen and (max-width: 1200px) {
+    .container__cards {
+        flex-wrap: wrap;
+    }
+    
+    .card {
+        min-width: 180px;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .ranking-title {
+        font-size: 2.5rem;
+    }
+
+    main header {
+        height: auto;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem 1rem 1rem 4rem;
+    }
+
+    .container__cards {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .container__ranking {
+        flex-direction: column;
+        align-items: center;
+        gap: 2rem;
+    }
+
+    .container__top3 {
+        width: 95%;
+        max-width: 600px;
+        transform: scale(0.9);
+    }
+
+    .container__lista {
+        width: 95%;
+        max-width: 600px;
+    }
+
+    .top1 .bar {
+        height: 200px;
+    }
+    
+    .top2 .bar {
+        height: 150px;
+    }
+    
+    .top3 .bar {
+        height: 120px;
+    }
+
+    .icon i {
+        font-size: 4rem;
+    }
+
+    table {
+        font-size: 0.9rem;
+    }
+
+    th, td {
+        padding: 0.4rem;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .container__top3 {
+        transform: scale(0.8);
+    }
+
+    .container__lista table {
+        font-size: 0.9rem;
+    }
+
+    .top1 .bar {
+        height: 180px;
+    }
+    
+    .top2 .bar {
+        height: 130px;
+    }
+    
+    .top3 .bar {
+        height: 100px;
+    }
+
+    .icon i {
+        font-size: 3rem;
+    }
+
+    table {
+        font-size: 0.8rem;
+    }
+
+    th, td {
+        padding: 0.3rem;
+    }
+
+    th:nth-child(2),
+    td:nth-child(2) {
+        display: none;
+    }
+}
+
+/* Adicione estes estilos */
+.animated-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: -1;
+    background: black; /* Fundo preto para contrastar com as linhas */
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.bar-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.animated-bar {
+    position: absolute;
+    bottom: -100%;
+    width: 10px;
+    height: 100%;
+    opacity: 0.6;
+    animation: moveUp 3s infinite;
+}
+
+@keyframes moveUp {
+    0% {
+        transform: translateY(100%);
+    }
+    100% {
+        transform: translateY(-100%);
+    }
+}
+
+.animated-line {
+    position: absolute;
+    height: 2px;
+    transform: rotate(-45deg);
+    background: linear-gradient(90deg, transparent, #fff);
+    mix-blend-mode: screen; /* Ajuda na visualização das linhas */
+}
+
+.animated-line::after {
+    content: '▲';
+    position: absolute;
+    right: -10px;
+    top: -8px;
+    color: #fff;
+    font-size: 12px;
+    transform: rotate(45deg);
+}
+
+.info__foto .valor {
+    font-weight: bold;
+    color: #574A63;
+    font-size: 1.4rem; /* Aumentado de 1.1rem para 1.4rem */
+}
+
+/* Dark mode switch */
+.theme-switch-wrapper {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    z-index: 100;
+}
+
+.theme-switch {
+    display: inline-block;
+    height: 34px;
+    width: 60px;
+    position: relative;
+}
+
+.theme-switch input {
+    display: none;
+}
+
+.slider {
+    background-color: #ccc;
+    bottom: 0;
+    cursor: pointer;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transition: all 0.4s ease-in-out; /* Adicionada transição */
+    border-radius: 34px;
+}
+
+.slider:before {
+    background-color: #fff;
+    bottom: 4px;
+    content: "";
+    height: 26px;
+    left: 4px;
+    position: absolute;
+    transition: all 0.4s ease-in-out; /* Adicionada transição */
+    width: 26px;
+    border-radius: 50%;
+}
+
+.slider i {
+    transition: all 0.4s ease-in-out; /* Adicionada transição */
+    opacity: 0.7;
+}
+
+.slider i:hover {
+    opacity: 1;
+}
+
+.slider i {
+    color: #ffffff;
+    position: absolute;
+    transform: translateY(-50%);
+    top: 50%;
+    font-size: 0.9rem;
+}
+
+.slider .fa-sun {
+    right: 8px;
+}
+
+.slider .fa-moon {
+    left: 8px;
+}
+
+input:checked + .slider {
+    background-color: #4F21A9;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+/* Dark mode colors */
+[data-theme="dark"] {
+    --bg-primary: #1a1625;
+    --bg-secondary: #2d2438;
+    --text-primary: #ffffff;
+    --text-secondary: #b8b5c0;
+    --accent-primary: #6e42c1;
+    --accent-secondary: #8659d4;
+    --card-bg: #2d2438;
+    --border-color: #3d3450;
+    --shadow-color: rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] body {
+    background: var(--bg-primary);
+}
+
+[data-theme="dark"] main {
+    background-color: var(--bg-primary);
+}
+
+[data-theme="dark"] main header {
+    background-color: var(--bg-secondary);
+    box-shadow: 0 4px 6px var(--shadow-color);
+}
+
+[data-theme="dark"] .ranking-title {
+    color: var(--accent-secondary);
+}
+
+[data-theme="dark"] .container {
+    background-color: var(--bg-secondary);
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+[data-theme="dark"] .card {
+    background-color: var(--card-bg);
+}
+
+[data-theme="dark"] .info__valores .title {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .txt {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] table {
+    background-color: var(--bg-secondary);
+}
+
+[data-theme="dark"] th {
+    color: var(--accent-secondary);
+    background-color: var(--bg-secondary);
+}
+
+[data-theme="dark"] td {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] tr:hover {
+    background-color: var(--card-bg);
+}
+
+[data-theme="dark"] td.valor {
+    color: var(--accent-secondary);
+}
+
+[data-theme="dark"] .info__foto .valor {
+    color: #d9b0ff !important; /* Cor específica para valores no info__foto */
+}
+
+/* Cards no Dark Mode */
+[data-theme="dark"] .card.faturamento {
+    background-color: rgba(46, 125, 50, 0.15);  /* Verde escuro com transparência */
+}
+
+[data-theme="dark"] .card.quantidade {
+    background-color: rgba(21, 101, 192, 0.15);  /* Azul escuro com transparência */
+}
+
+[data-theme="dark"] .card.agendamentos {
+    background-color: rgba(239, 108, 0, 0.15);  /* Laranja escuro com transparência */
+}
+
+/* Cores dos valores e porcentagens no Dark Mode */
+[data-theme="dark"] .card.faturamento .valor,
+[data-theme="dark"] .card.faturamento .porcentagem {
+    color: #81c784;  /* Verde mais claro para legibilidade */
+}
+
+[data-theme="dark"] .card.quantidade .valor,
+[data-theme="dark"] .card.quantidade .porcentagem {
+    color: #64b5f6;  /* Azul mais claro para legibilidade */
+}
+
+[data-theme="dark"] .card.agendamentos .valor,
+[data-theme="dark"] .card.agendamentos .porcentagem {
+    color: #ffb74d;  /* Laranja mais claro para legibilidade */
+}
+
+/* Adicione estas regras no início do arquivo, logo após o reset global */
+:root {
+    --bg-primary: #F6F0FA;
+    --bg-secondary: #FFFFFF;
+    --text-primary: #000000;
+    --text-secondary: #574A63;
+    --accent-primary: #4F21A9;
+    --accent-secondary: #7549DD;
+    --card-bg: #FFFFFF;
+    --border-color: #E0E0E0;
+    --shadow-color: rgba(0, 0, 0, 0.08);
+    
+    /* Adicione esta linha para a transição */
+    transition: all 0.3s ease-in-out;
+}
+
+/* Adicione transição para todos os elementos que mudam de cor */
+body,
+main,
+main header,
+.ranking-title,
+.container,
+.card,
+.info__valores .title,
+.txt,
+table,
+th,
+td,
+tr:hover,
+td.valor,
+.info__foto .valor,
+.card.faturamento,
+.card.quantidade,
+.card.agendamentos,
+.card.faturamento .valor,
+.card.faturamento .porcentagem,
+.card.quantidade .valor,
+.card.quantidade .porcentagem,
+.card.agendamentos .valor,
+.card.agendamentos .porcentagem {
+    transition: all 0.3s ease-in-out;
+}
+
+/* Dark mode colors - Mantenha as cores existentes */
+[data-theme="dark"] {
+    --bg-primary: #1a1625;
+    --bg-secondary: #2d2438;
+    --text-primary: #ffffff;
+    --text-secondary: #b8b5c0;
+    --accent-primary: #6e42c1;
+    --accent-secondary: #8659d4;
+    --card-bg: #2d2438;
+    --border-color: #3d3450;
+    --shadow-color: rgba(0, 0, 0, 0.2);
+}
+
+/* ... resto do código CSS existente ... */
+
+.ranking-foto {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.valor {
+    text-align: right;
+    padding-right: 20px;
+}
+
+
+.info__foto .valor {
+    padding-right: 0;
+    text-align: center;  /* Opcional: mantém o texto centralizado */
+}
+
+/* Modifique a classe .valor para ser mais específica */
+td.valor {
+    text-align: center;  /* Centraliza horizontalmente */
+    padding-right: 0;    /* Remove o padding direito anterior */
+}
+
+/* Mantenha a regra original para .info__foto .valor */
+.info__foto .valor {
+    padding-right: 0;
+    text-align: center;
+}

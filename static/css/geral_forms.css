@@ -1,0 +1,335 @@
+/* ========================= */
+/* ESTILOS GERAIS */
+/* ========================= */
+@import url('colors.css');
+
+main * {
+    border: none;
+}
+
+main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(to bottom, 
+        var(--cor-branco-50), /* Branco suave */
+        var(--cor-branco-100), /* Branco com leve tom cinza */
+        var(--cor-branco-200), /* Branco mais escuro */
+        var(--cor-branco-300)  /* Branco muito suave */
+    ); /* Degradê do branco suave ao cinza */
+    font-family: 'Arial', sans-serif; /* Fonte simples e arredondada */
+}
+
+/* ========================= */
+/* ESTILOS DO CONTAINER */
+/* ========================= */
+.container {
+    width: 100%;
+    max-width: 1200px;
+    min-height: max-content;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: stretch;
+    background-color: var(--cor-branco); /* Cor de fundo do container */
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Sombra para dar um efeito de profundidade */
+    border-radius: 12px; /* Borda mais arredondada */
+    border: 1px solid var(--cor-cinza-claro); /* Borda em cinza claro */
+    margin: 40px 0 80px;
+    padding: 0;
+    overflow: hidden; /* Oculta o conteúdo que ultrapassa os limites do contêiner */
+}
+
+/* ========================= */
+/* ESTILOS DOS BOTÕES QUE ABREM OS MODAIS */
+/* ========================= */
+.options_modais {
+    display: flex;
+    justify-content: flex-start;
+    flex-direction: column;
+    align-items: stretch;
+    width: 32%;
+}
+
+/* ========================= */
+/* ESTILOS DOS BOTÕES PRINCIPAIS */
+/* ========================= */
+.btn-primary {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    background-color: var(--cor-branco); /* Cor de fundo do botão primário */
+    color: var(--cor-preto); /* Cor do texto do botão primário */
+    padding: 13px 20px 13px 8px;
+    border-bottom: 1px solid var(--cor-cinza-claro);
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: 100%;
+}
+
+.btn-primary:hover {
+    background-color: var(--cor-branco-100); /* Cor ao passar o mouse */
+}
+
+/* ========================= */
+/* ESTILOS PARA O FORMULÁRIO */
+/* ========================= */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+form label {
+    font-weight: bold;
+    margin-bottom: 3px;
+    color: var(--cor-cinza);
+    font-size: 14px;
+}
+
+form input, form select, form textarea {
+    width: 75%;
+    padding: 8px;
+    border: 1px solid var(--cor-cinza-claro);
+    border-radius: 4px;
+    background-color: var(--cor-branco-100); /* Fundo de input no modo claro */
+    color: var(--cor-cinza); /* Texto em input no modo claro */
+    font-size: 14px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+form input:focus, form select:focus, form textarea:focus {
+    outline: none;
+    border-color: var(--azul-escuro-500);
+    box-shadow: 0 0 4px rgba(54, 143, 251, 0.4);
+}
+
+form .btn-primary {
+    background-color: var(--azul-escuro-500);
+    color: var(--cor-branco);
+    border: none;
+    padding: 10px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+form .btn-primary:hover {
+    background-color: var(--azul-escuro-400);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* ========================= */
+/* ESTILO PARA MENSAGENS DE ERRO */
+/* ========================= */
+form .errorlist {
+    color: red;
+    font-size: 12px;
+    margin-top: -5px;
+}
+
+/* ========================= */
+/* ESTILOS PARA CAMPOS OBRIGATÓRIOS */
+/* ========================= */
+form .required::after {
+    content: "*";
+    color: red;
+    margin-left: 5px;
+}
+
+/* ========================= */
+/* ESTILOS PARA CHECKBOX E RADIO PERSONALIZADOS */
+/* ========================= */
+form input[type="checkbox"], form input[type="radio"] {
+    accent-color: var(--azul-escuro-500);
+}
+
+/* ========================= */
+/* ESTILOS PARA TOOLTIP NO BOTÃO */
+/* ========================= */
+form button:hover::after {
+    content: attr(data-tooltip);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 5px;
+    border-radius: 4px;
+    font-size: 10px;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    transform: translateY(8px);
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+/* ========================= */
+/* ESPAÇAMENTO ENTRE CAMPO DE FORMULÁRIO E BOTÃO */
+/* ========================= */
+form button {
+    margin-top: 15px;
+    align-self: flex-start;
+}
+
+/* ========================= */
+/* ESTILOS PARA A TABELA NO MODAL */
+/* ========================= */
+/* Estilos da tabela */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 14px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Sombra suave para a tabela */
+    border-radius: 8px; /* Bordas arredondadas */
+}
+
+thead {
+    background-color: var(--azul-escuro-500);
+    color: var(--cor-branco);
+}
+
+th, td {
+    padding: 12px;
+    border: 1px solid var(--cor-branco-200);
+    text-align: left;
+    transition: background-color 0.3s ease; /* Transição suave para o fundo */
+}
+
+tbody tr {
+    background-color: var(--cor-branco);
+}
+
+tbody tr:hover {
+    background-color: var(--azul-escuro-200); /* Cor ao passar o mouse */
+}
+
+/* Estilos para botões de exclusão */
+.delete-btn {
+    background: none;
+    border: none;
+    color: var(--azul-escuro-500);
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.delete-btn:hover {
+    color: var(--azul-escuro-400);
+}
+
+/* Estilos para links */
+a {
+    color: var(--azul-escuro-600);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* ========================= */
+/* ESTILOS PARA O MODO ESCURO */
+/* ========================= */
+main.darkmode {
+    background: var(--dark-background-fundo); /* Fundo escuro */
+    color: var(--dark-text-color); /* Cor do texto para o modo escuro */
+}
+
+main.darkmode .options_modais {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    
+    background-color: var(--dark-modal-background); /* Fundo do modal em cinza escuro */
+    width: 32%;
+}
+
+main.darkmode .options_modais .btn {
+    background-color: var(--dark-modal-background); /* Fundo do modal em cinza escuro */
+    color: var(--cor-branco); /* Cor do texto do botão normal no modo escuro */
+    border: none; /* Remover borda */
+    padding: 13px 20px; /* Padding para os botões */
+    cursor: pointer; /* Cursor de ponteiro */
+    transition: background-color 0.3s ease; /* Transição suave para a cor de fundo */
+}
+
+main.darkmode .options_modais .btn:hover {
+    background-color: var(--cor-branco-400); /* Cor ao passar o mouse no botão normal */
+}
+
+main.darkmode .btn-submit {
+    background-color: var(--cor-branco-600); /* Cor de fundo do botão de envio no modo escuro */
+    color: var(--cor-branco); /* Cor do texto do botão de envio no modo escuro */
+    border: none; /* Remover borda */
+    padding: 10px 16px; /* Padding para o botão de envio */
+    border-radius: 4px; /* Bordas arredondadas */
+    cursor: pointer; /* Cursor de ponteiro */
+    font-size: 14px; /* Tamanho da fonte */
+    transition: background-color 0.3s ease, box-shadow 0.3s ease; /* Transição suave */
+}
+
+main.darkmode .btn-submit:hover {
+    background-color: var(--cor-branco-500); /* Cor ao passar o mouse no botão de envio */
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1); /* Sombra ao passar o mouse */
+}
+
+main.darkmode .options_modais .btn-active {
+    background-color: var(--cor-branco-600); /* Cor de fundo do botão ativo */
+    color: var(--cor-branco); /* Cor do texto do botão ativo */
+}
+
+main.darkmode .modal {
+    background-color: var(--dark-modal-background); /* Fundo do modal em cinza escuro */
+}
+
+main.darkmode .modal-body {
+    background-color: var(--dark-modal-background); /* Fundo do modal em cinza escuro */
+}
+
+main.darkmode .modal-header {
+    background-color: var(--azul-escuro-500); /* Fundo do cabeçalho do modal */
+    color: var(--cor-branco); /* Cor do texto do cabeçalho */
+    padding: 10px; /* Padding do cabeçalho */
+}
+
+main.darkmode .modal-body .table {
+    background-color: var(--dark-background-fundo); /* Cor de fundo da tabela no modo escuro */
+}
+
+main.darkmode .modal-body .table th {
+    background-color: var(--cor-branco-600); /* Cor de fundo do cabeçalho no modo escuro */
+    color: var(--cor-branco); /* Cor do texto do cabeçalho em branco */
+}
+
+main.darkmode .modal-body .table tbody tr {
+    background-color: var(--dark-container-background); /* Cor de fundo das linhas no modo escuro */
+}
+
+main.darkmode .modal-body .table tbody tr:hover {
+    background-color: var(--azul-escuro-300); /* Cor ao passar o mouse no modo escuro */
+}
+
+main.darkmode a {
+    color: var(--cor-branco); /* Cor dos links no modo escuro */
+}
+
+main.darkmode a:hover {
+    text-decoration: underline; /* Sublinhado ao passar o mouse sobre links no modo escuro */
+}
+
+/* Estilo para os campos de seleção no modo escuro */
+main.darkmode .form-control, 
+main.darkmode select {
+    background-color: var(--dark-modal-background); /* Fundo igual ao do modal */
+    color: var(--dark-text-color); /* Cor do texto */
+    border: 1px solid var(--dark-border-color); /* Borda em cinza claro */
+}
+
+main.darkmode .form-control:focus, 
+main.darkmode select:focus {
+    border-color: var(--azul-escuro-500); /* Cor da borda ao focar */
+    box-shadow: 0 0 4px rgba(54, 143, 251, 0.4); /* Sombra ao focar */
+}

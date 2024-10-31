@@ -56,7 +56,6 @@ function createAnimatedBackground() {
     const barWidth = 10;
     const numberOfBars = Math.floor(containerWidth / (barWidth * 2));
 
-<<<<<<< HEAD
     for (let i = 0; i < numberOfBars; i++) {
         const bar = $('<div>').addClass('animated-bar');
         const randomColor = colors[Math.floor(Math.random() * colors.length)];
@@ -71,55 +70,6 @@ function createAnimatedBackground() {
         });
         
         barContainer.append(bar);
-=======
-    if (metaGeral) {
-        const metaTitulo = metaGeral.titulo;
-        const metaValue = metaGeral.valor;
-        const metaValueTotal = metaGeral.valor_total;
-        const metaPercentage = metaGeral.percentual_height;
-
-        console.log('metaValue:', metaValue, 'metaPercentage:', metaPercentage);
-
-        const metaHtml = `
-            <h3 class="title">${metaTitulo}</h3>
-            <p>${metaValue}</p>
-            <div class="container">
-                <span class="value-box"><p class="value">R$ ${metaValueTotal}</p></span>
-                <div class="progress-bar" style="height: ${metaPercentage}%">
-                    <div class="scene">
-                        <div class="rocket">
-                            <img src="/static/img/apps/siape/rocket.png" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        metaGeralContainer.innerHTML = metaHtml;
-    }
-    if (metaEquipe) {
-        const metaTitulo = metaEquipe.titulo;
-        const metaValue = metaEquipe.valor;
-        const metaValueTotal = metaEquipe.valor_total;
-        const metaPercentage = metaEquipe.percentual_height;
-
-        console.log('metaValue:', metaValue, 'metaPercentage:', metaPercentage);
-
-        const metaHtml = `
-            <h3 class="title">${metaTitulo}</h3>
-            <p>${metaValue}</p>
-            <div class="container">
-                <span class="value-box"><p class="value">R$ ${metaValueTotal}</p></span>
-                <div class="progress-bar" style="height: ${metaPercentage}%">
-                    <div class="scene">
-                        <div class="rocket">
-                            <img src="/static/img/apps/siape/rocket.png" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        metaEquipeContainer.innerHTML = metaHtml;
->>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
     }
 }
 
@@ -217,5 +167,5 @@ function setupPageReload() {
     setInterval(() => {
         console.log('Página recarregada em:', new Date().toLocaleString());
         window.location.reload();
-    }, 100000000);
+    }, 10000);
 }

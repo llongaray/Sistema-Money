@@ -309,6 +309,7 @@ def criar_dicionario_agendamento(agendamento, hoje, incluir_status=True):
     return dicionario
 
 def get_all_forms_and_objects(request_post):
+<<<<<<< HEAD
     print("\n\n----- Iniciando get_all_forms_and_objects -----\n")
     
     hoje = timezone.now().date()
@@ -380,10 +381,62 @@ def get_all_forms_and_objects(request_post):
 
     # Clientes na loja hoje
     clientes_loja = agendamentos_base_query.annotate(
+=======
+    '''
+    Função principal que retorna todos os formulários e objetos necessários para a view all_forms.
+    Processa permissões de usuário e retorna dados filtrados baseados no nível de acesso.
+    '''
+    print("\n\n----- Iniciando get_all_forms_and_objects -----\n")
+    
+    # ----- Verificação de Permissões e Acesso -----
+    if request_post.user.is_superuser:
+        print("Usuário é superuser - mostrando todos os funcionários")
+        funcionarios = Funcionario.objects.all()
+    else:
+        print("Usuário não é superuser - verificando funcionário associado")
+        try:
+            funcionario = Funcionario.objects.get(usuario_id=request_post.user.id)
+            funcionarios = Funcionario.objects.filter(id=funcionario.id)
+            print(f"Funcionário encontrado: {funcionario.nome}")
+        except Funcionario.DoesNotExist:
+            print("Nenhum funcionário associado ao usuário")
+            funcionarios = Funcionario.objects.none()
+
+    # ----- Configuração Inicial de Dados -----
+    lojas = Loja.objects.all().values('id', 'nome')
+    lojas_dicionario = [{'id': str(loja['id']), 'nome': loja['nome']} for loja in lojas]
+
+    # Inicialização de formulários
+    form_agendamento = AgendamentoForm(funcionarios=funcionarios)
+    form_confirmacao = ConfirmacaoAgendamentoForm()
+    
+    # ----- Lista de Vendedores -----
+    if request_post.user.is_superuser:
+        vendedores_lista_clientes = [{'id': f.id, 'nome': f.nome} for f in funcionarios]
+    else:
+        try:
+            funcionario_logado = Funcionario.objects.get(usuario_id=request_post.user.id)
+            vendedores_lista_clientes = [{'id': funcionario_logado.id, 'nome': funcionario_logado.nome}]
+        except Funcionario.DoesNotExist:
+            vendedores_lista_clientes = []
+
+    hoje = timezone.now().date()
+
+    # ----- Funções Auxiliares -----
+    def processar_agendamentos(queryset, filtros=None, incluir_status=True):
+        '''Processa uma queryset de agendamentos aplicando filtros opcionais'''
+        if filtros:
+            queryset = queryset.filter(**filtros)
+        return [criar_dicionario_agendamento(a, hoje, incluir_status) for a in queryset]
+
+    # ----- Processamento de Agendamentos da Loja -----
+    agendamentos_loja = Agendamento.objects.annotate(
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
         apenas_data=TruncDate('dia_agendado')
     ).filter(
         tabulacao_atendente='CONFIRMADO',
         apenas_data=hoje
+<<<<<<< HEAD
     )
 
     clientes_loja_dicionario = [{
@@ -454,6 +507,87 @@ def get_all_forms_and_objects(request_post):
 
     print("\n----- Finalizando get_all_forms_and_objects -----\n")
     
+=======
+    ).select_related('loja_agendada', 'atendente_agendou')
+
+    clientes_loja_dicionario = []
+    for agendamento in agendamentos_loja:
+        cliente_dict = {
+            'id': agendamento.id,
+            'nome_cliente': agendamento.nome_cliente,
+            'cpf_cliente': agendamento.cpf_cliente,
+            'numero_cliente': agendamento.numero_cliente,
+            'dia_agendado_completo': agendamento.dia_agendado.strftime('%Y-%m-%d %H:%M:%S'),
+            'dia_agendado': agendamento.dia_agendado.strftime('%Y-%m-%d'),
+            'tabulacao_atendente': agendamento.tabulacao_atendente,
+            'atendente_agendou': agendamento.atendente_agendou.nome if agendamento.atendente_agendou else '',
+            'loja_agendada': agendamento.loja_agendada.nome if agendamento.loja_agendada else ''
+        }
+        clientes_loja_dicionario.append(cliente_dict)
+
+    # ----- Processamento de Agendamentos para Confirmação -----
+    agendamentos_confirmacao = Agendamento.objects.filter(
+        Q(tabulacao_atendente='AGENDADO') |
+        Q(tabulacao_atendente='REAGENDADO')
+    ).select_related('loja_agendada', 'atendente_agendou').order_by('dia_agendado')
+    
+    agendamentos_confirmacao_list = []
+    for agendamento in agendamentos_confirmacao:
+        agendamento_dict = {
+            'id': agendamento.id,
+            'nome_cliente': agendamento.nome_cliente,
+            'cpf_cliente': agendamento.cpf_cliente,
+            'numero_cliente': agendamento.numero_cliente,
+            'dia_agendado_completo': agendamento.dia_agendado.strftime('%Y-%m-%d %H:%M:%S'),
+            'dia_agendado': agendamento.dia_agendado.strftime('%d/%m/%Y'),
+            'dia_agendado_form': agendamento.dia_agendado.strftime('%Y-%m-%d'),
+            'atendente_nome': agendamento.atendente_agendou.nome if agendamento.atendente_agendou else None,
+            'loja_nome': agendamento.loja_agendada.nome if agendamento.loja_agendada else None,
+            'tabulacao_atendente': agendamento.tabulacao_atendente,
+            'tabulacao_vendedor': agendamento.tabulacao_vendedor,
+            'status_dias': calcular_status_dias(agendamento, hoje)
+        }
+        agendamentos_confirmacao_list.append(agendamento_dict)
+
+    # Lista de agendamentos para edição
+    agendamentos_edicao_list = agendamentos_confirmacao_list
+
+    # ----- Processamento de Agendamentos Reagendados -----
+    agendamentos_reagendados = Agendamento.objects.filter(
+        tabulacao_atendente='REAGENDADO',
+        tabulacao_vendedor__isnull=True
+    ).select_related('loja_agendada', 'atendente_agendou')
+    agendamentos_reagendados_dicionario = processar_agendamentos(agendamentos_reagendados)
+
+    # ----- Processamento de Todos os Agendamentos -----
+    todos_agendamentos = Agendamento.objects.all().select_related('loja_agendada', 'atendente_agendou')
+    todos_agendamentos_dicionario = []
+    for agendamento in todos_agendamentos:
+        agendamento_dict = criar_dicionario_agendamento(agendamento, hoje, incluir_status=True)
+        agendamento_dict['dia_agendado'] = agendamento.dia_agendado.strftime('%Y-%m-%d %H:%M:%S')
+        todos_agendamentos_dicionario.append(agendamento_dict)
+    # Todos os agendamentos
+    todos_agendamentos = Agendamento.objects.all().select_related('loja_agendada', 'atendente_agendou')
+    todos_agendamentos_dicionario = []
+    for agendamento in todos_agendamentos:
+        agendamento_dict = {
+            'id': agendamento.id,
+            'nome_cliente': agendamento.nome_cliente,
+            'cpf_cliente': agendamento.cpf_cliente,
+            'numero_cliente': agendamento.numero_cliente,
+            'dia_agendado': agendamento.dia_agendado.strftime('%Y-%m-%d %H:%M:%S'),
+            'atendente_nome': agendamento.atendente_agendou.nome if agendamento.atendente_agendou else '',
+            'loja_nome': agendamento.loja_agendada.nome if agendamento.loja_agendada else '',
+            'tabulacao_atendente': agendamento.tabulacao_atendente or '',
+            'tabulacao_vendedor': agendamento.tabulacao_vendedor or '',
+            'status_dias': calcular_status_dias(agendamento, timezone.now())
+        }
+        todos_agendamentos_dicionario.append(agendamento_dict)
+
+    print("\n----- Finalizando get_all_forms_and_objects -----\n")
+    
+    # ----- Retorno Final -----
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
     return {
         'form_agendamento': form_agendamento,
         'form_confirmacao': form_confirmacao,
@@ -462,17 +596,26 @@ def get_all_forms_and_objects(request_post):
         'clientes_loja': clientes_loja_dicionario,
         'vendedores_lista_clientes': vendedores_lista_clientes,
         'agendamentos_confirmacao': agendamentos_confirmacao_list,
+<<<<<<< HEAD
         'agendamentos_edicao': agendamentos_confirmacao_list,
         'agendamentos_reagendamento': agendamentos_reagendados_dicionario,
         'todos_agendamentos': todos_agendamentos_dicionario,
         'funcionario_logado': funcionario_logado,
         'nivel_cargo': nivel_cargo,
         'loja_funcionario': loja_funcionario
+=======
+        'agendamentos_edicao': agendamentos_edicao_list,
+        'agendamentos_reagendamento': agendamentos_reagendados_dicionario,
+        'todos_agendamentos': todos_agendamentos_dicionario,
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
     }
 
 @login_required
 def render_all_forms(request):
+<<<<<<< HEAD
     """Renderiza a página com todos os formulários"""
+=======
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
     print("\n\n----- Iniciando render_all_forms -----\n")
     
     mensagem = {'texto': '', 'classe': ''}
@@ -484,19 +627,29 @@ def render_all_forms(request):
         funcionario_logado = None
         print("\n\nFuncionário não encontrado.")
 
+<<<<<<< HEAD
     # Processamento de formulários POST
+=======
+    print("\nVerificando se o request é POST...")
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
     if request.method == 'POST':
         print("\nRequest é POST. Processando formulário...")
         form_type = request.POST.get('form_type')
         print(f"\nTipo de formulário: {form_type}")
 
         if form_type == 'agendamento':
+<<<<<<< HEAD
             print("\nProcessando formulário de agendamento...")
+=======
+            print("\nProcessando formul��rio de agendamento...")
+            # Extraindo os dados diretamente do request.POST
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
             agendamento_data = {
                 'nome_cliente': request.POST.get('nome_cliente'),
                 'cpf_cliente': request.POST.get('cpf_cliente'),
                 'numero_cliente': request.POST.get('numero_cliente'),
                 'dia_agendado': request.POST.get('dia_agendado'),
+<<<<<<< HEAD
                 'loja_agendada': request.POST.get('loja_agendada'),
                 'atendente_agendou': request.POST.get('atendente_agendou')
             }
@@ -512,6 +665,21 @@ def render_all_forms(request):
                     'texto': 'Erro no formulário de agendamento. Preencha todos os campos obrigatórios.',
                     'classe': 'error'
                 }
+=======
+                'loja_agendada': request.POST.get('loja_agendada'),  # ID da loja
+                'atendente_agendou': request.POST.get('atendente_agendou')  # ID do atendente
+            }
+            
+            # Exibindo os dados recebidos
+            print(f"Dados recebidos: {agendamento_data}")
+
+            # Validando os dados (aqui você pode adicionar a lógica de validação que preferir)
+            if agendamento_data['nome_cliente'] and agendamento_data['cpf_cliente'] and agendamento_data['numero_cliente']:
+                mensagem = post_agendamento(agendamento_data, funcionario_logado)  # Passa os dados para o processamento
+                print("Agendamento processado.")
+            else:
+                mensagem = {'texto': 'Erro no formulário de agendamento. Preencha todos os campos obrigatórios.', 'classe': 'error'}
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
                 print("Erro no formulário de agendamento.")
 
         elif form_type == 'confirmacao_agendamento':
@@ -527,6 +695,10 @@ def render_all_forms(request):
                 'nova_dia_agendado': request.POST.get('nova_dia_agendado'),
                 'observacao': request.POST.get('observacao')
             }
+<<<<<<< HEAD
+=======
+            
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
             print(f"Dados extraídos do formulário: {form_data}")
             
             if not form_data['agendamento_id']:
@@ -539,6 +711,10 @@ def render_all_forms(request):
 
         elif form_type == 'lista_clientes':
             print("\nProcessando formulário de lista de clientes...")
+<<<<<<< HEAD
+=======
+            # Extraindo os dados diretamente do request.POST
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
             lista_clientes_data = {
                 'agendamento_id': request.POST.get('agendamento_id'),
                 'nome_cliente': request.POST.get('nome_cliente'),
@@ -547,6 +723,7 @@ def render_all_forms(request):
                 'dia_agendado': request.POST.get('dia_agendado'),
                 'tabulacao_atendente': request.POST.get('tabulacao_atendente'),
                 'tabulacao_vendedor': request.POST.get('tabulacao_vendedor'),
+<<<<<<< HEAD
                 'vendedor_id': request.POST.get('vendedor_id'),
                 'observacao': request.POST.get('observacao')
             }
@@ -562,6 +739,25 @@ def render_all_forms(request):
                     'classe': 'error'
                 }
                 print("Erro no formulário de lista de clientes.")
+=======
+                'vendedor_id': request.POST.get('vendedor_id'),  # Incluindo vendedor_id
+                'observacao': request.POST.get('observacao')  # Incluindo observação
+            }
+
+            # Exibindo os dados recebidos
+            print(f"Dados recebidos: {lista_clientes_data}")
+
+            # Validando os dados
+            if lista_clientes_data['agendamento_id'] and lista_clientes_data['tabulacao_vendedor']:
+                print('Entrou no if do list!')
+                # Chama a função para processar a venda ou tabulação
+                mensagem = post_venda_tabulacao(lista_clientes_data, funcionario_logado)  # Passa os dados para o processamento
+                print("Tabulação processada.")
+            else:
+                mensagem = {'texto': 'Erro no formulário de lista de clientes. Preencha todos os campos obrigatórios.', 'classe': 'error'}
+                print("Erro no formulário de lista de clientes.")
+
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
     else:
         print("\nRequest não é POST. Carregando formulários vazios...")
 
@@ -569,12 +765,16 @@ def render_all_forms(request):
     context_data = get_all_forms_and_objects(request)
     print("\nRetornou de get_all_forms_and_objects.")
 
+<<<<<<< HEAD
     # Atualiza o contexto com mensagem e funcionário logado
+=======
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
     context_data.update({
         'mensagem': mensagem,
         'funcionario_logado': funcionario_logado,
     })
 
+<<<<<<< HEAD
     # Logs para debug
     print("\nContexto dos dados obtidos:")
     if 'funcionarios' in context_data:
@@ -583,11 +783,19 @@ def render_all_forms(request):
         print("\nNenhum funcionário encontrado no contexto\n")
     
     print(f"Clientes Confirmados: {context_data.get('clientes_loja', [])}\n")
+=======
+    print("\nContexto dos dados obtidos:")
+    print(f'\n{context_data}\n')
+
+    print(f"\nFuncionrios: {[funcionario.nome for funcionario in context_data['funcionarios']]}\n")
+    print(f"Clientes Confirmados: {context_data['clientes_loja']}\n")
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
 
     print("\n----- Finalizando render_all_forms -----\n")
     return render(request, 'inss/all_forms.html', context_data)
 
 def get_cards(periodo='mes'):
+<<<<<<< HEAD
     print("\n----- Iniciando get_cards -----\n")
     
     hoje = timezone.now()
@@ -608,6 +816,16 @@ def get_cards(periodo='mes'):
         # Se não encontrou meta, usa o mês atual
         primeiro_dia = hoje.replace(day=1)
         ultimo_dia = (hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1))
+=======
+    """
+    Calcula os dados para os cards: faturamento total, quantidade de vendas e agendamentos
+    """
+    print("\n----- Iniciando get_cards -----\n")
+    
+    hoje = timezone.now()
+    primeiro_dia = hoje.replace(day=1)
+    ultimo_dia = (hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1))
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
     
     # Busca todos os registros de valores no período
     valores_range = RegisterMoney.objects.filter(
@@ -623,9 +841,16 @@ def get_cards(periodo='mes'):
     ).select_related('departamento', 'loja')
     
     # Inicializa variáveis para cálculo
+<<<<<<< HEAD
     faturamento_total = Decimal('0')
     
     # Calcula faturamento total
+=======
+    faturamento_inss = Decimal('0')
+    faturamento_total = Decimal('0')
+    
+    # Calcula faturamentos
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
     for venda in valores_range:
         funcionario = next((f for f in funcionarios if f.id == venda.funcionario_id), None)
         if not funcionario:
@@ -633,6 +858,15 @@ def get_cards(periodo='mes'):
             
         valor_venda = Decimal(str(venda.valor_est))
         faturamento_total += valor_venda
+<<<<<<< HEAD
+=======
+        
+        if funcionario.departamento and funcionario.departamento.grupo.name == 'INSS':
+            faturamento_inss += valor_venda
+    
+    # Calcula o percentual do INSS em relação ao total
+    percentual_inss = round((faturamento_inss / faturamento_total * 100) if faturamento_total else 0, 2)
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
     
     # Busca quantidade de vendas (agendamentos com FECHOU NEGOCIO)
     qtd_vendas = Agendamento.objects.filter(
@@ -646,6 +880,7 @@ def get_cards(periodo='mes'):
         tabulacao_atendente='CONFIRMADO'
     ).count()
     
+<<<<<<< HEAD
     # Calcula o percentual em relação à meta
     if meta_geral and meta_geral.valor:
         percentual_meta = round((faturamento_total / meta_geral.valor * 100), 2)
@@ -664,11 +899,29 @@ def get_cards(periodo='mes'):
         'periodo': {
             'inicio': primeiro_dia.date() if isinstance(primeiro_dia, datetime) else primeiro_dia,
             'fim': ultimo_dia.date() if isinstance(ultimo_dia, datetime) else ultimo_dia
+=======
+    # Formata o valor monetário
+    valor_formatado = f"R$ {faturamento_inss:,.2f}".replace(',', '_').replace('.', ',').replace('_', '.')
+    
+    # Prepara o contexto com os dados formatados
+    context_data = {
+        'valor_total': valor_formatado,  # Já inclui o R$
+        'percentual': percentual_inss,   # Número puro, o % está no template
+        'qtd_vendas': qtd_vendas,        # Número inteiro
+        'qtd_agendamentos': qtd_agendamentos,  # Número inteiro
+        'periodo': {
+            'inicio': primeiro_dia.date(),
+            'fim': ultimo_dia.date()
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
         }
     }
     
     print(f"Faturamento INSS: {context_data['valor_total']}")
+<<<<<<< HEAD
     print(f"Percentual da Meta: {context_data['percentual']}%")
+=======
+    print(f"Percentual INSS: {context_data['percentual']}%")
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
     print(f"Quantidade de Vendas: {context_data['qtd_vendas']}")
     print(f"Quantidade de Agendamentos: {context_data['qtd_agendamentos']}")
     print("\n----- Finalizando get_cards -----\n")
@@ -753,18 +1006,29 @@ def get_tabela_ranking(periodo='mes'):
     print("\n----- Iniciando get_tabela_ranking -----\n")
     
     hoje = timezone.now().date()
+<<<<<<< HEAD
     # Calcula o domingo da semana atual
     primeiro_dia = hoje - timezone.timedelta(days=hoje.weekday() + 1)
     # Calcula o sábado da semana atual
     ultimo_dia = primeiro_dia + timezone.timedelta(days=6)
     
     # Filtro para a semana atual
+=======
+    primeiro_dia = hoje.replace(day=1)
+    ultimo_dia = (primeiro_dia + timezone.timedelta(days=32)).replace(day=1) - timezone.timedelta(days=1)
+    
+    # Filtro para o mês atual
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
     filtro_data = Q(
         dia_agendado__date__gte=primeiro_dia,
         dia_agendado__date__lte=ultimo_dia
     )
 
+<<<<<<< HEAD
     # Busca agendamentos da semana atual
+=======
+    # Busca agendamentos do mês atual
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
     agendamentos = Agendamento.objects.filter(
         filtro_data,
         atendente_agendou__isnull=False    # Apenas agendamentos com atendente definido
@@ -783,6 +1047,7 @@ def get_tabela_ranking(periodo='mes'):
                 'total_agendamentos': 0,
                 'confirmados': 0,
                 'fechamentos': 0,
+<<<<<<< HEAD
                 'taxa_efetividade': 0,
                 'percentual_conf': 0  # Inicializa o percentual de confirmação
             }
@@ -791,6 +1056,11 @@ def get_tabela_ranking(periodo='mes'):
         if agendamento.tabulacao_vendedor == 'NÃO QUIS OUVIR':
             continue
             
+=======
+                'taxa_efetividade': 0
+            }
+        
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
         ranking_por_atendente[atendente]['total_agendamentos'] += 1
         
         # Conta confirmações e fechamentos
@@ -799,6 +1069,7 @@ def get_tabela_ranking(periodo='mes'):
             if agendamento.tabulacao_vendedor == 'FECHOU NEGOCIO':
                 ranking_por_atendente[atendente]['fechamentos'] += 1
 
+<<<<<<< HEAD
     # Calcula taxa de efetividade e percentual de confirmação
     ranking_data = []
     for dados in ranking_por_atendente.values():
@@ -808,6 +1079,11 @@ def get_tabela_ranking(periodo='mes'):
                 (dados['confirmados'] / dados['total_agendamentos']) * 100
             )
         
+=======
+    # Calcula taxa de efetividade e filtra atendentes
+    ranking_data = []
+    for dados in ranking_por_atendente.values():
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
         # Só inclui atendentes com pelo menos 1 fechamento
         if dados['fechamentos'] > 0:
             # Calcula taxa de efetividade (fechamentos / confirmados)
@@ -822,6 +1098,7 @@ def get_tabela_ranking(periodo='mes'):
     
     print(f"Dados do ranking calculados para {len(ranking_data)} atendentes")
     print(f"Período: {primeiro_dia} até {ultimo_dia}")
+<<<<<<< HEAD
     
     # Log para debug dos percentuais
     for dados in ranking_data:
@@ -831,6 +1108,8 @@ def get_tabela_ranking(periodo='mes'):
         print(f"Percentual de Confirmação: {dados['percentual_conf']}%")
         print("---")
     
+=======
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
     print("\n----- Finalizando get_tabela_ranking -----\n")
     
     return {
@@ -851,9 +1130,13 @@ def get_ranking(request):
     dados_ranking = get_tabela_ranking()
     dados_podium = get_podium()
     dados_cards = get_cards()
+<<<<<<< HEAD
     # Log para debug do percentual_conf
     for dados in dados_ranking['ranking_data']:
         print(f"Percentual de confirmação para {dados['nome']}: {dados.get('percentual_conf', 0)}%")
+=======
+    
+>>>>>>> 8c9bdec505c96e6d36a28aa15689b2584d325ac5
     context_data = {
         'ranking_data': dados_ranking['ranking_data'],
         'periodo': dados_ranking['periodo'],

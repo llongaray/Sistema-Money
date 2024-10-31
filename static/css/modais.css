@@ -1,0 +1,367 @@
+/* ========================= */
+/* ESTILOS DOS MODAIS */
+/* ========================= */
+.modal {
+    display: none;
+    position: relative;
+    width: 100%;
+    text-decoration: none;
+    background-color: var(--cor-branco); /* Cor de fundo do modal */
+    padding: 0 0 15px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal.active {
+    display: block;
+    opacity: 1;
+}
+
+.fade-in {
+    opacity: 1;
+}
+
+.fade-out {
+    opacity: 0;
+}
+
+.modal-header {
+    background-color: var(--azul-escuro-500); /* Fundo do cabeçalho do modal */
+    border-bottom: 1px solid var(--azul-escuro-500);
+    padding: 10px;
+    color: white;
+}
+
+.modal-title {
+    font-size: 1.25em;
+    color: var(--cor-cinza);
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    border-top: 1px solid var(--cor-cinza-claro);
+    padding: 10px;
+}
+
+/* ========================= */
+/* ESTILO PARA O CONTEÚDO DO MODAL */
+/* ========================= */
+#modalEdicaoCliente .modal-dialog, #modalConfirmacaoAgendamentoEdicao .modal-dialog {
+    background-color: var(--cor-branco);
+    border-radius: 5px;
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+#modalEdicaoCliente .modal-header {
+    padding: 10px;
+    background-color: var(--azul-escuro-500);
+    border-bottom: 1px solid var(--cor-cinza-claro);
+}
+
+#modalEdicaoCliente .modal-title {
+    font-size: 1.3em;
+    color: var(--cor-branco);
+}
+
+#modalEdicaoCliente .modal-body {
+    padding: 10px;
+}
+
+#modalEdicaoCliente .form-control {
+    width: 100%;
+    padding: 8px;
+    margin: 5px 0;
+    border: 1px solid var(--cor-cinza-claro);
+    border-radius: 4px;
+}
+/* Estilos para a tabela no modal de lista de funcionários */
+main.darkmode table {
+    background-color: var(--dark-container-background); /* Fundo da tabela no modo escuro */
+}
+
+main.darkmode thead {
+    background-color: var(--dark-background-fundo); /* Fundo do cabeçalho no modo escuro */
+    color: var(--cor-preto); /* Cor do texto do cabeçalho em preto */
+}
+
+main.darkmode th, main.darkmode td {
+    border: 1px solid var(--dark-border-color); /* Borda em cinza claro no modo escuro */
+}
+
+main.darkmode tbody tr {
+    background-color: var(--dark-container-background); /* Fundo das linhas no modo escuro */
+}
+
+main.darkmode tbody tr:hover {
+    background-color: var(--azul-escuro-300); /* Cor ao passar o mouse no modo escuro */
+}
+
+/* ========================= */
+/* ESTILOS PARA O MODAL SEC */
+/* ========================= */
+.modal-sec {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1050;
+    padding: 20px 0;
+    
+    /* Centralização vertical e horizontal */
+    align-items: center; /* Centraliza verticalmente */
+    justify-content: center; /* Centraliza horizontalmente */
+}
+
+.modal-sec.active {
+    display: flex; /* Mantém o display flex para centralização */
+}
+
+.modal-sec .modal-dialog {
+    position: relative;
+    width: 90%;
+    max-width: 600px;
+    margin: auto; /* Permite centralização automática */
+    animation: modalFadeIn 0.3s ease-in-out;
+    height: fit-content;
+    
+    /* Evita que modais muito altos ultrapassem a viewport */
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+}
+
+.modal-sec .modal-content {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    height: fit-content;
+    display: flex;
+    flex-direction: column;
+    
+    /* Remove max-height daqui pois já está no modal-dialog */
+    position: relative;
+}
+
+.modal-sec .modal-header {
+    padding: 10px;
+    background-color: var(--azul-escuro-500);
+    border-bottom: 1px solid var(--cor-cinza-claro);
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-sec .modal-title {
+    font-size: 1.3em;
+    color: var(--cor-branco);
+    margin: 0;
+    font-weight: 600;
+}
+
+.modal-sec .btn-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--cor-branco);
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: color 0.2s;
+}
+
+.modal-sec .btn-close:hover {
+    color: var(--cor-cinza-claro);
+}
+
+.modal-sec .modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-sec .form-label {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.modal-sec .form-control {
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.modal-sec .form-control:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.modal-sec .form-control[readonly] {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+}
+
+.modal-sec .btn-submit {
+    width: 100%;
+    padding: 0.75rem;
+    font-weight: 500;
+    margin-top: 1rem;
+    transition: all 0.2s;
+}
+
+.modal-sec .btn-submit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translate(0, -20px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(0, 0);
+    }
+}
+
+/* Ajuste responsivo */
+@media (max-width: 768px) {
+    .modal-sec {
+        padding: 10px;
+    }
+    
+    .modal-sec .modal-dialog {
+        margin: auto;
+        max-height: calc(100vh - 20px);
+    }
+}
+
+.modal-lg {
+    max-width: 100%;
+}
+
+.table-responsive {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.table th {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1;
+    
+    color: black;
+}
+
+.disabled-link {
+    pointer-events: none;
+    color: #999 !important;
+    text-decoration: none !important;
+    cursor: not-allowed !important;
+}
+
+.text-muted {
+    color: #6c757d;
+    cursor: not-allowed;
+    text-decoration: none;
+}
+
+.text-muted:hover {
+    text-decoration: none;
+    color: #6c757d;
+}
+
+/* Estilos específicos para formulários dentro do modal-sec */
+.modal-sec .modal-body form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    align-items: start;
+}
+
+.modal-sec .mb-3 {
+    margin-bottom: 0 !important; /* Remove margem padrão do Bootstrap */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ajuste para inputs se ajustarem ao conteúdo */
+.modal-sec .form-control {
+    width: auto;
+    min-width: 180px;
+    max-width: 100%;
+}
+
+/* Ajustes específicos para certos tipos de campos */
+.modal-sec input[type="date"] {
+    width: 160px;
+}
+
+.modal-sec input[type="text"] {
+    width: 100%;
+}
+
+.modal-sec input[readonly] {
+    width: fit-content;
+    min-width: 160px;
+}
+
+/* Campos que devem ocupar linha inteira */
+.modal-sec .mb-3:has(textarea),
+.modal-sec .mb-3:has(select),
+.modal-sec .mb-3:has(button[type="submit"]) {
+    grid-column: 1 / -1;
+}
+
+/* Ajuste para o botão submit */
+.modal-sec .btn-submit {
+    width: auto;
+    min-width: 200px;
+    margin: 1rem auto 0;
+    display: block;
+}
+
+/* Container de observação e nova data sempre em linha única */
+#observacaoContainer,
+#novaDataContainer {
+    grid-column: 1 / -1;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .modal-sec .modal-body form {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-sec .form-control {
+        width: 100%;
+    }
+
+    .modal-sec input[type="date"],
+    .modal-sec input[readonly] {
+        width: 100%;
+    }
+}
+
+/* Ajuste para campos específicos que precisam de mais espaço */
+.modal-sec input[name="nome_cliente"],
+.modal-sec input[name="nomeClienteConfirmacao"] {
+    width: 100%;
+}
+
+/* Ajuste para campos menores */
+.modal-sec input[name="cpf_cliente"],
+.modal-sec input[name="numero_cliente"] {
+    width: fit-content;
+}
