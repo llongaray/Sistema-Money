@@ -994,18 +994,47 @@ def get_cards(periodo='mes'):
 def get_podium(periodo='mes'):
     """
     Calcula o pódio das lojas baseado nos valores registrados no RegisterMoney
-    para funcionários do departamento INSS
+    considerando as metas ativas do RegisterMeta
     """
     print("\n----- Iniciando get_podium -----\n")
     
-    hoje = timezone.now()
-    primeiro_dia = hoje.replace(day=1)
-    ultimo_dia = (hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1))
+    hoje = timezone.now().date()
+    
+    # Busca metas ativas
+    metas_ativas = RegisterMeta.objects.filter(
+        status=True,
+        range_data_inicio__lte=hoje,
+        range_data_final__gte=hoje
+    ).filter(
+        Q(tipo='GERAL') |
+        Q(tipo='EQUIPE', setor='INSS')
+    )
+    
+    print(f"Metas ativas encontradas: {metas_ativas.count()}")
+    
+    # Se não encontrar metas ativas, usa o mês atual
+    if not metas_ativas.exists():
+        print("Nenhuma meta ativa encontrada, usando mês atual")
+        primeiro_dia = hoje.replace(day=1)
+        ultimo_dia = (hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1))
+    else:
+        # Prioriza meta EQUIPE INSS se existir
+        meta_inss = metas_ativas.filter(tipo='EQUIPE', setor='INSS').first()
+        meta_atual = meta_inss if meta_inss else metas_ativas.first()
+        
+        print(f"Usando meta: {meta_atual.titulo} ({meta_atual.tipo})")
+        print(f"Período: {meta_atual.range_data_inicio} até {meta_atual.range_data_final}")
+        
+        primeiro_dia = meta_atual.range_data_inicio
+        ultimo_dia = meta_atual.range_data_final
     
     # Busca todos os registros de valores no período
     valores_range = RegisterMoney.objects.filter(
-        data__range=[primeiro_dia, ultimo_dia]
+        data__date__range=[primeiro_dia, ultimo_dia],
+        status=True
     )
+    
+    print(f"Registros encontrados no período: {valores_range.count()}")
     
     # Obtém os IDs dos funcionários com registros
     funcionarios_ids = valores_range.values_list('funcionario_id', flat=True).distinct()
@@ -1015,6 +1044,8 @@ def get_podium(periodo='mes'):
         id__in=funcionarios_ids,
         departamento__grupo__name='INSS'
     ).select_related('departamento', 'loja')
+    
+    print(f"Funcionários INSS encontrados: {funcionarios.count()}")
     
     # Dicionário para armazenar valores por loja
     valores_por_loja = {}
@@ -1032,7 +1063,8 @@ def get_podium(periodo='mes'):
                 'id': loja_id,
                 'nome': nome_loja,
                 'logo': funcionario.loja.logo.url if funcionario.loja.logo else '/static/img/default-store.png',
-                'total_fechamentos': Decimal('0')
+                'total_fechamentos': Decimal('0'),
+                'meta_valor': next((m.valor for m in metas_ativas if m.loja == nome_loja), Decimal('0'))
             }
         
         valores_por_loja[loja_id]['total_fechamentos'] += Decimal(str(venda.valor_est))
@@ -1047,18 +1079,19 @@ def get_podium(periodo='mes'):
     # Adiciona posição no pódio e formata os valores
     for i, loja in enumerate(podium):
         loja['posicao'] = i + 1
-        # Formata o valor para exibição (R$ XX.XXX,XX)
         loja['total_fechamentos'] = f"R$ {loja['total_fechamentos']:,.2f}".replace(',', '_').replace('.', ',').replace('_', '.')
+        if loja['meta_valor']:
+            loja['meta_valor'] = f"R$ {loja['meta_valor']:,.2f}".replace(',', '_').replace('.', ',').replace('_', '.')
 
-    print(f"Pódio calculado para o período: {primeiro_dia.date()} até {ultimo_dia.date()}")
+    print(f"Pódio calculado para o período: {primeiro_dia} até {ultimo_dia}")
     print(f"Total de lojas no pódio: {len(podium)}")
     print("\n----- Finalizando get_podium -----\n")
     
     return {
         'podium': podium,
         'periodo': {
-            'inicio': primeiro_dia.date(),
-            'fim': ultimo_dia.date()
+            'inicio': primeiro_dia,
+            'fim': ultimo_dia
         }
     }
 
