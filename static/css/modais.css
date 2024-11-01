@@ -446,3 +446,148 @@ main.darkmode tbody tr:hover {
         min-width: 100%;
     }
 }
+
+/* Estilos para a tabela TAC */
+.tac-table-container {
+    margin: 20px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+.tac-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
+    font-size: 14px;
+}
+
+.tac-table thead {
+    background-color: var(--azul-escuro-500);
+    color: white;
+}
+
+.tac-table th {
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tac-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+}
+
+/* Larguras específicas para as colunas */
+.th-nome, .td-nome { width: 30%; }
+.th-cpf, .td-cpf { width: 20%; }
+.th-valor, .td-valor { width: 15%; }
+.th-status, .td-status { width: 15%; }
+.th-acao, .td-acao { width: 20%; }
+
+/* Estilo para as badges de status */
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-pago {
+    background-color: #e6f4ea;
+    color: #1e7e34;
+}
+
+.status-nao_pago {
+    background-color: #fde7e9;
+    color: #dc3545;
+}
+
+.status-em_espera {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+/* Estilo para o select de status */
+.status-select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.status-select:hover {
+    border-color: var(--azul-escuro-500);
+}
+
+.status-select:focus {
+    outline: none;
+    border-color: var(--azul-escuro-500);
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Estilo para linhas vazias */
+.no-records {
+    text-align: center;
+    color: #666;
+    padding: 20px;
+    font-style: italic;
+}
+
+/* Hover effect nas linhas */
+.tac-row:hover {
+    background-color: #f8f9fa;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .tac-table-container {
+        margin: 10px 0;
+        overflow-x: auto;
+    }
+    
+    .tac-table {
+        font-size: 13px;
+    }
+    
+    .tac-table th,
+    .tac-table td {
+        padding: 8px 10px;
+    }
+    
+    .status-badge {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+}
+
+/* Modo escuro */
+.darkmode .tac-table {
+    background-color: var(--dark-container-background);
+    color: var(--cor-branco);
+}
+
+.darkmode .tac-table thead {
+    background-color: var(--dark-background-fundo);
+}
+
+.darkmode .tac-table td {
+    border-bottom-color: var(--dark-border-color);
+}
+
+.darkmode .tac-row:hover {
+    background-color: var(--dark-hover-background);
+}
+
+.darkmode .status-select {
+    background-color: var(--dark-container-background);
+    color: var(--cor-branco);
+    border-color: var(--dark-border-color);
+}

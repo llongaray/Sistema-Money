@@ -106,35 +106,34 @@ function preencherDadosSubModal(subModal, tipoModal, id) {
     console.log("Iniciando preenchimento do sub-modal para ID:", id);
 
     if (tipoModal === 'listaClientes') {
-        if (!id || id === 'undefined' || !clientesLoja[id]) {
-            console.error(`ID inválido ou cliente com ID ${id} não encontrado em clientesLoja`);
+        if (!id || id === 'undefined' || !clientesLojaData.find(c => c.id === id)) {
+            console.error(`ID inválido ou cliente com ID ${id} não encontrado em clientesLojaData`);
             return;
         }
 
-        const dados = clientesLoja[id];
+        const dados = clientesLojaData.find(c => c.id === id);
         console.log("Dados do cliente:", dados);
 
         try {
-            const agendamentoSelect = subModal.querySelector('#agendamentoId');
-            if (agendamentoSelect) {
-                if (!dados.id || dados.id === 'undefined') {
-                    console.error('ID do agendamento inválido');
-                    return;
-                }
-                agendamentoSelect.value = dados.id;
+            // Preencher o ID do agendamento
+            const agendamentoId = subModal.querySelector('#agendamentoId');
+            if (agendamentoId) {
+                agendamentoId.value = dados.id;
                 console.log(`Agendamento ID preenchido com: ${dados.id}`);
             }
 
+            // Mapear campos para preencher
             const campos = {
                 '#nomeCliente': dados.nome,
                 '#cpfCliente': dados.cpf,
                 '#numeroCliente': dados.numero,
-                '#diaAgendado': dados.diaAgendado,
+                '#diaAgendado': dados.diaAgendadoFormatado,
                 '#tabulacaoAtendente': dados.tabulacaoAtendente,
-                '#atendenteAgendou': dados.atendenteAgendou,
-                '#lojaAgendada': dados.lojaAgendada
+                '#atendenteAgendou': dados.atendenteNome,
+                '#lojaAgendada': dados.lojaNome
             };
 
+            // Preencher cada campo
             Object.entries(campos).forEach(([selector, valor]) => {
                 const elemento = subModal.querySelector(selector);
                 if (elemento) {
@@ -145,11 +144,15 @@ function preencherDadosSubModal(subModal, tipoModal, id) {
                 }
             });
 
+            // Preencher select de vendedores
             const vendedorSelect = subModal.querySelector('#vendedorLoja');
             if (vendedorSelect) {
+                // Limpar opções existentes
+                vendedorSelect.innerHTML = '<option value="">Selecione um vendedor</option>';
+                // Preencher com novos vendedores
                 preencherSelectVendedores(vendedorSelect);
                 
-                if (dados.vendedorLoja && dados.vendedorLoja !== 'undefined') {
+                if (dados.vendedorLoja) {
                     vendedorSelect.value = dados.vendedorLoja;
                     console.log(`Vendedor selecionado: ${dados.vendedorLoja}`);
                 }
@@ -157,6 +160,7 @@ function preencherDadosSubModal(subModal, tipoModal, id) {
                 console.warn('Select de vendedores não encontrado');
             }
 
+            // Configurar campos de tabulação do vendedor
             const tabulacaoVendedor = subModal.querySelector('#tabulacaoVendedor');
             const observacaoVendedor = subModal.querySelector('#observacaoVendedor');
             const observacaoContainer = subModal.querySelector('#observacaoVendedorContainer');
@@ -166,14 +170,16 @@ function preencherDadosSubModal(subModal, tipoModal, id) {
                 tabulacaoVendedor.value = dados.tabulacaoVendedor;
                 console.log(`Tabulação do vendedor: ${dados.tabulacaoVendedor}`);
 
+                // Mostrar campos adicionais se necessário
+                if (dados.tabulacaoVendedor === 'FECHOU NEGOCIO') {
+                    fechouNegocioContainer.style.display = 'block';
+                    observacaoContainer.style.display = 'block';
+                } else if (dados.tabulacaoVendedor) {
+                    observacaoContainer.style.display = 'block';
+                }
+
                 if (observacaoVendedor && dados.observacaoVendedor) {
                     observacaoVendedor.value = dados.observacaoVendedor;
-                    if (observacaoContainer) {
-                        observacaoContainer.style.display = 'block';
-                    }
-                    if (fechouNegocioContainer && dados.tabulacaoVendedor === 'FECHOU NEGOCIO') {
-                        fechouNegocioContainer.style.display = 'block';
-                    }
                 }
             }
 
@@ -218,40 +224,29 @@ function preencherTabelaClientes() {
     $tabela.empty();
     console.log('Tabela limpa');
 
-    const clientesPorCPF = {};
     clientesLojaData.forEach(cliente => {
-        if (!clientesPorCPF[cliente.cpf]) {
-            clientesPorCPF[cliente.cpf] = [];
-        }
-        clientesPorCPF[cliente.cpf].push(cliente);
-    });
+        const nomeElement = `<button type="button" class="btn-link abrir-sub-modal" 
+            onclick="abrirSubModal('#modalEdicaoCliente', 'listaClientes', '${cliente.id}')">
+            ${cliente.nome}
+        </button>`;
 
-    Object.values(clientesPorCPF).forEach(clientes => {
-        clientes.sort((a, b) => new Date(b.diaAgendado) - new Date(a.diaAgendado));
-
-        clientes.forEach((cliente, index) => {
-            const isRecente = index === 0;
-            const nomeElement = isRecente ? 
-                `<button type="button" class="btn-link abrir-sub-modal" onclick="abrirSubModal('#modalEdicaoCliente', 'listaClientes', ${cliente.id})">${cliente.nome}</button>` :
-                `<p class="text-muted">${cliente.nome}</p>`;
-
-            const row = `
-                <tr>
-                    <td>${nomeElement}</td>
-                    <td>${cliente.cpf}</td>
-                    <td>${cliente.numero}</td>
-                    <td>${cliente.diaAgendadoFormatado}</td>
-                </tr>
-            `;
-            
-            $tabela.append(row);
-            console.log(`Linha adicionada para cliente ${cliente.nome}`);
-        });
+        const row = `
+            <tr>
+                <td>${nomeElement}</td>
+                <td>${cliente.cpf}</td>
+                <td>${cliente.numero}</td>
+                <td>${cliente.diaAgendadoFormatado}</td>
+                <td>${cliente.atendenteNome}</td>
+                <td>${cliente.lojaNome}</td>
+                <td>${cliente.statusDias}</td>
+            </tr>
+        `;
+        
+        $tabela.append(row);
     });
     
     console.log('Preenchimento da tabela concluído');
 }
-
 // Variável global para controlar a direção da ordenação
 let sortDirection = 'desc'; // Começa com mais recente
 
@@ -283,19 +278,6 @@ function preencherTabelaTodosAgendamentos() {
     $tabela.empty();
     console.log('Tabela limpa');
 
-    // Ordenar o dicionário por data
-    todosAgendamentos.sort((a, b) => {
-        const dateA = new Date(a.dia_agendado);
-        const dateB = new Date(b.dia_agendado);
-        return sortDirection === 'desc' ? dateB - dateA : dateA - dateB;
-    });
-
-    // Converter e armazenar dados no formato correto
-    todosAgendamentos.forEach(agendamento => {
-        window.clientesLoja = window.clientesLoja || {};
-        window.clientesLoja[agendamento.id] = converterParaFormatoClienteLoja(agendamento);
-    });
-
     // Agrupar por CPF
     const agendamentosPorCPF = {};
     todosAgendamentos.forEach(agendamento => {
@@ -306,31 +288,37 @@ function preencherTabelaTodosAgendamentos() {
     });
 
     Object.values(agendamentosPorCPF).forEach(agendamentos => {
-        agendamentos.forEach((agendamento, index) => {
-            const isRecente = index === 0;
-            const nomeElement = isRecente ? 
-                `<button type="button" class="btn-link abrir-sub-modal" onclick="abrirSubModal('#modalEdicaoCliente', 'listaClientes', '${agendamento.id}')">${agendamento.nome_cliente}</button>` :
-                `<p class="text-muted">${agendamento.nome_cliente}</p>`;
+        // Ordenar agendamentos do mesmo CPF por data (mais recente primeiro)
+        agendamentos.sort((a, b) => new Date(b.dia_agendado) - new Date(a.dia_agendado));
+        
+        // Pegar apenas o agendamento mais recente
+        const agendamentoRecente = agendamentos[0];
+        const totalAgendamentos = agendamentos.length;
 
-            const dataCompleta = new Date(agendamento.dia_agendado);
-            const dataFormatada = dataCompleta.toISOString().split('T')[0];
+        const nomeElement = `<button type="button" class="btn-link abrir-sub-modal" 
+            onclick="abrirSubModal('#modalEdicaoCliente', 'listaClientes', '${agendamentoRecente.id}')">
+            ${agendamentoRecente.nome_cliente}
+        </button>`;
 
-            const row = `
-                <tr>
-                    <td>${nomeElement}</td>
-                    <td>${agendamento.cpf_cliente}</td>
-                    <td>${agendamento.numero_cliente}</td>
-                    <td data-date="${agendamento.dia_agendado}">${dataFormatada}</td>
-                    <td>${agendamento.atendente_nome}</td>
-                    <td>${agendamento.loja_nome}</td>
-                    <td>${agendamento.status_dias}</td>
-                </tr>
-            `;
-            
-            $tabela.append(row);
-        });
+        const dataCompleta = new Date(agendamentoRecente.dia_agendado);
+        const dataFormatada = dataCompleta.toISOString().split('T')[0];
+
+        const row = `
+            <tr>
+                <td>${nomeElement}</td>
+                <td>${agendamentoRecente.cpf_cliente}</td>
+                <td>${agendamentoRecente.numero_cliente}</td>
+                <td data-date="${agendamentoRecente.dia_agendado}">${dataFormatada}</td>
+                <td>${agendamentoRecente.atendente_nome}</td>
+                <td>${agendamentoRecente.loja_nome}</td>
+                <td>${agendamentoRecente.status_dias}</td>
+                <td>${totalAgendamentos}</td>
+            </tr>
+        `;
+        
+        $tabela.append(row);
     });
-    
+
     console.log('Preenchimento da tabela de todos os agendamentos concluído');
 }
 
@@ -508,20 +496,12 @@ function closeSubModal(modalId) {
     }
 }
 
-// Atualizar a função handleModalClick para lidar corretamente com cliques fora do modal
+// Atualizar a função handleModalClick para lidar apenas com modal-sec
 function handleModalClick(event) {
-    // Verifica se o clique foi em um modal-sec
-    const modalSec = event.target.closest('.modal-sec');
-    if (modalSec && event.target === modalSec) {
-        // Se clicou no backdrop do modal-sec
-        closeSubModal(modalSec.id);
-        return;
-    }
-
-    // Verifica se o clique foi em um modal normal
-    const modal = event.target.closest('.modal');
-    if (modal && event.target === modal) {
-        closeAllModals();
+    // Verifica se o clique foi diretamente no backdrop do modal-sec
+    if (event.target.classList.contains('modal-sec')) {
+        closeSubModal(event.target.id);
+        event.stopPropagation(); // Impede a propagação do evento para o modal pai
     }
 }
 
@@ -530,6 +510,8 @@ function handleSubModalFormSubmit(event) {
     event.preventDefault();
     const form = event.target;
     const subModal = form.closest('.modal-sec');
+    const formType = form.querySelector('input[name="form_type"]').value;
+    const parentModal = subModal.closest('.modal');  // Pega o modal pai
     
     // Enviar o formulário via AJAX
     $.ajax({
@@ -540,12 +522,32 @@ function handleSubModalFormSubmit(event) {
         contentType: false,
         success: function(response) {
             console.log('Formulário enviado com sucesso');
+            
             // Fechar apenas o sub-modal após o sucesso
             if (subModal) {
-                closeSubModal(subModal.id);
+                subModal.classList.remove('active');
+                console.log(`Sub-modal ${subModal.id} fechado`);
             }
-            // Atualizar a página ou fazer outras ações necessárias
-            location.reload();
+
+            // Se for formulário de lista_clientes, apenas atualizar a tabela
+            if (formType === 'lista_clientes') {
+                // Atualizar apenas a tabela relevante
+                if (document.getElementById('modalTodosAgendamentos').classList.contains('active')) {
+                    preencherTabelaTodosAgendamentos();
+                } else if (document.getElementById('modalListaClientes').classList.contains('active')) {
+                    preencherTabelaClientes();
+                }
+            } else if (formType === 'confirmacao_agendamento') {
+                // Para confirmação de agendamento, manter o modal pai aberto
+                if (parentModal) {
+                    setTimeout(() => {
+                        location.reload();
+                    }, 500);
+                }
+            } else {
+                // Para outros tipos de formulário, recarregar a página
+                location.reload();
+            }
         },
         error: function(xhr, status, error) {
             console.error('Erro ao enviar formulário:', error);
@@ -596,10 +598,10 @@ function atualizarStatusTAC(selectElement, agendamentoId) {
         }
     });
 }
-
 // Função auxiliar para mostrar mensagens
 function mostrarMensagem(texto, tipo) {
     const mensagem = $(`<div class="alert alert-${tipo}">${texto}</div>`);
     $('#mensagens').append(mensagem);
     setTimeout(() => mensagem.fadeOut('slow', function() { $(this).remove(); }), 3000);
 }
+

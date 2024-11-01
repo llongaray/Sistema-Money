@@ -212,7 +212,9 @@
                             {% for agendamento in agendamentos_reagendamento %}
                             <tr>
                                 <td>
-                                    <button type="button" class="btn-link abrir-sub-modal" data-agendamento-id="{{ agendamento.id }}" onclick="abrirSubModal('#modalConfirmacaoAgendamento', 'confirmacao', {{ agendamento.id }})">
+                                    <button type="button" class="btn-link abrir-sub-modal" 
+                                            data-agendamento-id="{{ agendamento.id }}" 
+                                            onclick="abrirSubModal('#modalConfirmacaoAgendamento', 'confirmacao', {{ agendamento.id }})">
                                         {{ agendamento.nome_cliente }}
                                     </button>
                                 </td>
@@ -221,6 +223,10 @@
                                 <td>{{ agendamento.atendente_nome }}</td>
                                 <td>{{ agendamento.loja_nome }}</td>
                                 <td>{{ agendamento.status_dias }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">Nenhum agendamento reagendado encontrado</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -246,6 +252,9 @@
                                 <th>CPF</th>
                                 <th>Número</th>
                                 <th>Data Agendada</th>
+                                <th>Atendente</th>
+                                <th>Loja</th>
+                                <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -288,6 +297,7 @@
                                 <th>Atendente</th>
                                 <th>Loja</th>
                                 <th>Status</th>
+                                <th>Total Agend.</th>  <!-- Nova coluna -->
                             </tr>
                         </thead>
                         <tbody>
@@ -307,32 +317,35 @@
                     <h5 class="modal-title">Agendamentos com TAC</h5>
                     <button type="button" class="btn-close" data-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <table class="wp-style-table">
+                <div class="modal-body tac-table-container">
+                    <table class="tac-table">
                         <thead>
                             <tr>
-                                <th>Nome Cliente</th>
-                                <th>CPF</th>
-                                <th>Valor TAC</th>
-                                <th>Status</th>
-                                <th>Ação</th>
+                                <th class="th-nome">Nome Cliente</th>
+                                <th class="th-cpf">CPF</th>
+                                <th class="th-valor">Valor TAC</th>
+                                <th class="th-status">Status</th>
+                                <th class="th-acao">Ação</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for agendamento in agendamentos_tac %}
-                            <tr data-agendamento-id="{{ agendamento.id }}">
-                                <td>{{ agendamento.nome_cliente }}</td>
-                                <td>{{ agendamento.cpf_cliente }}</td>
-                                <td>{{ agendamento.tac }}</td>
-                                <td class="status-tac">{{ agendamento.status_tac }}</td>
-                                <td>
+                            <tr data-agendamento-id="{{ agendamento.id }}" class="tac-row {% if agendamento.status_tac == 'PAGO' %}status-pago{% elif agendamento.status_tac == 'NAO_PAGO' %}status-nao-pago{% elif agendamento.status_tac == 'EM_ESPERA' %}status-espera{% endif %}">
+                                <td class="td-nome">{{ agendamento.nome_cliente }}</td>
+                                <td class="td-cpf">{{ agendamento.cpf_cliente }}</td>
+                                <td class="td-valor">R$ {{ agendamento.tac|floatformat:2 }}</td>
+                                <td class="td-status">
+                                    <span class="status-badge status-{{ agendamento.status_tac|lower }}">
+                                        {{ agendamento.get_status_tac_display }}
+                                    </span>
+                                </td>
+                                <td class="td-acao">
                                     <form method="POST" action="{% url 'inss:all_forms' %}" class="status-tac-form">
                                         {% csrf_token %}
                                         <input type="hidden" name="form_type" value="status_tac">
                                         <input type="hidden" name="agendamento_id" value="{{ agendamento.id }}">
-                                        <select class="status-tac-select form-select" name="status_tac" 
-                                                onchange="this.form.submit()">
-                                            <option value="">Selecione...</option>
+                                        <select class="status-select" name="status_tac" onchange="this.form.submit()">
+                                            <option value="">Alterar status...</option>
                                             <option value="PAGO" {% if agendamento.status_tac == 'PAGO' %}selected{% endif %}>PAGO</option>
                                             <option value="NAO_PAGO" {% if agendamento.status_tac == 'NAO_PAGO' %}selected{% endif %}>NÃO PAGO</option>
                                             <option value="EM_ESPERA" {% if agendamento.status_tac == 'EM_ESPERA' %}selected{% endif %}>EM ESPERA</option>
@@ -342,7 +355,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="4" class="text-center">Nenhum agendamento com TAC encontrado</td>
+                                <td colspan="5" class="no-records">Nenhum agendamento com TAC encontrado</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -456,7 +469,7 @@
                                 <label for="associacao" class="form-label">Associação</label>
                                 <select class="form-select" id="associacao" name="associacao">
                                     <option value="">Selecione uma opção</option>
-                                    <option value="COM ASSOCIAÇÃO">COM ASSOCIAÇÃO</option>
+                                    <option value="COM ASSOCIAÇÃO">COM ASSOCIAÃO</option>
                                     <option value="SEM ASSOCIAÇÃO">SEM ASSOCIAÇÃO</option>
                                 </select>
                             </div>
@@ -580,7 +593,8 @@
                 atendente_nome: "{{ agendamento.atendente_nome|default:'' }}",
                 loja_nome: "{{ agendamento.loja_nome|default:'' }}",
                 status_dias: "{{ agendamento.status_dias|default:'' }}",
-                tabulacao_atendente: "{{ agendamento.tabulacao_atendente|default:'' }}"
+                tabulacao_atendente: "{{ agendamento.tabulacao_atendente|default:'' }}",
+                total_agendamentos: "{{ agendamento.total_agendamentos }}"  // Nova linha
             }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
@@ -619,11 +633,13 @@
                 nome: "{{ cliente.nome_cliente }}",
                 cpf: "{{ cliente.cpf_cliente }}",
                 numero: "{{ cliente.numero_cliente }}",
-                diaAgendado: "{{ cliente.dia_agendado_completo }}", // Data completa
-                diaAgendadoFormatado: "{{ cliente.dia_agendado }}", // Apenas a data
+                diaAgendado: "{{ cliente.dia_agendado_completo }}", 
+                diaAgendadoFormatado: "{{ cliente.dia_agendado }}", 
                 tabulacaoAtendente: "{{ cliente.tabulacao_atendente }}",
-                atendenteAgendou: "{{ cliente.atendente_agendou }}",
-                lojaAgendada: "{{ cliente.loja_agendada }}"
+                atendenteNome: "{{ cliente.atendente_nome }}",
+                lojaNome: "{{ cliente.loja_nome }}",
+                statusDias: "{{ cliente.status_dias }}",
+                totalAgendamentos: "{{ cliente.total_agendamentos }}"
             }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];

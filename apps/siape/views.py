@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from setup.utils import verificar_autenticacao
 from decimal import Decimal
 
-from datetime import datetime
+from datetime import datetime, time
 
 from .models import *
 from apps.inss.models import *
@@ -768,16 +768,18 @@ def get_cards(periodo='mes'):
     # Define o período de análise
     if meta_geral:
         primeiro_dia = meta_geral.range_data_inicio
-        ultimo_dia = meta_geral.range_data_final
+        ultimo_dia = datetime.combine(meta_geral.range_data_final, time(23, 59, 59))
     else:
         primeiro_dia = hoje.replace(day=1)
-        ultimo_dia = (hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1))
+        ultimo_dia = datetime.combine((hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1)), time(23, 59, 59))
     
     # Busca os registros financeiros no período
     valores_range = RegisterMoney.objects.filter(
         data__range=[primeiro_dia, ultimo_dia]
     ).select_related('funcionario', 'funcionario__departamento', 'funcionario__departamento__grupo')
-    
+    print(f"Valores range encontrados: {valores_range.count()}")
+    for valor in valores_range:
+        print(f"Valor: {valor.valor_est} | Funcionário: {valor.funcionario} | Data: {valor.data}")
     # Calcula faturamentos
     faturamento_total = Decimal('0')
     faturamento_siape = Decimal('0')
