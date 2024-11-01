@@ -1,31 +1,31 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
-from django.utils import timezone
-from django.db.models import Sum, OuterRef, Subquery
-from django.db.models import Count, Sum, F, Q
-from django.db import transaction
+# Django imports
+from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from setup.utils import verificar_autenticacao
+from django.db import transaction
+from django.db.models import Count, F, OuterRef, Q, Subquery, Sum
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_http_methods
+
+# Python built-in imports
+import csv
+import io
+import logging
+import os
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 
-from datetime import datetime, time
+# Third party imports
+import pandas as pd
 
+# Local imports
+from custom_tags_app.permissions import check_access
+from setup.utils import verificar_autenticacao
 from .models import *
 from apps.inss.models import *
 from apps.funcionarios.models import *
-
-import logging
-from datetime import timedelta
-
-from custom_tags_app.permissions import check_access
-
-import csv
-from django.contrib import messages
-import io
-import pandas as pd
-from django.conf import settings
-import os
 
 # Configurando o logger para registrar atividades e erros no sistema
 logger = logging.getLogger(__name__)
@@ -649,10 +649,11 @@ def get_all_forms():
     return context
 
 @verificar_autenticacao
-@check_access(departamento='SIAPE', nivel_minimo='PADRÃO')
+@check_access(departamento='SIAPE', nivel_minimo='ESTAGIO')
 def all_forms(request):
     """
     Renderiza a página com todos os formulários do SIAPE e processa os formulários enviados.
+    Requer autenticação e acesso ao departamento SIAPE (nível mínimo: ESTAGIO).
     """
     print("Iniciando função all_forms")
     
@@ -828,13 +829,32 @@ def get_cards(periodo='mes'):
 def get_podium(periodo='mes'):
     """
     Calcula o pódio dos funcionários baseado nos valores registrados no RegisterMoney
-    para funcionários do departamento SIAPE
+    usando o período da meta ativa do SIAPE
     """
     print("\n----- Iniciando get_podium -----\n")
     
-    hoje = timezone.now()
-    primeiro_dia = hoje.replace(day=1)
-    ultimo_dia = (hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1))
+    hoje = timezone.now().date()
+    
+    # Busca meta ativa do SIAPE
+    meta_siape = RegisterMeta.objects.filter(
+        status=True,
+        tipo='EQUIPE',
+        setor='SIAPE',
+        range_data_inicio__lte=hoje,
+        range_data_final__gte=hoje
+    ).first()
+    
+    # Se encontrou meta ativa, usa o range de datas dela
+    if meta_siape:
+        print(f"Meta SIAPE ativa encontrada: {meta_siape.titulo}")
+        primeiro_dia = meta_siape.range_data_inicio
+        ultimo_dia = meta_siape.range_data_final
+    else:
+        print("Nenhuma meta SIAPE ativa encontrada, usando mês atual")
+        primeiro_dia = hoje.replace(day=1)
+        ultimo_dia = (hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1))
+    
+    print(f"Período do pódio: {primeiro_dia} até {ultimo_dia}")
     
     # Busca todos os registros de valores no período
     valores_range = RegisterMoney.objects.filter(
@@ -880,18 +900,16 @@ def get_podium(periodo='mes'):
     # Adiciona posição no pódio e formata os valores
     for i, funcionario in enumerate(podium):
         funcionario['posicao'] = i + 1
-        # Formata o valor para exibição (R$ XX.XXX,XX)
         funcionario['total_fechamentos'] = f"R$ {funcionario['total_fechamentos']:,.2f}".replace(',', '_').replace('.', ',').replace('_', '.')
 
-    print(f"Pódio calculado para o período: {primeiro_dia.date()} até {ultimo_dia.date()}")
     print(f"Total de funcionários no pódio: {len(podium)}")
     print("\n----- Finalizando get_podium -----\n")
     
     return {
         'podium': podium,
         'periodo': {
-            'inicio': primeiro_dia.date(),
-            'fim': ultimo_dia.date()
+            'inicio': primeiro_dia,
+            'fim': ultimo_dia
         }
     }
 
@@ -915,9 +933,12 @@ def get_ranking(request):
     print("\n----- Finalizando get_ranking -----\n")
     return context_data
 
+@verificar_autenticacao
+@check_access(departamento='SIAPE', nivel_minimo='ESTAGIO')
 def render_ranking(request):
     """
-    Renderiza a página de ranking com os dados necessários
+    Renderiza a página de ranking com os dados necessários.
+    Requer autenticação e acesso ao departamento SIAPE (nível mínimo: ESTAGIO).
     """
     print("\n----- Iniciando render_ranking -----\n")
     

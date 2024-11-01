@@ -21,6 +21,6 @@ urlpatterns = [
     #path('registro-valores/', registro_valores, name='registro_valores'),
 
     # Rota para o ranking
-    path('', render_ranking, name='ranking'),
+    path('ranking/', render_ranking, name='ranking'),
     path('all-forms/', all_forms, name='all_forms'),
 ]

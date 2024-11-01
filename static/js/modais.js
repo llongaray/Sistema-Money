@@ -1,4 +1,3 @@
-// Funções de Gerenciamento de Estado do Modal
 function saveActiveModalState(modalId) {
     if (modalId) {
         sessionStorage.setItem('activeModal', modalId.replace('#', ''));
@@ -12,7 +11,6 @@ function saveActiveModalState(modalId) {
 function restoreActiveModalState() {
     const activeModalId = sessionStorage.getItem('activeModal');
     if (activeModalId) {
-        closeAllModals();
         const modal = document.getElementById(activeModalId);
         if (modal) {
             modal.classList.add('active');
@@ -21,10 +19,16 @@ function restoreActiveModalState() {
     }
 }
 
-// Funções de Controle de Modal
 function openModal(modalId) {
     const cleanedModalId = modalId.replace('#', '');
     console.log(`Tentando abrir o modal com ID: ${cleanedModalId}`);
+
+    document.querySelectorAll('.modal.active, .modal-sec.active').forEach(modal => {
+        if (modal.id !== cleanedModalId) {
+            modal.classList.remove('active');
+            console.log(`Fechando modal: ${modal.id}`);
+        }
+    });
 
     const modal = document.getElementById(cleanedModalId);
     if (modal) {
@@ -46,7 +50,11 @@ function openModal(modalId) {
     }
 }
 
-function closeAllModals() {
+function closeAllModals(forceClose = false) {
+    if (!forceClose) {
+        return;
+    }
+    
     document.querySelectorAll('.modal.active').forEach(modal => {
         console.log(`Fechando modal com ID: ${modal.id}`);
         modal.classList.remove('active');
@@ -56,24 +64,29 @@ function closeAllModals() {
 
 function fecharModal(modalId) {
     const cleanedModalId = modalId.replace('#', '');
-    const modal = document.getElementById(cleanedModalId);
+    console.log(`Tentando fechar o modal com ID: ${cleanedModalId}`);
     
+    const modal = document.getElementById(cleanedModalId);
     if (modal) {
         modal.classList.remove('active');
         saveActiveModalState(null);
         console.log(`Modal com ID: ${cleanedModalId} fechado com sucesso`);
-    } else {
-        console.error(`Modal com ID: ${cleanedModalId} não encontrado`);
     }
 }
 
 function abrirModalOptions(modalId) {
-    console.log('Tetando abri');
-    closeAllModals();
+    console.log(`Tentando abrir modal via options: ${modalId}`);
+    
+    document.querySelectorAll('.modal.active, .modal-sec.active').forEach(modal => {
+        if (modal.id !== modalId.replace('#', '')) {
+            modal.classList.remove('active');
+            console.log(`Fechando modal: ${modal.id}`);
+        }
+    });
+
     openModal(modalId);
 }
 
-// Funções de Sub-Modal
 function abrirSubModal(modalId, tipoModal, id) {
     console.log(`Abrindo sub-modal com ID: ${modalId}, tipo: ${tipoModal}, ID do agendamento: ${id}`);
 
@@ -115,14 +128,12 @@ function preencherDadosSubModal(subModal, tipoModal, id) {
         console.log("Dados do cliente:", dados);
 
         try {
-            // Preencher o ID do agendamento
             const agendamentoId = subModal.querySelector('#agendamentoId');
             if (agendamentoId) {
                 agendamentoId.value = dados.id;
                 console.log(`Agendamento ID preenchido com: ${dados.id}`);
             }
 
-            // Mapear campos para preencher
             const campos = {
                 '#nomeCliente': dados.nome,
                 '#cpfCliente': dados.cpf,
@@ -133,7 +144,6 @@ function preencherDadosSubModal(subModal, tipoModal, id) {
                 '#lojaAgendada': dados.lojaNome
             };
 
-            // Preencher cada campo
             Object.entries(campos).forEach(([selector, valor]) => {
                 const elemento = subModal.querySelector(selector);
                 if (elemento) {
@@ -144,12 +154,9 @@ function preencherDadosSubModal(subModal, tipoModal, id) {
                 }
             });
 
-            // Preencher select de vendedores
             const vendedorSelect = subModal.querySelector('#vendedorLoja');
             if (vendedorSelect) {
-                // Limpar opções existentes
                 vendedorSelect.innerHTML = '<option value="">Selecione um vendedor</option>';
-                // Preencher com novos vendedores
                 preencherSelectVendedores(vendedorSelect);
                 
                 if (dados.vendedorLoja) {
@@ -160,7 +167,6 @@ function preencherDadosSubModal(subModal, tipoModal, id) {
                 console.warn('Select de vendedores não encontrado');
             }
 
-            // Configurar campos de tabulação do vendedor
             const tabulacaoVendedor = subModal.querySelector('#tabulacaoVendedor');
             const observacaoVendedor = subModal.querySelector('#observacaoVendedor');
             const observacaoContainer = subModal.querySelector('#observacaoVendedorContainer');
@@ -170,7 +176,6 @@ function preencherDadosSubModal(subModal, tipoModal, id) {
                 tabulacaoVendedor.value = dados.tabulacaoVendedor;
                 console.log(`Tabulação do vendedor: ${dados.tabulacaoVendedor}`);
 
-                // Mostrar campos adicionais se necessário
                 if (dados.tabulacaoVendedor === 'FECHOU NEGOCIO') {
                     fechouNegocioContainer.style.display = 'block';
                     observacaoContainer.style.display = 'block';
@@ -210,7 +215,6 @@ function preencherDadosSubModal(subModal, tipoModal, id) {
     }
 }
 
-// Funções de Manipulação de Tabelas
 function preencherTabelaClientes() {
     console.log('Iniciando preenchimento da tabela de clientes');
     
@@ -247,10 +251,9 @@ function preencherTabelaClientes() {
     
     console.log('Preenchimento da tabela concluído');
 }
-// Variável global para controlar a direção da ordenação
-let sortDirection = 'desc'; // Começa com mais recente
 
-// Função para converter o formato dos dados
+let sortDirection = 'desc';
+
 function converterParaFormatoClienteLoja(agendamento) {
     return {
         id: agendamento.id,
@@ -278,7 +281,6 @@ function preencherTabelaTodosAgendamentos() {
     $tabela.empty();
     console.log('Tabela limpa');
 
-    // Agrupar por CPF
     const agendamentosPorCPF = {};
     todosAgendamentos.forEach(agendamento => {
         if (!agendamentosPorCPF[agendamento.cpf_cliente]) {
@@ -288,10 +290,8 @@ function preencherTabelaTodosAgendamentos() {
     });
 
     Object.values(agendamentosPorCPF).forEach(agendamentos => {
-        // Ordenar agendamentos do mesmo CPF por data (mais recente primeiro)
         agendamentos.sort((a, b) => new Date(b.dia_agendado) - new Date(a.dia_agendado));
         
-        // Pegar apenas o agendamento mais recente
         const agendamentoRecente = agendamentos[0];
         const totalAgendamentos = agendamentos.length;
 
@@ -322,7 +322,6 @@ function preencherTabelaTodosAgendamentos() {
     console.log('Preenchimento da tabela de todos os agendamentos concluído');
 }
 
-// Funções de Manipulação de Formulários
 function handleTabulacaoChange() {
     const modal = document.getElementById('modalConfirmacaoAgendamento');
     const tabulacaoSelect = modal.querySelector('#tabulacaoAtendente');
@@ -376,7 +375,6 @@ function preencherSelectVendedores(selectElement) {
     });
 }
 
-// Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
     const mensagensContainer = document.getElementById('mensagens');
     const temMensagemSucesso = mensagensContainer && 
@@ -409,12 +407,10 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Modal de edição cliente não encontrado');
     }
 
-    // Adicionar listeners para os formulários em sub-modais
     document.querySelectorAll('.modal-sec form').forEach(form => {
         form.addEventListener('submit', handleSubModalFormSubmit);
     });
 
-    // Atualizar os listeners de botões close em sub-modais
     document.querySelectorAll('.modal-sec .btn-close').forEach(button => {
         button.addEventListener('click', function() {
             const modalId = this.closest('.modal-sec').id;
@@ -422,13 +418,76 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Adiciona o evento de clique em todos os modal-sec
     document.querySelectorAll('.modal-sec').forEach(modalSec => {
         modalSec.addEventListener('click', function(event) {
-            // Se o clique foi diretamente no .modal-sec (backdrop)
             if (event.target === this) {
                 closeSubModal(this.id);
             }
+        });
+    });
+
+    document.addEventListener('click', function(event) {
+        if (event.target.classList.contains('modal') || event.target.classList.contains('modal-sec')) {
+            fecharModal(event.target.id);
+        }
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            document.querySelectorAll('.modal.active, .modal-sec.active').forEach(modal => {
+                fecharModal(modal.id);
+            });
+        }
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const keepModalId = urlParams.get('keepModal');
+    const lastActiveModal = sessionStorage.getItem('lastActiveModal');
+
+    if (keepModalId) {
+        console.log(`Restaurando modal específico: ${keepModalId}`);
+        openModal(keepModalId);
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (lastActiveModal) {
+        console.log(`Restaurando último modal ativo: ${lastActiveModal}`);
+        openModal(lastActiveModal);
+        sessionStorage.removeItem('lastActiveModal');
+    }
+
+    // Verifica se deve abrir o modal padrão após reload
+    const defaultModal = sessionStorage.getItem('defaultModal');
+    if (defaultModal) {
+        console.log(`Abrindo modal padrão após reload: ${defaultModal}`);
+        openModal(defaultModal);
+        sessionStorage.removeItem('defaultModal');
+    }
+
+    // Adiciona listener específico para o form de meta
+    const formMeta = document.querySelector('form[name="form_type"][value="adicionar_meta"]');
+    if (formMeta) {
+        formMeta.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const metaModal = document.getElementById('modalAdicionarMeta');
+            if (metaModal) {
+                metaModal.classList.remove('active');
+                console.log('Modal de meta fechado antes do submit');
+            }
+            handleSubModalFormSubmit(event);
+        });
+    }
+
+    // Adiciona listener específico para formulários em modais
+    document.querySelectorAll('.modal form, .modal-sec form').forEach(form => {
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            // Fecha todos os modais antes do submit
+            document.querySelectorAll('.modal.active, .modal-sec.active').forEach(modal => {
+                modal.classList.remove('active');
+                console.log(`Fechando modal: ${modal.id}`);
+            });
+            
+            handleSubModalFormSubmit(event);
         });
     });
 });
@@ -457,7 +516,6 @@ $(document).ready(function() {
         return false;
     });
 
-    // Listener para o filtro de CPF
     $("#filtroCPF").on("keyup", function() {
         const value = $(this).val().toLowerCase();
         $("#tabelaTodosAgendamentos tbody tr").filter(function() {
@@ -465,7 +523,6 @@ $(document).ready(function() {
         });
     });
 
-    // Listener para ordenação por data
     $('.sortable[data-sort="data"]').on('click', function() {
         sortDirection = sortDirection === 'desc' ? 'asc' : 'desc';
         const icon = $(this).find('i');
@@ -474,16 +531,13 @@ $(document).ready(function() {
         preencherTabelaTodosAgendamentos();
     });
 
-    // Estilo para cursor pointer na coluna ordenável
     $('.sortable').css('cursor', 'pointer');
 
-    // Formatação para caixa alta
     $('.text-uppercase').on('input', function() {
         this.value = this.value.toUpperCase();
     });
 });
 
-// Funções de Controle de Modal
 function closeSubModal(modalId) {
     const cleanedModalId = modalId.replace('#', '');
     const modal = document.getElementById(cleanedModalId);
@@ -496,24 +550,31 @@ function closeSubModal(modalId) {
     }
 }
 
-// Atualizar a função handleModalClick para lidar apenas com modal-sec
 function handleModalClick(event) {
-    // Verifica se o clique foi diretamente no backdrop do modal-sec
     if (event.target.classList.contains('modal-sec')) {
         closeSubModal(event.target.id);
-        event.stopPropagation(); // Impede a propagação do evento para o modal pai
+        event.stopPropagation();
     }
 }
 
-// Adicionar função para lidar com o submit dos formulários em sub-modais
 function handleSubModalFormSubmit(event) {
     event.preventDefault();
     const form = event.target;
-    const subModal = form.closest('.modal-sec');
     const formType = form.querySelector('input[name="form_type"]').value;
-    const parentModal = subModal.closest('.modal');  // Pega o modal pai
     
-    // Enviar o formulário via AJAX
+    console.log(`Processando submit do formulário tipo: ${formType}`);
+    
+    // Fecha todos os modais antes do submit
+    document.querySelectorAll('.modal.active, .modal-sec.active').forEach(modal => {
+        modal.classList.remove('active');
+        console.log(`Fechando modal: ${modal.id}`);
+    });
+    
+    // Limpa todos os estados salvos
+    sessionStorage.removeItem('activeModal');
+    sessionStorage.removeItem('lastActiveModal');
+    sessionStorage.removeItem('defaultModal');
+    
     $.ajax({
         url: form.action,
         method: form.method,
@@ -523,39 +584,27 @@ function handleSubModalFormSubmit(event) {
         success: function(response) {
             console.log('Formulário enviado com sucesso');
             
-            // Fechar apenas o sub-modal após o sucesso
-            if (subModal) {
-                subModal.classList.remove('active');
-                console.log(`Sub-modal ${subModal.id} fechado`);
-            }
-
-            // Se for formulário de lista_clientes, apenas atualizar a tabela
-            if (formType === 'lista_clientes') {
-                // Atualizar apenas a tabela relevante
-                if (document.getElementById('modalTodosAgendamentos').classList.contains('active')) {
+            // Define o modal padrão para abrir após reload
+            if (formType === 'adicionar_meta') {
+                sessionStorage.setItem('defaultModal', 'modalConsultaCliente');
+            } else if (formType === 'lista_clientes') {
+                if (document.getElementById('modalTodosAgendamentos')) {
                     preencherTabelaTodosAgendamentos();
-                } else if (document.getElementById('modalListaClientes').classList.contains('active')) {
+                } else if (document.getElementById('modalListaClientes')) {
                     preencherTabelaClientes();
                 }
-            } else if (formType === 'confirmacao_agendamento') {
-                // Para confirmação de agendamento, manter o modal pai aberto
-                if (parentModal) {
-                    setTimeout(() => {
-                        location.reload();
-                    }, 500);
-                }
-            } else {
-                // Para outros tipos de formulário, recarregar a página
-                location.reload();
             }
+            
+            // Força reload completo da página
+            window.location.href = window.location.pathname;
         },
         error: function(xhr, status, error) {
             console.error('Erro ao enviar formulário:', error);
+            mostrarMensagem('Erro ao processar formulário', 'error');
         }
     });
 }
 
-// Função para atualizar status TAC
 function atualizarStatusTAC(selectElement, agendamentoId) {
     const novoStatus = selectElement.value;
     if (!novoStatus) return;
@@ -573,13 +622,10 @@ function atualizarStatusTAC(selectElement, agendamentoId) {
         },
         success: function(response) {
             if (response.success) {
-                // Atualiza o status na tabela
                 statusCell.text(novoStatus);
                 
-                // Feedback visual
                 mostrarMensagem('Status atualizado com sucesso!', 'success');
                 
-                // Se foi marcado como PAGO, atualiza a interface
                 if (novoStatus === 'PAGO') {
                     row.addClass('tac-pago');
                 } else {
@@ -587,18 +633,16 @@ function atualizarStatusTAC(selectElement, agendamentoId) {
                 }
             } else {
                 mostrarMensagem('Erro ao atualizar status: ' + response.error, 'error');
-                // Reverte a seleção em caso de erro
                 $(selectElement).val(statusCell.text());
             }
         },
         error: function() {
             mostrarMensagem('Erro ao comunicar com o servidor', 'error');
-            // Reverte a seleção em caso de erro
             $(selectElement).val(statusCell.text());
         }
     });
 }
-// Função auxiliar para mostrar mensagens
+
 function mostrarMensagem(texto, tipo) {
     const mensagem = $(`<div class="alert alert-${tipo}">${texto}</div>`);
     $('#mensagens').append(mensagem);

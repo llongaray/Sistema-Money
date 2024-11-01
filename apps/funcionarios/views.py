@@ -23,6 +23,7 @@ import os
 from .forms import FuncionarioForm, UserForm, FuncionarioFullForm, CustomUserForm, UserGroupForm
 from .models import Funcionario, Empresa, Horario, Departamento, Cargo, Loja
 from custom_tags_app.permissions import check_access
+from setup.utils import verificar_autenticacao
 
 # Configuração do logger
 logger = logging.getLogger(__name__)
@@ -812,7 +813,13 @@ def delete_cargo(cargo_id):
     return mensagem
 
 # ---------- RENDER ALL FORMS -----------------------
+@verificar_autenticacao
+@check_access(departamento='CIA', nivel_minimo='ESTAGIO')
 def render_all_forms(request):
+    """
+    Renderiza a página com todos os formulários da CIA e processa os formulários enviados.
+    Requer autenticação e acesso ao departamento CIA (nível mínimo: ESTAGIO).
+    """
     print("\n\n----- Iniciando render_all_forms -----\n")
     
     mensagem = {'texto': '', 'classe': ''}

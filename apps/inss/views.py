@@ -13,6 +13,10 @@ from django.db.models.functions import Coalesce, TruncDate
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+# Local imports
+from custom_tags_app.permissions import check_access
+from setup.utils import verificar_autenticacao
+
 # Importações de modelos
 from .models import *
 from apps.funcionarios.models import *
@@ -755,20 +759,24 @@ def get_all_forms_and_objects(request_post):
         'agendamentos_tac': agendamentos_tac_dicionario
     }
 
-@login_required
+@verificar_autenticacao
+@check_access(departamento='INSS', nivel_minimo='ESTAGIO')
 def render_all_forms(request):
-    """Renderiza a página com todos os formulários"""
+    """
+    Renderiza a página com todos os formulários do INSS e processa os formulários enviados.
+    Requer autenticação e acesso ao departamento INSS (nível mínimo: ESTAGIO).
+    """
     print("\n\n----- Iniciando render_all_forms -----\n")
     
     mensagem = {'texto': '', 'classe': ''}
-
+    
     try:
         funcionario_logado = Funcionario.objects.get(usuario_id=request.user.id)
         print(f"\nFuncionário logado: {funcionario_logado.nome}")
     except Funcionario.DoesNotExist:
         funcionario_logado = None
         print("\n\nFuncionário não encontrado.")
-
+    
     # Processamento de formulários POST
     if request.method == 'POST':
         print("\nRequest é POST. Processando formulário...")
@@ -812,7 +820,7 @@ def render_all_forms(request):
                 'nova_dia_agendado': request.POST.get('nova_dia_agendado'),
                 'observacao': request.POST.get('observacao')
             }
-            print(f"Dados extraídos do formul��rio: {form_data}")
+            print(f"Dados extraídos do formulário: {form_data}")
             
             if not form_data['agendamento_id']:
                 mensagem = {
@@ -1098,22 +1106,41 @@ def get_podium(periodo='mes'):
 def get_tabela_ranking(periodo='mes'):
     """
     Calcula o ranking dos atendentes baseado nos agendamentos que resultaram em atendimento em loja
+    usando o período da meta ativa do INSS
     """
     print("\n----- Iniciando get_tabela_ranking -----\n")
     
     hoje = timezone.now().date()
-    # Calcula o domingo da semana atual
-    primeiro_dia = hoje - timezone.timedelta(days=hoje.weekday() + 1)
-    # Calcula o sábado da semana atual
-    ultimo_dia = primeiro_dia + timezone.timedelta(days=6)
     
-    # Filtro para a semana atual
+    # Busca meta ativa do INSS
+    meta_inss = RegisterMeta.objects.filter(
+        status=True,
+        setor='INSS',
+        range_data_inicio__lte=hoje,
+        range_data_final__gte=hoje
+    ).first()
+    
+    # Se encontrou meta ativa, usa o range de datas dela
+    if meta_inss:
+        print(f"Meta INSS ativa encontrada: {meta_inss.titulo}")
+        primeiro_dia = meta_inss.range_data_inicio
+        ultimo_dia = meta_inss.range_data_final
+    else:
+        print("Nenhuma meta INSS ativa encontrada, usando semana atual")
+        # Calcula o domingo da semana atual
+        primeiro_dia = hoje - timezone.timedelta(days=hoje.weekday() + 1)
+        # Calcula o sábado da semana atual
+        ultimo_dia = primeiro_dia + timezone.timedelta(days=6)
+    
+    print(f"Período do ranking: {primeiro_dia} até {ultimo_dia}")
+    
+    # Filtro para o período da meta
     filtro_data = Q(
         dia_agendado__date__gte=primeiro_dia,
         dia_agendado__date__lte=ultimo_dia
     )
 
-    # Busca agendamentos da semana atual
+    # Busca agendamentos do período
     agendamentos = Agendamento.objects.filter(
         filtro_data,
         atendente_agendou__isnull=False    # Apenas agendamentos com atendente definido
@@ -1133,7 +1160,7 @@ def get_tabela_ranking(periodo='mes'):
                 'confirmados': 0,
                 'fechamentos': 0,
                 'taxa_efetividade': 0,
-                'percentual_conf': 0  # Inicializa o percentual de confirmação
+                'percentual_conf': 0
             }
         
         # Ignora agendamentos com tabulação "NÃO QUIS OUVIR"
@@ -1170,7 +1197,6 @@ def get_tabela_ranking(periodo='mes'):
     ranking_data.sort(key=lambda x: x['fechamentos'], reverse=True)
     
     print(f"Dados do ranking calculados para {len(ranking_data)} atendentes")
-    print(f"Período: {primeiro_dia} até {ultimo_dia}")
     
     # Log para debug dos percentuais
     for dados in ranking_data:
@@ -1214,9 +1240,12 @@ def get_ranking(request):
     print("\n----- Finalizando get_ranking -----\n")
     return context_data
 
+@verificar_autenticacao
+@check_access(departamento='INSS', nivel_minimo='ESTAGIO')
 def render_ranking(request):
     """
-    Renderiza a página de ranking com os dados necessários
+    Renderiza a página de ranking com os dados necessários.
+    Requer autenticação e acesso ao departamento INSS (nível mínimo: ESTAGIO).
     """
     print("\n----- Iniciando render_ranking -----\n")
     
