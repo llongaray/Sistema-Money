@@ -255,6 +255,7 @@
                                     <th>Valor</th>
                                     <th>Cliente</th>
                                     <th>Data</th>
+                                    <th>Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -264,10 +265,21 @@
                                         <td>{{ registro.valor }}</td>         <!-- Valor estimado -->
                                         <td>{{ registro.cliente }}</td>       <!-- Nome do cliente ou CPF -->
                                         <td>{{ registro.data|date:"d/m/Y H:i" }}</td>
+                                        <td>
+                                            <form method="POST" action="{% url 'siape:all_forms' %}" style="display: inline;">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="form_type" value="excluir_registro">
+                                                <input type="hidden" name="registro_id" value="{{ registro.id }}">
+                                                <button type="submit" class="btn btn-link text-danger" 
+                                                        onclick="return confirm('Tem certeza que deseja excluir este registro?')">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
+                                        </td>
                                     </tr>
                                 {% empty %}
                                     <tr>
-                                        <td colspan="4" class="text-center">Nenhum registro encontrado.</td>
+                                        <td colspan="5" class="text-center">Nenhum registro encontrado.</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -422,13 +434,19 @@
 
 {% block addjs_extra %}
 <!-- Início dos Scripts JS -->
+
+<!-- Bibliotecas Externas -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
+<!-- Dicionários e Dados Iniciais -->
 <script>
-    // Supondo que você tenha o dicionário de debitos_por_campanha disponível no contexto
+    // Dicionário de débitos por campanha disponível no contexto
     const debitosPorCampanha = {{ debitos_por_campanha|safe }};
+</script>
 
+<!-- Funções de Gerenciamento de Campanhas -->
+<script>
     // Função para alternar entre as seções de edição e importação
     function toggleCampanhaAction() {
         const acaoCampanha = document.getElementById('acaoCampanha').value;
@@ -467,7 +485,10 @@
         const statusCampanha = document.getElementById('statusCampanha').value;
         console.log(`Atualizando campanha para status: ${statusCampanha}`);
     }
+</script>
 
+<!-- Funções de Gerenciamento de Campos e Visibilidade -->
+<script>
     // Função para controlar a visibilidade do campo setor
     function toggleSetorField() {
         const tipoMeta = document.getElementById('tipo').value;
@@ -499,7 +520,7 @@
         }
     }
 
-    // Adicione um listener para o campo setor
+    // Event Listeners
     document.getElementById('setor').addEventListener('change', function() {
         if (this.value === 'INSS') {
             document.getElementById('lojaContainer').style.display = 'block';
@@ -511,19 +532,18 @@
         }
     });
 
-    // Executar a função no carregamento da página
+    // Inicialização
     document.addEventListener('DOMContentLoaded', function() {
         toggleSetorField();
     });
-
 </script>
+
+<!-- Scripts Externos e Módulos -->
 <script src="{% static 'darkmode.js' %}"></script>
+<script src="{% static 'conjunto/initialConfig.js' %}"></script> 
 <script src="{% static 'modais.js' %}"></script>
-<script src="{% static 'conjunto/initialConfig.js' %}"></script> <!-- Carregue o groups.js aqui -->
 
 <!-- Fim dos Scripts JS -->
-
-<!-- Agora carrega o arquivo 'modais.js', que pode usar as funções e os dados definidos acima -->
 {% endblock %}
 
 

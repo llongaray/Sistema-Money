@@ -118,6 +118,7 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static', 'css', 'partials'),
     os.path.join(BASE_DIR, 'static', 'js'),
     os.path.join(BASE_DIR, 'static', 'js', 'apps'),
+    os.path.join(BASE_DIR, 'static', 'files'),
 ]
 
 

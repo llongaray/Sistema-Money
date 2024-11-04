@@ -6,6 +6,7 @@
 
 {% block addcss_extra %}
 <link rel="stylesheet" href="{% static '/siape/ranking.css' %}">
+<link rel="stylesheet" href="{% static 'ranking_data.css' %}">
 <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -132,7 +133,23 @@
 {% endblock %}
 
 {% block addjs_extra %}
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+<script>
+    // Dados do pódium atual
+    const podiumData = {
+        top1: {
+            nome: "{{ podium.0.nome|default:'Posição Disponível' }}",
+            valor: "{{ podium.0.total_fechamentos|default:'0' }}"
+        }
+    };
+</script>
+<script src="{% static 'conjunto/ranking_data.js' %}"></script>
+<!-- Scripts para funcionalidades do ranking -->
 <script src="{% static '/siape/ranking.js' %}"></script>
+
+<!-- Script para manipulação dos dados do ranking -->
+
+<!-- Debug do percentual de conformidade -->
 <script>
         console.log("{{ item.percentual_conf }}");
 </script>

@@ -163,9 +163,16 @@ if (currentTheme) {
 
 // Adicione esta função no final do arquivo
 function setupPageReload() {
-    // Recarrega a página a cada 10 segundos (10000 milissegundos)
     setInterval(() => {
-        console.log('Página recarregada em:', new Date().toLocaleString());
+        console.log('Verificando mudanças antes do reload:', new Date().toLocaleString());
+        
+        // Salva o estado atual antes do reload
+        const currentTop1 = podiumData.top1;
+        
+        // Armazena temporariamente para comparação pós-reload
+        sessionStorage.setItem('preReloadTop1', JSON.stringify(currentTop1));
+        
+        // Recarrega a página
         window.location.reload();
-    }, 100000000);
+    }, 10000);
 }

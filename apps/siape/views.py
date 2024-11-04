@@ -573,7 +573,31 @@ def importar_dados_csv(request):
     print("Finalizando função importar_dados_csv")
     return redirect('siape:all_forms')
 
+# Antes de get_all_forms()
+def post_deleteMoney(registro_id):
+    """Processa a exclusão de um registro em RegisterMoney."""
+    print("\n\n----- Iniciando post_deleteMoney -----\n")
+    mensagem = {'texto': '', 'classe': ''}
 
+    try:
+        registro = RegisterMoney.objects.get(id=registro_id)
+        registro.delete()
+        mensagem['texto'] = 'Registro excluído com sucesso!'
+        mensagem['classe'] = 'success'
+        print(f"Registro excluído: {registro_id}")
+
+    except RegisterMoney.DoesNotExist:
+        mensagem['texto'] = 'Registro não encontrado.'
+        mensagem['classe'] = 'error'
+        print(f"Erro: Registro {registro_id} não encontrado")
+    except Exception as e:
+        mensagem['texto'] = f'Erro ao excluir registro: {str(e)}'
+        mensagem['classe'] = 'error'
+        print(f"Erro: {str(e)}")
+
+    print(f"Mensagem final: {mensagem}\n\n")
+    print("\n----- Finalizando post_deleteMoney -----\n")
+    return mensagem
 
 # ===== FIM DA SEÇÃO DOS POSTS =====
 
@@ -625,10 +649,11 @@ def get_all_forms():
             nome_ou_cpf = registro.cpf_cliente
 
         registros.append({
-            'nome': registro.funcionario.nome,  # Nome do funcionário relacionado
-            'valor': registro.valor_est,        # Valor estimado
-            'cliente': nome_ou_cpf,            # Nome do cliente ou CPF
-            'data': registro.data              # Data do registro
+            'id': registro.id,
+            'nome': registro.funcionario.nome,
+            'valor': registro.valor_est,
+            'cliente': nome_ou_cpf,
+            'data': registro.data
         })
 
     # Adicionar metas ao contexto
@@ -698,6 +723,10 @@ def all_forms(request):
 
         elif form_type == 'adicionar_registro':
             mensagem = post_addMoney(request.POST)
+        
+        elif form_type == 'excluir_registro':
+            registro_id = request.POST.get('registro_id')
+            mensagem = post_deleteMoney(registro_id)
         
         elif form_type == 'alterar_status_campanha':
             campanha_id = request.POST.get('campanha_id')
