@@ -8,7 +8,7 @@ urlpatterns = [
     path('siape/', include('apps.siape.urls')),  # Página principal
     path('inss/', include('apps.inss.urls')),
     path('rh/', include('apps.funcionarios.urls')),
-    path('gerenciamento/', include('apps.gerenciamento.urls')),
+    path('', include('apps.geral.urls')),
     path('autenticacao/', include('apps.usuarios.urls')),
 ]
 

@@ -27,10 +27,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'apps.funcionarios.apps.FuncionariosConfig',
-    'apps.gerenciamento.apps.GerenciamentoConfig',
     'apps.siape.apps.SiapeConfig',
     'apps.inss.apps.InssConfig',
     'apps.usuarios.apps.UsuariosConfig',
+    'apps.geral.apps.GeralConfig',
     'custom_tags_app',
 ]
 

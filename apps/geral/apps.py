@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class GerenciamentoConfig(AppConfig):
+class GeralConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'apps.gerenciamento'
+    name = 'apps.geral'

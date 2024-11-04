@@ -4,6 +4,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import Group
 from apps.funcionarios.models import Funcionario, Departamento, Cargo
 import logging
+from django.shortcuts import redirect
+from django.contrib import messages
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +38,8 @@ def check_access(departamento, nivel_minimo):
             
             if not funcionario:
                 print(f"Erro: Usuário {user.username} não tem um funcionário associado.")
-                return HttpResponse("Usuário não tem um funcionário associado.", status=403)
+                messages.error(request, "Usuário não tem um funcionário associado.")
+                return redirect('geral:ranking')
 
             print(f"Funcionário: {funcionario}")
             print(f"Departamento: {departamento_nome}")
@@ -45,23 +48,25 @@ def check_access(departamento, nivel_minimo):
 
             if departamento_nome != departamento and departamento != 'TODOS':
                 print(f"Acesso negado. Usuário não pertence ao departamento {departamento}.")
-                return HttpResponse(f"Acesso negado. Você não pertence ao departamento {departamento}.", status=403)
+                messages.error(request, f"Acesso negado. Você não pertence ao departamento {departamento}.")
+                return redirect('geral:ranking')
 
             niveis_hierarquia = {
-                'TOTAL': 5,
-                'SUPERVISOR GERAL': 4,
-                'COORDENADOR': 3,
-                'GERENTE': 2,
-                'PADRÃO': 1,
-                'ESTÁGIO': 0
+                'ESTAGIO': 1,
+                'PADRÃO': 2,
+                'GERENTE': 3,
+                'COORDENADOR': 4,
+                'SUPERVISOR GERAL': 5,
+                'TOTAL': 6
             }
             
             nivel_usuario = niveis_hierarquia.get(nivel, 0)
-            nivel_minimo_req = niveis_hierarquia.get(nivel_minimo, 5)
+            nivel_minimo_req = niveis_hierarquia.get(nivel_minimo, 6)
             
             if nivel_usuario < nivel_minimo_req:
                 print(f"Acesso negado. Nível do usuário ({nivel}) é inferior ao requerido ({nivel_minimo}).")
-                return HttpResponse(f"Acesso negado. Nível mínimo requerido: {nivel_minimo}.", status=403)
+                messages.error(request, f"Acesso negado. Nível mínimo requerido: {nivel_minimo}.")
+                return redirect('geral:ranking', {'mensagem': {'texto': f"Acesso negado. Nível mínimo requerido: {nivel_minimo}.", 'classe': 'error'}})
 
             print(f"Acesso concedido para {user.username}.")
             return view_func(request, *args, **kwargs)
