@@ -38,7 +38,10 @@
 }
 
 .modal-body {
-    padding: 20px;
+    padding: 1.5rem;
+    overflow-y: auto;
+    max-height: calc(80vh - 120px);
+    flex: 1;
 }
 
 .modal-footer {
@@ -141,8 +144,10 @@ main.darkmode tbody tr:hover {
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     height: 100%;
+    max-height: 720px; /* Altura máxima ajustada para 720px */
     display: flex;
     flex-direction: column;
+    overflow: hidden; /* Garante que o conteúdo não vaze */
 }
 
 .modal-sec .modal-header {
@@ -178,9 +183,9 @@ main.darkmode tbody tr:hover {
 
 .modal-sec .modal-body {
     padding: 1.5rem;
-    overflow-y: auto;
+    overflow-y: scroll; /* Força a barra de rolagem vertical */
     flex: 1;
-    max-height: calc(90vh - 120px); /* Altura máxima considerando header e padding */
+    max-height: 660px; /* Altura máxima ajustada para 660px */
 }
 
 .modal-sec .form-label {
@@ -590,4 +595,45 @@ main.darkmode tbody tr:hover {
     background-color: var(--dark-container-background);
     color: var(--cor-branco);
     border-color: var(--dark-border-color);
+}
+
+/* Ajuste específico para modais maiores */
+.modal-lg .modal-content {
+    max-height: 720px;
+}
+
+.modal-lg .modal-body {
+    max-height: 660px;
+}
+
+/* Estilo para a barra de rolagem (opcional, para melhor aparência) */
+.modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Ajuste para modo escuro */
+main.darkmode .modal-body::-webkit-scrollbar-track {
+    background: var(--dark-container-background);
+}
+
+main.darkmode .modal-body::-webkit-scrollbar-thumb {
+    background: var(--dark-border-color);
+}
+
+main.darkmode .modal-body::-webkit-scrollbar-thumb:hover {
+    background: var(--dark-hover-background);
 }

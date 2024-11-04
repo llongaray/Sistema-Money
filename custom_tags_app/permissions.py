@@ -46,8 +46,12 @@ def check_access(departamento, nivel_minimo):
             print(f"Cargo: {cargo}")
             print(f"Nível: {nivel}")
 
-            if departamento_nome != departamento and departamento != 'TODOS':
-                print(f"Acesso negado. Usuário não pertence ao departamento {departamento}.")
+            # Verifica se o usuário pertence ao departamento ou ao grupo correspondente
+            pertence_ao_departamento = departamento_nome == departamento
+            pertence_ao_grupo = user.groups.filter(name=departamento).exists()
+
+            if not (pertence_ao_departamento or pertence_ao_grupo) and departamento != 'TODOS':
+                print(f"Acesso negado. Usuário não pertence ao departamento ou grupo {departamento}.")
                 messages.error(request, f"Acesso negado. Você não pertence ao departamento {departamento}.")
                 return redirect('geral:ranking')
 
