@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_tags %}
+{% get_user_cargo user as user_cargo %}
 
 {% block addtitle %}
 <title>Formulários</title>
@@ -26,33 +28,44 @@
 <div class="container">
     <!-- Botões para abrir os modais -->
     <div class="options_modais">
-        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalCadastroFuncionario')">
-            Cadastro de Funcionário
-        </button>
-        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalCadastrarUsuario')">
-            Cadastrar Usuário
-        </button>
-        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalAssociarGrupos')">
-            Associar Grupos a Usuário
-        </button>
-        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalEmpresa')">
-            Cadastro de Empresa
-        </button>
-        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalLoja')">
-            Cadastro de Loja
-        </button>
-        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalDepartamento')">
-            Cadastro de Departamento
-        </button>
-        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalCargo')">
-            Cadastro de Cargo
-        </button>
-        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalHorario')">
-            Cadastro de Horário
-        </button>
-        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalTabela')">
-            Lista de Funcionários
-        </button>
+        {% can_view_funcionarios_button user 'cadastro_funcionario' as can_view_funcionario %}
+        {% if can_view_funcionario or user.is_superuser %}
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalCadastroFuncionario')">
+                Cadastro de Funcionário
+            </button>
+        {% endif %}
+
+        {% can_view_funcionarios_button user 'cadastro_usuario' as can_view_usuario %}
+        {% if can_view_usuario or user.is_superuser %}
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalCadastrarUsuario')">
+                Cadastrar Usuário
+            </button>
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalAssociarGrupos')">
+                Associar Grupos a Usuário
+            </button>
+        {% endif %}
+
+        {% can_view_funcionarios_button user 'cadastro_empresa' as can_view_empresa %}
+        {% if can_view_empresa or user.is_superuser %}
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalEmpresa')">
+                Cadastro de Empresa
+            </button>
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalLoja')">
+                Cadastro de Loja
+            </button>
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalDepartamento')">
+                Cadastro de Departamento
+            </button>
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalCargo')">
+                Cadastro de Cargo
+            </button>
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalHorario')">
+                Cadastro de Horário
+            </button>
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalTabela')">
+                Lista de Funcionários
+            </button>
+        {% endif %}
     </div>
 
     <div class="divider"></div>

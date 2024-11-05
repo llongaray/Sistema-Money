@@ -46,7 +46,7 @@
 }
 
 #menu ul li {
-    font-size: 18px;
+    font-size: 16px; /* Diminua o tamanho da fonte aqui */
     font-weight: 500; /* Usando peso médio da fonte para os itens do menu */
 }
 

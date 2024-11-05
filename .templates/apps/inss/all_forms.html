@@ -37,40 +37,36 @@
 <div class="container">
     <!-- Botões para abrir os modais -->
     <div class="options_modais">
-        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalAgendamento')">
-            Agendamento
-        </button>
-        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalConfiAgendamentoTabela')">
-            Confirmação Agendamento
-        </button>
-        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalReagendamentoTabela')">
-            Reagendamento
-        </button>
-        {% if user.is_superuser %}
+        {% get_user_cargo user as user_cargo %}
+        
+        {% can_view_inss_button user 'agendamento' as can_view_agendamento %}
+        {% if can_view_agendamento or user.is_superuser %}
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalAgendamento')">
+                Agendamento
+            </button>
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalConfiAgendamentoTabela')">
+                Confirmação Agendamento
+            </button>
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalReagendamentoTabela')">
+                Reagendamento
+            </button>
+        {% endif %}
+
+        {% can_view_inss_button user 'clientes_loja' as can_view_clientes %}
+        {% if can_view_clientes or user.is_superuser %}
             <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalListaClientes')">
                 Clientes Presentes na Loja
             </button>
             <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalTodosAgendamentos')">
                 Todos os Agendamentos
             </button>
+        {% endif %}
+
+        {% can_view_inss_button user 'agendamentos_tac' as can_view_tac %}
+        {% if can_view_tac or user.is_superuser %}
             <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalAgendamentosTAC')">
                 Agendamentos com TAC
             </button>
-        {% else %}
-            {% get_user_cargo user as user_cargo %}
-            {% if user_cargo.cargo == 'VENDEDOR(A)' %}
-                <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalListaClientes')">
-                    Clientes Presentes na Loja
-                </button>
-                <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalTodosAgendamentos')">
-                    Todos os Agendamentos
-                </button>
-            {% endif %}
-            {% if user_cargo.cargo == 'SUPERVISOR GERAL' %}
-                <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalAgendamentosTAC')">
-                    Agendamentos com TAC
-                </button>
-            {% endif %}
         {% endif %}
     </div>
 

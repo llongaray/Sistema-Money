@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Restaurar estado do modal ativo (se houver)
-    restoreActiveModalState();
+    //restoreActiveModalState();
     
     // Adicionar listeners para fechar modais
     document.querySelectorAll('[data-dismiss="modal"]').forEach(button => {

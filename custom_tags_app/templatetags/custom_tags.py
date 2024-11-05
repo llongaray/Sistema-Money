@@ -2,6 +2,7 @@ from django import template
 from django.urls import reverse
 from django.core.exceptions import ObjectDoesNotExist
 from ..permissions import get_user_info
+from django.contrib.auth.models import Group
 
 register = template.Library()
 
@@ -108,3 +109,86 @@ def get_user_groups(user):
         'groups': grupos,
         'is_admin': is_admin
     }
+
+@register.simple_tag
+def can_view_inss_button(user, button_type):
+    """
+    Verifica permissões específicas para botões do INSS
+    """
+    if user.is_superuser:
+        return True
+        
+    funcionario, departamento_nome, cargo, nivel = get_user_info(user)
+    
+    # Função auxiliar para extrair o cargo base (antes do ' - ')
+    def get_base_cargo(nome_cargo):
+        return nome_cargo.split(' - ')[0] if ' - ' in nome_cargo else nome_cargo
+    
+    # Verifica se o usuário está no grupo correspondente
+    is_atendente = any(get_base_cargo(group.name) == 'ATENDENTE' for group in user.groups.all())
+    is_vendedor_loja = any(get_base_cargo(group.name) == 'VENDEDOR(A) LOJA' for group in user.groups.all())
+    is_supervisor = any(group.name == 'VENDEDOR(A) - SUPERVISOR GERAL' for group in user.groups.all())
+    
+    # Verifica também o cargo do funcionário
+    if cargo:
+        cargo_grupo = Group.objects.get(id=cargo.id)
+        cargo_base = get_base_cargo(cargo_grupo.name)
+        is_atendente = is_atendente or cargo_base == 'ATENDENTE'
+        is_vendedor_loja = is_vendedor_loja or cargo_base == 'VENDEDOR(A) LOJA'
+        is_supervisor = is_supervisor or cargo_grupo.name == 'VENDEDOR(A) - SUPERVISOR GERAL'
+    
+    # Define permiss��es por tipo de botão
+    if button_type in ['agendamento', 'confirmacao', 'reagendamento']:
+        return is_atendente
+    
+    elif button_type in ['clientes_loja', 'todos_agendamentos']:
+        return is_vendedor_loja
+    
+    elif button_type == 'agendamentos_tac':
+        return is_vendedor_loja and is_supervisor
+    
+    return False
+
+@register.simple_tag
+def can_view_funcionarios_button(user, button_type):
+    """
+    Verifica permissões específicas para botões da área de funcionários
+    """
+    if user.is_superuser:
+        return True
+        
+    funcionario, departamento_nome, cargo, nivel = get_user_info(user)
+    
+    # Verifica se o usuário está no departamento RH ou grupo RH
+    is_rh = False
+    if departamento_nome == 'RH' or user.groups.filter(name='RH').exists():
+        is_rh = True
+    
+    # Verifica se o usuário é do TI (cargo ou grupo)
+    is_ti = False
+    if cargo and cargo.grupo.name == 'TI' or user.groups.filter(name='TI').exists():
+        is_ti = True
+    
+    # Botões que requerem apenas RH
+    rh_buttons = [
+        'cadastro_funcionario',
+        'cadastro_empresa',
+        'cadastro_loja',
+        'cadastro_departamento',
+        'cadastro_cargo',
+        'cadastro_horario',
+        'lista_funcionarios'
+    ]
+    
+    # Botões que requerem TI
+    ti_buttons = [
+        'cadastro_usuario',
+        'associar_grupos'
+    ]
+    
+    if button_type in rh_buttons:
+        return is_rh
+    elif button_type in ti_buttons:
+        return is_ti
+        
+    return False

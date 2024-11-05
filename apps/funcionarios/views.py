@@ -141,6 +141,19 @@ def create_user(usuario_data, funcionario_id):
         return mensagem
 
     try:
+        # Primeiro, verificamos se o funcionário existe e obtemos seus dados
+        if funcionario_id:
+            try:
+                funcionario = Funcionario.objects.select_related('cargo', 'departamento').get(id=funcionario_id)
+                print(f"Funcionário encontrado: {funcionario.nome} {funcionario.sobrenome}")
+                print(f"Cargo: {funcionario.cargo.grupo.name if funcionario.cargo else 'Nenhum'}")
+                print(f"Departamento: {funcionario.departamento.grupo.name if funcionario.departamento else 'Nenhum'}")
+            except Funcionario.DoesNotExist:
+                mensagem['texto'] = 'Funcionário não encontrado.'
+                mensagem['classe'] = 'error'
+                return mensagem
+
+        # Criando o usuário
         print("Criando usuário...")
         usuario = User.objects.create_user(
             username=usuario_data['username'],
@@ -150,13 +163,30 @@ def create_user(usuario_data, funcionario_id):
         print("Usuário criado com sucesso:", usuario)
 
         if funcionario_id:
-            print(f"Associando usuário ao funcionário com ID {funcionario_id}...")
-            funcionario = Funcionario.objects.get(id=funcionario_id)
+            # Associando o usuário ao funcionário
             funcionario.usuario = usuario
             funcionario.save()
             print("Usuário associado ao funcionário com sucesso")
 
-        mensagem['texto'] = f'Usuário {usuario.username} cadastrado com sucesso!'
+            # Adicionando usuário aos grupos correspondentes
+            grupos_para_adicionar = []
+            
+            # Adiciona ao grupo do cargo se existir
+            if funcionario.cargo and funcionario.cargo.grupo:
+                grupos_para_adicionar.append(funcionario.cargo.grupo)
+                print(f"Adicionando ao grupo do cargo: {funcionario.cargo.grupo.name}")
+            
+            # Adiciona ao grupo do departamento se existir
+            if funcionario.departamento and funcionario.departamento.grupo:
+                grupos_para_adicionar.append(funcionario.departamento.grupo)
+                print(f"Adicionando ao grupo do departamento: {funcionario.departamento.grupo.name}")
+
+            # Adiciona o usuário a todos os grupos necessários
+            if grupos_para_adicionar:
+                usuario.groups.add(*grupos_para_adicionar)
+                print(f"Usuário adicionado aos grupos: {[g.name for g in grupos_para_adicionar]}")
+
+        mensagem['texto'] = f'Usuário {usuario.username} cadastrado com sucesso e adicionado aos grupos correspondentes!'
         mensagem['classe'] = 'success'
 
     except ValidationError as e:
@@ -814,7 +844,7 @@ def delete_cargo(cargo_id):
 
 # ---------- RENDER ALL FORMS -----------------------
 @verificar_autenticacao
-@check_access(departamento='CIA', nivel_minimo='ESTAGIO')
+@check_access(departamento='RH', nivel_minimo='ESTAGIO')
 def render_all_forms(request):
     """
     Renderiza a página com todos os formulários da CIA e processa os formulários enviados.

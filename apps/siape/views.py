@@ -132,14 +132,19 @@ def format_currency(value):
 
 # ===== INÍCIO DA SEÇÃO DE FICHA CLIENTE =====
 
-def get_ficha_cliente(request, cliente_id):
+def get_ficha_cliente(request, cpf):
     """
-    Obtém os dados da ficha do cliente com base no ID fornecido e renderiza a página.
+    Obtém os dados da ficha do cliente com base no CPF fornecido e renderiza a página.
     """
-    print(f"Iniciando get_ficha_cliente para cliente_id: {cliente_id}")
+    print(f"Iniciando get_ficha_cliente para CPF: {cpf}")
     
-    # Obtém o cliente pelo ID, ou retorna um erro 404 se não encontrado
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    # Normaliza o CPF
+    cpf_normalizado = normalize_cpf(cpf)
+    if not cpf_normalizado:
+        return render(request, 'siape/error.html', {'message': 'CPF inválido.'})
+
+    # Obtém o cliente pelo CPF, ou retorna um erro 404 se não encontrado
+    cliente = get_object_or_404(Cliente, cpf=cpf_normalizado)
     print(f"Cliente encontrado: {cliente.nome}")
 
     # Dicionário com os dados do cliente
@@ -174,13 +179,12 @@ def get_ficha_cliente(request, cliente_id):
     except InformacoesPessoais.DoesNotExist:
         info_pessoal_data = {}
         print("Nenhuma informação pessoal encontrada")
-    
+
     # Filtra os débitos e margens associados ao cliente com prazo maior que zero
     debitos_margens = DebitoMargem.objects.filter(cliente=cliente, prazo__gt=0)
     print(f"Total de débitos/margens encontrados: {debitos_margens.count()}")
-    
+
     debitos_margens_data = []
-    
     for debito_margem in debitos_margens:
         # Cálculo do saldo devedor
         pmt = float(debito_margem.pmt)
@@ -349,8 +353,8 @@ def importar_dados_csv(request):
 
     print("Arquivo CSV recebido")
     csv_file = request.FILES['csv_file']
-    campanha_id = request.POST.get('campanha_id', '')  # Captura o ID da campanha
-    data_hora = request.POST.get('data_hora')  # Captura a data e hora do formulário
+    campanha_id = request.POST.get('campanha_id', '0')  # Captura o ID da campanha
+    data_hora = request.POST.get('data_hora', '2001-01-01')  # Captura a data e hora do formulário
     print(f"ID da campanha: {campanha_id}, Data e Hora: {data_hora}")
 
     if not csv_file.name.endswith(('.csv', '.xlsx', '.xls')):
@@ -377,6 +381,10 @@ def importar_dados_csv(request):
         print(f"Aviso: {message}")
         return redirect('siape:all_forms')
 
+    # Obter os campos do modelo Cliente
+    cliente_fields = {field.name for field in Cliente._meta.get_fields()}
+    informacoes_fields = {field.name for field in InformacoesPessoais._meta.get_fields()}
+
     # Processamento dos dados
     erros_processamento = 0
     linhas_com_erro = []
@@ -397,25 +405,24 @@ def importar_dados_csv(request):
         try:
             print(f"Verificando cliente com CPF: {cpf_cliente}")
             cliente, created = Cliente.objects.update_or_create(
-                cpf=cpf_cliente,  # CPF já normalizado como string
+                cpf=cpf_cliente,
                 defaults={
-                    'nome': str(row['NOME']).strip(),
-                    'uf': str(row['UF']).strip(),
-                    'upag': str(row['UPAG']).strip(),
-                    'situacao_funcional': str(row['Situacao Funcional']).strip(),
-                    'data_nascimento': parse_date(row['data_nascimento']),
-                    'sexo': str(row['sexo']).strip(),
-                    'rf_situacao': str(row['rf_situacao']).strip(),
-                    'numero_beneficio_1': str(row['numero_beneficio_1']).strip(),
-                    'especie_beneficio_1': str(row['especie_beneficio_1']).strip(),
-                    'siape_tipo_siape': str(row['siape_TipoSIAPE']).strip(),
-                    'siape_qtd_matriculas': parse_int(row['siape_Qtd_Matriculas']),
-                    'siape_qtd_contratos': parse_int(row['siape_Qtd_Contratos']),
-                    'flg_nao_perturbe': str(row['flg_NaoPerturbe_DoNotCall']).lower() in ['1', 'true', 'sim', 'yes'],
+                    'nome': str(row.get('NOME', 'nao existe')).strip() or "nao existe",
+                    'uf': str(row.get('UF', 'nao existe')).strip() or "nao existe",
+                    'upag': str(row.get('UPAG', 'nao existe')).strip() or "nao existe",
+                    'situacao_funcional': str(row.get('Situacao Funcional', 'nao existe')).strip() or "nao existe",
+                    'data_nascimento': parse_date(row.get('data_nascimento', '2001-01-01')),
+                    'sexo': str(row.get('sexo', 'nao existe')).strip() or "nao existe",
+                    'rf_situacao': str(row.get('rf_situacao', 'nao existe')).strip() or "nao existe",
+                    'numero_beneficio_1': str(row.get('numero_beneficio_1', 'nao existe')).strip() or "nao existe",
+                    'especie_beneficio_1': str(row.get('especie_beneficio_1', 'nao existe')).strip() or "nao existe",
+                    'siape_tipo_siape': str(row.get('siape_TipoSIAPE', 'nao existe')).strip() or "nao existe",
+                    'siape_qtd_matriculas': parse_int(row.get('siape_Qtd_Matriculas', '0')),
+                    'siape_qtd_contratos': parse_int(row.get('siape_Qtd_Contratos', '0')),
+                    'flg_nao_perturbe': str(row.get('flg_NaoPerturbe_DoNotCall', '0')).lower() in ['1', 'true', 'sim', 'yes'],
                 }
             )
 
-            # Garante que temos o ID do cliente
             cliente_id = cliente.id
             print(f"ID do cliente: {cliente_id}")
 
@@ -425,18 +432,9 @@ def importar_dados_csv(request):
             else:
                 print(f"Cliente encontrado: {cliente.nome} (ID: {cliente_id}). Atualizando cliente.")
                 # Atualiza os campos do cliente existente
-                cliente.uf = str(row['UF']).strip()
-                cliente.upag = str(row['UPAG']).strip()
-                cliente.situacao_funcional = str(row['Situacao Funcional']).strip()
-                cliente.data_nascimento = parse_date(row['data_nascimento'])
-                cliente.sexo = str(row['sexo']).strip()
-                cliente.rf_situacao = str(row['rf_situacao']).strip()
-                cliente.numero_beneficio_1 = str(row['numero_beneficio_1']).strip()
-                cliente.especie_beneficio_1 = str(row['especie_beneficio_1']).strip()
-                cliente.siape_tipo_siape = str(row['siape_TipoSIAPE']).strip()
-                cliente.siape_qtd_matriculas = parse_int(row['siape_Qtd_Matriculas'])
-                cliente.siape_qtd_contratos = parse_int(row['siape_Qtd_Contratos'])
-                cliente.flg_nao_perturbe = str(row['flg_NaoPerturbe_DoNotCall']).lower() in ['1', 'true', 'sim', 'yes']
+                for field in cliente_fields:
+                    if field in row:
+                        setattr(cliente, field, str(row[field]).strip() or "nao existe")
                 cliente.save()
                 clientes_atualizados += 1
 
@@ -450,27 +448,21 @@ def importar_dados_csv(request):
         # 2. Verificar informações pessoais
         try:
             print("Verificando informações pessoais")
-
-            # Contar quantas informações pessoais já existem para o cliente
-            informacoes_existentes = InformacoesPessoais.objects.filter(cliente=cliente).count()
-            print(f"Cliente {cliente.nome} já possui {informacoes_existentes} registros de informações pessoais.")
-
-            # Criar um novo registro de informações pessoais
-            informacoes_pessoais = InformacoesPessoais.objects.create(
+            informacoes_pessoais, created = InformacoesPessoais.objects.update_or_create(
                 cliente=cliente,
-                uf=row['UF'],
-                fne_celular_1=row['fne_celular_1'],
-                fne_celular_1_flg_whats=str(row['fne_celular_1_flg_whats']).lower() in ['1', 'true', 'sim', 'yes'],
-                fne_celular_2=row['fne_celular_2'],
-                fne_celular_2_flg_whats=str(row['fne_celular_2_flg_whats']).lower() in ['1', 'true', 'sim', 'yes'],
-                end_cidade_1=row['end_cidade_1'],
-                email_1=row['email_1'],
-                email_2=row['email_2'],
-                email_3=row['email_3'],
-                # data_envio será preenchida automaticamente pelo `auto_now_add=True`
+                defaults={
+                    'uf': row.get('UF', "nao existe") or "nao existe",
+                    'fne_celular_1': row.get('fne_celular_1', "nao existe") or "nao existe",
+                    'fne_celular_1_flg_whats': str(row.get('fne_celular_1_flg_whats', '0')).lower() in ['1', 'true', 'sim', 'yes'],
+                    'fne_celular_2': row.get('fne_celular_2', "nao existe") or "nao existe",
+                    'fne_celular_2_flg_whats': str(row.get('fne_celular_2_flg_whats', '0')).lower() in ['1', 'true', 'sim', 'yes'],
+                    'end_cidade_1': row.get('end_cidade_1', "nao existe") or "nao existe",
+                    'email_1': row.get('email_1', "nao existe") or "nao existe",
+                    'email_2': row.get('email_2', "nao existe") or "nao existe",
+                    'email_3': row.get('email_3', "nao existe") or "nao existe",
+                }
             )
-
-            print(f"Nova informação pessoal adicionada para o cliente: {cliente.nome}. Agora totaliza {informacoes_existentes + 1} registros.")
+            print(f"Informações pessoais {'criadas' if created else 'atualizadas'} para o cliente: {cliente.nome}.")
 
         except Exception as e:
             erros_processamento += 1
@@ -484,77 +476,54 @@ def importar_dados_csv(request):
             print("Verificando débito/margem")
             
             # Preparar os valores numéricos
-            pmt_valor = parse_float(row.get('PMT', 0))
-            prazo_valor = parse_int(row.get('PRAZO', 0))
-            bruta_35_valor = parse_float(row.get('Bruta 35', 0))
+            pmt_valor = parse_float(row.get('PMT', '0'))  # Se não existir, usa 0
+            prazo_valor = parse_int(row.get('PRAZO', '0'))  # Se não existir, usa 0
+            bruta_35_valor = parse_float(row.get('Bruta 35', '0'))  # Se não existir, usa 0
             
             print(f"Valores após parse: PMT={pmt_valor}, Prazo={prazo_valor}, Bruta 35={bruta_35_valor}")
-            
-            debito = DebitoMargem.objects.create(
-                cliente=cliente,
-                campanha=campanha,
-                banco=str(row.get('BANCO', '')).strip(),
-                orgao=str(row.get('ORGAO', '')).strip(),
-                matricula=str(row.get('MATRICULA', '')).strip(),
-                upag=parse_int(row.get('UPAG', 0)),
-                pmt=pmt_valor,
-                prazo=prazo_valor,
-                contrato=str(row.get('CONTRATO', '')).strip(),
-                saldo_5=parse_float(row.get('Saldo 5', 0)),
-                beneficio_5=parse_float(row.get('Beneficio5', 0)),
-                benef_util_5=parse_float(row.get('BenefUtil5', 0)),
-                benef_saldo_5=parse_float(row.get('BenefSaldo5', 0)),
-                bruta_35=bruta_35_valor,
-                util_35=parse_float(row.get('Util.35', 0)),
-                saldo_35=parse_float(row.get('Saldo 35', 0)),
-                bruta_70=parse_float(row.get('Bruta 70', 0)),
-                saldo_70=parse_float(row.get('Saldo 70', 0)),
-                rend_bruto=parse_float(row.get('Rend.Bruto', 0)),
-                data_envio=data_hora if data_hora else timezone.now()  # Usa diretamente o data_hora do formulário
-            )
-            print(f"Débito/margem criado com sucesso: ID={debito.id}")
+
+            # Verificar se já existe um débito/margem para o cliente com o mesmo PMT e prazo
+            existing_debito = DebitoMargem.objects.filter(cliente=cliente, pmt=pmt_valor, prazo=prazo_valor).first()
+
+            if existing_debito:
+                print(f"Débito/margem já existe para o cliente {cliente.nome} com PMT={pmt_valor} e prazo={prazo_valor}. Pulando criação.")
+            else:
+                # Criar um novo dicionário com os dados do débito/margem
+                debito_data = {
+                    'cliente': cliente,
+                    'campanha': campanha,
+                    'banco': str(row.get('BANCO', 'nao existe')).strip() or "nao existe",
+                    'orgao': str(row.get('ORGAO', 'nao existe')).strip() or "nao existe",
+                    'matricula': str(row.get('MATRICULA', 'nao existe')).strip() or "nao existe",
+                    'upag': parse_int(row.get('UPAG', '0')),  # Se não existir, usa 0
+                    'pmt': pmt_valor,
+                    'prazo': prazo_valor,
+                    'contrato': str(row.get('CONTRATO', 'nao existe')).strip() or "nao existe",
+                    'saldo_5': parse_float(row.get('Saldo 5', '0')),  # Se não existir, usa 0
+                    'beneficio_5': parse_float(row.get('Beneficio5', '0')),  # Se não existir, usa 0
+                    'benef_util_5': parse_float(row.get('BenefUtil5', '0')),  # Se não existir, usa 0
+                    'benef_saldo_5': parse_float(row.get('BenefSaldo5', '0')),  # Se não existir, usa 0
+                    'bruta_35': bruta_35_valor,
+                    'util_35': parse_float(row.get('Util.35', '0')),  # Se não existir, usa 0
+                    'saldo_35': parse_float(row.get('Saldo 35', '0')),  # Se não existir, usa 0
+                    'bruta_70': parse_float(row.get('Bruta 70', '0')),  # Se não existir, usa 0
+                    'saldo_70': parse_float(row.get('Saldo 70', '0')),  # Se não existir, usa 0
+                    'rend_bruto': parse_float(row.get('Rend.Bruto', '0')),  # Se não existir, usa 0
+                    'data_envio': data_hora  # Usa diretamente o data_hora do formulário
+                }
+
+                # Criar e salvar o novo registro de débito/margem
+                debito = DebitoMargem(**debito_data)
+                debito.save()
+                print(f"Débito/margem criado com sucesso: ID={debito.id}")
+
+                # Se debitos_margens é um ManyToManyField, adicione o débito ao cliente
+                if hasattr(cliente, 'debitos_margens'):
+                    cliente.debitos_margens.add(debito)
 
         except Exception as e:
             erros_processamento += 1
-            
-            # Garante que temos o ID correto do cliente
-            cliente_id = cliente.id if cliente else None
-            
-            valores_debug = {
-                'PMT': {'valor': row.get('PMT'), 'tipo': type(row.get('PMT')).__name__, 'processado': pmt_valor},
-                'PRAZO': {'valor': row.get('PRAZO'), 'tipo': type(row.get('PRAZO')).__name__, 'processado': prazo_valor},
-                'Bruta 35': {'valor': row.get('Bruta 35'), 'tipo': type(row.get('Bruta 35')).__name__, 'processado': bruta_35_valor},
-                'data_envio': {'valor': data_hora, 'tipo': type(data_hora).__name__},
-                'cliente_id': {'valor': cliente_id, 'tipo': type(cliente_id).__name__},  # Adicionado tipo do cliente_id
-                'campanha_id': {'valor': campanha.id if campanha else None}
-            }
-            
-            erro_detalhado = {
-                'erro': str(e),
-                'tipo_erro': type(e).__name__,
-                'valores': valores_debug,
-                'cliente_info': {  # Adicionando mais informações do cliente para debug
-                    'nome': cliente.nome if cliente else None,
-                    'cpf': cpf_cliente,
-                    'id': cliente_id
-                }
-            }
-            
-            erro_msg = (
-                f"Erro ao adicionar débito/margem na linha {index + 1}, CPF: {cpf_cliente}\n"
-                f"Tipo do erro: {erro_detalhado['tipo_erro']}\n"
-                f"Mensagem: {erro_detalhado['erro']}\n"
-                f"Valores que causaram erro:\n"
-                f"PMT: {valores_debug['PMT']['valor']} (tipo: {valores_debug['PMT']['tipo']}, processado: {valores_debug['PMT']['processado']})\n"
-                f"PRAZO: {valores_debug['PRAZO']['valor']} (tipo: {valores_debug['PRAZO']['tipo']}, processado: {valores_debug['PRAZO']['processado']})\n"
-                f"Bruta 35: {valores_debug['Bruta 35']['valor']} (tipo: {valores_debug['Bruta 35']['tipo']}, processado: {valores_debug['Bruta 35']['processado']})\n"
-                f"Data Envio: {valores_debug['data_envio']['valor']} (tipo: {valores_debug['data_envio']['tipo']})\n"
-                f"Cliente ID: {valores_debug['cliente_id']['valor']} (tipo: {valores_debug['cliente_id']['tipo']})\n"
-                f"Cliente Nome: {erro_detalhado['cliente_info']['nome']}\n"
-                f"Cliente CPF: {erro_detalhado['cliente_info']['cpf']}\n"
-                f"Campanha ID: {valores_debug['campanha_id']['valor']}"
-            )
-            
+            erro_msg = f"Erro ao adicionar débito/margem na linha {index + 1}, CPF: {cpf_cliente}: {str(e)}"
             linhas_com_erro.append(erro_msg)
             print(erro_msg)
             continue  # Continua para a próxima linha

@@ -12,7 +12,7 @@ urlpatterns = [
 
 
     # Rota para a ficha de cliente
-    path('ficha-cliente/<int:id>/', get_ficha_cliente, name='ficha_cliente'),
+    path('ficha-cliente/<str:cpf>/', get_ficha_cliente, name='ficha_cliente'),
 
     # Rota para a confirmação de pagamentos
     #path('aprovacao-valores/', aprov_valores, name='aprov_valores'),

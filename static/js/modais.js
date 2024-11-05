@@ -380,12 +380,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const temMensagemSucesso = mensagensContainer && 
                               mensagensContainer.querySelector('.success');
     
-    if (temMensagemSucesso) {
-        saveActiveModalState(null);
-        console.log('Estado do modal removido - mensagem de sucesso');
-    } else {
-        restoreActiveModalState();
-    }
+    // Remover esta parte que restaura o modal antigo
+    // if (temMensagemSucesso) {
+    //     saveActiveModalState(null);
+    //     console.log('Estado do modal removido - mensagem de sucesso');
+    // } else {
+    //     restoreActiveModalState();
+    // }
 
     document.querySelectorAll('.btn-close').forEach(button => {
         button.addEventListener('click', function() {
@@ -499,15 +500,6 @@ document.querySelectorAll('.modal').forEach(modal => {
 document.getElementById('modalConfirmacaoAgendamento')
     .querySelector('#tabulacaoAtendente')
     .addEventListener('change', handleTabulacaoChange);
-
-window.addEventListener('beforeunload', function(event) {
-    const navigationType = performance.getEntriesByType("navigation")[0]?.type;
-    
-    if (navigationType !== "reload") {
-        sessionStorage.removeItem('activeModal');
-        console.log('Estado do modal removido - navegação para outra página');
-    }
-});
 
 $(document).ready(function() {
     $('[data-target="#modalListaClientes"]').on('click', function() {
