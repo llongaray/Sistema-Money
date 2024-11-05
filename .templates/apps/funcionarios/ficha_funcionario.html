@@ -7,10 +7,10 @@
 
 {% block addcss_extra %}
 <link rel="stylesheet" href="{% static 'funcionarios/all_forms.css' %}">
-<link rel="stylesheet" href="{% static 'geral_forms.css' %}">
-<link rel="stylesheet" href="{% static 'mensagem.css' %}">
 <link rel="stylesheet" href="{% static 'modais.css' %}">
 <link rel="stylesheet" href="{% static 'divider.css' %}">
+<link rel="stylesheet" href="{% static 'geral_forms.css' %}">
+<link rel="stylesheet" href="{% static 'mensagens.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
     .password-field {
@@ -74,8 +74,10 @@
                     <button type="button" class="btn-close" onclick="fecharModal('modalEditarFuncionario')"></button>
                 </div>
                 <div class="modal-body">
-                    <form method="POST" enctype="multipart/form-data" action="{% url 'funcionarios:update_funcionario' funcionario.id %}">
+                    <form method="POST" enctype="multipart/form-data" action="{% url 'funcionarios:update_funcionario' %}">
                         {% csrf_token %}
+                        <input type="hidden" name="form_type" value="update_funcionario">
+                        <input type="hidden" name="funcionario_id" value="{{ funcionario.id }}">
                         
                         <section>
                             <h3>Informações Básicas</h3>
@@ -309,8 +311,11 @@
                     <button type="button" class="btn-close" onclick="fecharModal('modalEditarUsuario')"></button>
                 </div>
                 <div class="modal-body">
-                    <form method="POST" action="{% url 'funcionarios:update_user' funcionario.id %}">
+                    <form method="POST" action="{% url 'funcionarios:update_user' %}">
                         {% csrf_token %}
+                        <input type="hidden" name="form_type" value="update_user">
+                        <input type="hidden" name="user_id" value="{{ user.id }}">
+    
                         <!-- Substitua {{ form_user.as_p }} pelos campos individuais -->
                         {% for field in form_user %}
                             <div class="form-group">
@@ -337,7 +342,7 @@
 {% endblock %}
 
 {% block addjs_extra %}
-<script src="{% static 'conjunto/initialConfig.js' %}"></script> <!-- Carregue o groups.js aqui -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="{% static 'darkmode.js' %}"></script>
 <script src="{% static 'modais.js' %}"></script>
 <script src="{% static 'geral_forms.js' %}"></script>

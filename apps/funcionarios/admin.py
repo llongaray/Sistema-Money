@@ -42,7 +42,6 @@ class FuncionarioAdmin(admin.ModelAdmin):
     list_display = ('nome', 'sobrenome', 'cpf', 'empresa', 'loja', 'cargo', 'status')  # Exibir principais campos
     search_fields = ('nome', 'sobrenome', 'cpf', 'empresa__nome', 'loja__nome')  # Permite busca por nome, CPF, empresa e loja
     list_filter = ('status', 'empresa', 'loja', 'cargo')  # Filtros por status, empresa, loja e cargo
-    readonly_fields = ('foto',)  # Campo de foto é apenas leitura no admin
     fieldsets = (
         ('Informações Pessoais', {
             'fields': ('nome', 'sobrenome', 'cpf', 'data_de_nascimento', 'foto')

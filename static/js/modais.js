@@ -567,8 +567,19 @@ function handleSubModalFormSubmit(event) {
     sessionStorage.removeItem('lastActiveModal');
     sessionStorage.removeItem('defaultModal');
     
+    // Define a URL correta com base no tipo de formulário
+    let url;
+    if (formType === 'update_funcionario') {
+        url = form.action; // A URL já está definida no action do formulário
+    } else if (formType === 'update_user') {
+        url = form.action; // A URL já está definida no action do formulário
+    } else {
+        console.error('Tipo de formulário não reconhecido:', formType);
+        return; // Sai da função se o tipo não for reconhecido
+    }
+
     $.ajax({
-        url: form.action,
+        url: url,
         method: form.method,
         data: new FormData(form),
         processData: false,

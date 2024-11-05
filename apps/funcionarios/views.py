@@ -262,10 +262,9 @@ def associar_grupos(form):
 
 # ------------------ EDITAÇÃO DE FUNCIONARIO E USER --------------------------
 
-def render_ficha_funcionario(request, id, nome_sobrenome):
+def render_ficha_funcionario(request, id):
     print(f"\n\n----- Iniciando render_ficha_funcionario para ID: {id} -----\n")
     
-    print(f"Buscando funcionário com ID: {id}")
     funcionario = get_object_or_404(Funcionario, id=id)
     print(f"Funcionário encontrado: {funcionario.nome} {funcionario.sobrenome}")
     
@@ -292,11 +291,13 @@ def render_ficha_funcionario(request, id, nome_sobrenome):
     print("\n----- Finalizando render_ficha_funcionario -----\n")
     return render(request, 'funcionarios/ficha_funcionario.html', context)
 
-def update_funcionario(request, id):
-    print(f"\n\n----- Iniciando update_funcionario para ID: {id} -----\n")
+def update_funcionario(request):
+    print("\n\n----- Iniciando update_funcionario -----\n")
     
-    print(f"Buscando funcionário com ID: {id}")
-    funcionario = get_object_or_404(Funcionario, id=id)
+    # Obtendo o ID do funcionário a partir dos dados do formulário
+    funcionario_id = request.POST.get('funcionario_id')
+    print(f"Buscando funcionário com ID: {funcionario_id}")
+    funcionario = get_object_or_404(Funcionario, id=funcionario_id)
     print(f"Funcionário encontrado: {funcionario.nome} {funcionario.sobrenome}")
     
     if request.method == 'POST':
@@ -311,14 +312,19 @@ def update_funcionario(request, id):
             # Tratamento específico para a foto
             if 'foto' in request.FILES:
                 funcionario.foto = request.FILES['foto']
+                print("Nova foto recebida e será adicionada.")
             elif 'foto-clear' in request.POST:
                 funcionario.foto = None
+                print("Foto foi removida.")
             
             try:
                 funcionario.save()
                 print("Funcionário atualizado com sucesso.")
                 messages.success(request, f'Funcionário {funcionario.nome} {funcionario.sobrenome} atualizado com sucesso!')
                 logger.info(f'Funcionário {funcionario.nome} {funcionario.sobrenome} atualizado com sucesso!')
+                
+                # Redireciona para a ficha do funcionário após a atualização
+                return redirect('funcionarios:render_ficha_funcionario', id=funcionario.id)
             except Exception as e:
                 error_message = f'Erro ao atualizar o funcionário: {e}'
                 print(f"Erro: {error_message}")
@@ -336,20 +342,18 @@ def update_funcionario(request, id):
         form_funcionario = FuncionarioFullForm(instance=funcionario)
 
     print("\n----- Finalizando update_funcionario -----\n")
-    return render(request, 'funcionarios/ficha_funcionario.html', {
-        'form_funcionario': form_funcionario,
-        'funcionario': funcionario,
-    })
+    return redirect('funcionarios:render_ficha_funcionario', id=funcionario.id)
 
-def update_user(request, id):
-    print(f"\n\n----- Iniciando update_user para ID: {id} -----\n")
+def update_user(request):
+    print("\n\n----- Iniciando update_user -----\n")
     
-    print(f"Buscando funcionário com ID: {id}")
-    funcionario = post_object_or_404(Funcionario, id=id)
+    # Obtendo o ID do usuário a partir dos dados do formulário
+    user_id = request.POST.get('user_id')
+    print(f"Buscando usuário com ID: {user_id}")
+    user = get_object_or_404(User, id=user_id)
+    
+    funcionario = user.funcionario  # Obtendo o funcionário associado
     print(f"Funcionário encontrado: {funcionario.nome} {funcionario.sobrenome}")
-    
-    user = funcionario.usuario
-    print(f"Usuário associado: {user.username}")
 
     if request.method == 'POST':
         print("Método POST detectado. Processando formulário...")
@@ -364,7 +368,7 @@ def update_user(request, id):
             messages.error(request, 'Erro ao atualizar o usuário.')
         
         print("Mensagens de feedback:")
-        for message in messages.post_messages(request):
+        for message in messages.get_messages(request):
             print(f"{message.level_tag.upper()}: {message.message}")
 
     print("\n----- Finalizando update_user -----\n")

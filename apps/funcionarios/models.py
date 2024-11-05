@@ -144,7 +144,16 @@ class Funcionario(models.Model):
     certidao_de_nascimento = models.FileField(upload_to=get_funcionario_upload_path, storage=fs, blank=True, null=True)
 
     def save(self, *args, **kwargs):
-        """Converte nome e sobrenome para caixa alta antes de salvar"""
+        """Converte nome e sobrenome para caixa alta antes de salvar e gerencia a foto."""
+        if self.pk:  # Verifica se o objeto já existe
+            old_foto = Funcionario.objects.get(pk=self.pk).foto  # Obtém a foto antiga
+            if old_foto and old_foto != self.foto:  # Se a foto antiga existir e for diferente da nova
+                # Deleta a foto antiga do sistema de arquivos
+                try:
+                    os.remove(old_foto.path)  # Remove o arquivo da foto antiga
+                except Exception as e:
+                    print(f"Erro ao deletar a foto antiga: {e}")
+
         self.nome = self.nome.upper()
         self.sobrenome = self.sobrenome.upper()
         super().save(*args, **kwargs)

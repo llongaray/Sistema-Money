@@ -764,35 +764,43 @@ def get_cards(periodo='mes'):
         range_data_final__gte=hoje.date()
     ).first()
     
-    # Define o período de análise
+    # Define o período de análise para a meta geral
     if meta_geral:
-        primeiro_dia = meta_geral.range_data_inicio
-        ultimo_dia = datetime.combine(meta_geral.range_data_final, time(23, 59, 59))
+        primeiro_dia_geral = meta_geral.range_data_inicio
+        ultimo_dia_geral = datetime.combine(meta_geral.range_data_final, time(23, 59, 59))
     else:
-        primeiro_dia = hoje.replace(day=1)
-        ultimo_dia = datetime.combine((hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1)), time(23, 59, 59))
+        primeiro_dia_geral = hoje.replace(day=1)
+        ultimo_dia_geral = datetime.combine((hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1)), time(23, 59, 59))
     
-    # Busca os registros financeiros no período
+    # Busca os registros financeiros no período da meta geral
     valores_range = RegisterMoney.objects.filter(
-        data__range=[primeiro_dia, ultimo_dia]
+        data__range=[primeiro_dia_geral, ultimo_dia_geral]
     ).select_related('funcionario', 'funcionario__departamento', 'funcionario__departamento__grupo')
     print(f"Valores range encontrados: {valores_range.count()}")
-    for valor in valores_range:
-        print(f"Valor: {valor.valor_est} | Funcionário: {valor.funcionario} | Data: {valor.data}")
-    # Calcula faturamentos
-    faturamento_total = Decimal('0')
-    faturamento_siape = Decimal('0')
     
+    # Calcula faturamentos para a meta geral
+    faturamento_total = Decimal('0')
     for valor in valores_range:
         valor_decimal = Decimal(str(valor.valor_est))
         faturamento_total += valor_decimal
+    
+    # Define o período de análise para a meta SIAPE
+    if meta_equipe:
+        primeiro_dia_siape = meta_equipe.range_data_inicio
+        ultimo_dia_siape = datetime.combine(meta_equipe.range_data_final, time(23, 59, 59))
         
-        # Verifica se o funcionário pertence ao grupo SIAPE
-        if (valor.funcionario and 
-            valor.funcionario.departamento and 
-            valor.funcionario.departamento.grupo and 
-            valor.funcionario.departamento.grupo.name == 'SIAPE'):
+        # Busca os registros financeiros dentro do intervalo da meta EQUIPE
+        valores_siape_range = RegisterMoney.objects.filter(
+            data__range=[primeiro_dia_siape, ultimo_dia_siape]
+        ).select_related('funcionario', 'funcionario__departamento', 'funcionario__departamento__grupo')
+        
+        # Calcula faturamento para a meta SIAPE
+        faturamento_siape = Decimal('0')
+        for valor in valores_siape_range:
+            valor_decimal = Decimal(str(valor.valor_est))
             faturamento_siape += valor_decimal
+    else:
+        faturamento_siape = Decimal('0')  # Se não houver meta_equipe, faturamento_siape é 0
     
     # Calcula percentuais
     percentual_geral = 0
