@@ -139,17 +139,13 @@ function preencherDadosImportCSV(subModal, idCampanha) {
 function preencherDadosSubModal(subModal, tipoModal, id) {
     console.log("Iniciando preenchimento do sub-modal para ID:", id);
 
-    // Declaramos agendamentosEdicao como objeto vazio
-    let agendamentosEdicao = null;
-
     if (tipoModal === 'listaClientes') {
-        const dados = todosAgendamentos.find(c => c.id === id);
-
-        if (!id || id === 'undefined' || !dados) {
-            console.error(`ID inválido ou cliente com ID ${id} não encontrado em todosAgendamentos`);
+        if (!id || id === 'undefined' || !clientesLojaData.find(c => c.id === id)) {
+            console.error(`ID inválido ou cliente com ID ${id} não encontrado em clientesLojaData`);
             return;
         }
 
+        const dados = clientesLojaData.find(c => c.id === id);
         console.log("Dados do cliente:", dados);
 
         try {
@@ -160,13 +156,13 @@ function preencherDadosSubModal(subModal, tipoModal, id) {
             }
 
             const campos = {
-                '#nomeCliente': dados.nome_cliente,
-                '#cpfCliente': dados.cpf_cliente,
-                '#numeroCliente': dados.numero_cliente,
-                '#diaAgendado': dados.dia_agendado, // Ajustado para usar a propriedade correta
-                '#tabulacaoAtendente': dados.tabulacao_atendente,
-                '#atendenteAgendou': dados.atendente_nome,
-                '#lojaAgendada': dados.loja_nome
+                '#nomeCliente': dados.nome,
+                '#cpfCliente': dados.cpf,
+                '#numeroCliente': dados.numero,
+                '#diaAgendado': dados.diaAgendadoFormatado,
+                '#tabulacaoAtendente': dados.tabulacaoAtendente,
+                '#atendenteAgendou': dados.atendenteNome,
+                '#lojaAgendada': dados.lojaNome
             };
 
             Object.entries(campos).forEach(([selector, valor]) => {
@@ -217,35 +213,28 @@ function preencherDadosSubModal(subModal, tipoModal, id) {
             console.error('Erro ao preencher dados do sub-modal:', error);
         }
     } else if (tipoModal === 'confirmacao') {
-        // Verifica se todosAgendamentos está carregado
-        if (!todosAgendamentos || todosAgendamentos.length === 0) {
-            console.error("todosAgendamentos ainda não foi carregado.");
-            return;
-        }
-    
-        // Convertendo o ID para string para garantir a comparação correta
-        const idExistente = todosAgendamentos.find(agendamento => agendamento.id === String(id));
-    
-        if (idExistente) {
-            console.log('Dados do agendamento encontrados:', idExistente);
-            agendamentosEdicao = idExistente;
-    
-            subModal.querySelector('#idAgendamentoConfirmacao').value = id;
-            subModal.querySelector('#nomeClienteConfirmacao').value = agendamentosEdicao.nome_cliente;
-            subModal.querySelector('#diaAgendadoConfirmacao').value = agendamentosEdicao.dia_agendado;
-            subModal.querySelector('#numeroClienteConfirmacao').value = agendamentosEdicao.numero_cliente;
-            subModal.querySelector('#lojaAgendadaConfirmacao').value = agendamentosEdicao.loja_nome;
-            subModal.querySelector('#tabulacaoAtendente').value = agendamentosEdicao.tabulacao_atendente;
-    
-            console.log('ID do agendamento definido:', id);
-        } else {
+        if (!id || id === 'undefined' || !agendamentosEdicao[id]) {
             console.error(`ID inválido ou agendamento com ID ${id} não encontrado`);
             return;
         }
-    }
-    
-}
 
+        const dados = agendamentosEdicao[id];
+        if (dados) {
+            console.log('Dados do agendamento:', dados);
+            
+            subModal.querySelector('#idAgendamentoConfirmacao').value = id;
+            subModal.querySelector('#nomeClienteConfirmacao').value = dados.nome;
+            subModal.querySelector('#diaAgendadoConfirmacao').value = dados.diaAgendadoForm;
+            subModal.querySelector('#numeroClienteConfirmacao').value = dados.numero;
+            subModal.querySelector('#lojaAgendadaConfirmacao').value = dados.lojaNome;
+            subModal.querySelector('#tabulacaoAtendente').value = dados.tabulacaoAtendente;
+            
+            console.log('ID do agendamento definido:', id);
+        } else {
+            console.warn(`Dados para o ID ${id} não encontrados no dicionário.`);
+        }
+    }
+}
 
 function preencherTabelaClientes() {
     console.log('Iniciando preenchimento da tabela de clientes');
@@ -260,17 +249,17 @@ function preencherTabelaClientes() {
     $tabela.empty();
     console.log('Tabela limpa');
 
-    clientesLoja.forEach(cliente => {
+    clientesLojaData.forEach(cliente => {
         const nomeElement = `<button type="button" class="btn-link abrir-sub-modal" 
             onclick="abrirSubModal('#modalEdicaoCliente', 'listaClientes', '${cliente.id}')">
-            ${cliente.nome_cliente}
+            ${cliente.nome}
         </button>`;
 
         const row = `
             <tr>
                 <td>${nomeElement}</td>
-                <td>${cliente.cpf_cliente}</td>
-                <td>${cliente.numero_cliente}</td>
+                <td>${cliente.cpf}</td>
+                <td>${cliente.numero}</td>
                 <td>${cliente.diaAgendadoFormatado}</td>
                 <td>${cliente.atendenteNome}</td>
                 <td>${cliente.lojaNome}</td>

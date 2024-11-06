@@ -122,6 +122,7 @@
                         <div class="form-row">
                             <label>Funcionário:</label>
                             {% if funcionario_logado %}
+                                <input type="hidden" name="atendente_agendou" value="{{ funcionario_logado.id }}">
                                 <input type="text" value="{{ funcionario_logado.nome }}" readonly>
                             {% else %}
                                 <select name="atendente_agendou" required>
@@ -157,10 +158,11 @@
                                 <th>Dia Agendado</th>
                                 <th>Atendente</th>
                                 <th>Loja Agendada</th>
+                                <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for agendamento in agendamentos_confirmacao %}
+                            {% for agendamento in agendamentos_agendados %}
                             <tr>
                                 <td>
                                     <button type="button" class="btn-link abrir-sub-modal" data-agendamento-id="{{ agendamento.id }}" onclick="abrirSubModal('#modalConfirmacaoAgendamento', 'confirmacao', {{ agendamento.id }})">
@@ -169,8 +171,9 @@
                                 </td>
                                 <td>{{ agendamento.numero_cliente }}</td>
                                 <td>{{ agendamento.dia_agendado }}</td>
-                                <td>{{ agendamento.atendente_nome }}</td>
-                                <td>{{ agendamento.loja_nome }}</td>
+                                <td>{{ agendamento.atendente_agendou }}</td>
+                                <td>{{ agendamento.loja_agendada }}</td>
+                                <td>{{ agendamento.status }}</td>
                             </tr>
                             {% empty %}
                             <tr>
@@ -205,20 +208,18 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for agendamento in agendamentos_reagendamento %}
+                            {% for agendamento in agendamentos_reagendados %}
                             <tr>
                                 <td>
-                                    <button type="button" class="btn-link abrir-sub-modal" 
-                                            data-agendamento-id="{{ agendamento.id }}" 
-                                            onclick="abrirSubModal('#modalConfirmacaoAgendamento', 'confirmacao', {{ agendamento.id }})">
+                                    <button type="button" class="btn-link abrir-sub-modal" data-agendamento-id="{{ agendamento.id }}" onclick="abrirSubModal('#modalConfirmacaoAgendamento', 'confirmacao', {{ agendamento.id }})">
                                         {{ agendamento.nome_cliente }}
                                     </button>
                                 </td>
                                 <td>{{ agendamento.numero_cliente }}</td>
                                 <td>{{ agendamento.dia_agendado }}</td>
-                                <td>{{ agendamento.atendente_nome }}</td>
-                                <td>{{ agendamento.loja_nome }}</td>
-                                <td>{{ agendamento.status_dias }}</td>
+                                <td>{{ agendamento.atendente_agendou }}</td>
+                                <td>{{ agendamento.loja_agendada }}</td>
+                                <td>{{ agendamento.status }}</td>
                             </tr>
                             {% empty %}
                             <tr>
@@ -576,25 +577,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
 <!-- ========================= DADOS INICIAIS ========================= -->
-<script>
-    // Dados iniciais dos agendamentos
-    const todosAgendamentos = [
-        {% for agendamento in todos_agendamentos %}
-            {
-                id: "{{ agendamento.id }}",
-                nome_cliente: "{{ agendamento.nome_cliente }}",
-                cpf_cliente: "{{ agendamento.cpf_cliente }}",
-                numero_cliente: "{{ agendamento.numero_cliente }}",
-                dia_agendado: "{{ agendamento.dia_agendado }}",
-                atendente_nome: "{{ agendamento.atendente_nome|default:'' }}",
-                loja_nome: "{{ agendamento.loja_nome|default:'' }}",
-                status_dias: "{{ agendamento.status_dias|default:'' }}",
-                tabulacao_atendente: "{{ agendamento.tabulacao_atendente|default:'' }}",
-                total_agendamentos: "{{ agendamento.total_agendamentos }}"  // Nova linha
-            }{% if not forloop.last %},{% endif %}
-        {% endfor %}
-    ];
-</script>
+
 
 <!-- ========================= FUNÇÕES DE FILTRO ========================= -->
 <script>
@@ -614,69 +597,92 @@
     
     // Dicionário de vendedores
     const vendedoresListaClientes = {
-        {% for vendedor in vendedores_lista_clientes %}
-            "{{ vendedor.id }}": {
+        {% for vendedor_id, vendedor in vendedores_lista_clientes.items %}
+            "{{ vendedor_id }}": {
                 id: "{{ vendedor.id }}",
                 nome: "{{ vendedor.nome }}"
             },
         {% endfor %}
     };
-    // Dados dos clientes
-    const clientesLojaData = [
-        {% for cliente in clientes_loja %}
-            {
-                id: "{{ cliente.id }}",
-                nome: "{{ cliente.nome_cliente }}",
-                cpf: "{{ cliente.cpf_cliente }}",
-                numero: "{{ cliente.numero_cliente }}",
-                diaAgendado: "{{ cliente.dia_agendado_completo }}", 
-                diaAgendadoFormatado: "{{ cliente.dia_agendado }}", 
-                tabulacaoAtendente: "{{ cliente.tabulacao_atendente }}",
-                atendenteNome: "{{ cliente.atendente_nome }}",
-                lojaNome: "{{ cliente.loja_nome }}",
-                statusDias: "{{ cliente.status_dias }}",
-                totalAgendamentos: "{{ cliente.total_agendamentos }}"
-            }{% if not forloop.last %},{% endif %}
-        {% endfor %}
-    ];
 
-    // Dados de todos os agendamentos
-    const todosAgendamentosData = [
+    // Log do dicionário de vendedores no console para verificação
+    console.log("Vendedores Lista Clientes:", vendedoresListaClientes);
+</script>
+
+<!-- ========================= DADOS INICIAIS ========================= -->
+<script>
+    // Dados iniciais dos agendamentos
+    const todosAgendamentos = [
         {% for agendamento in todos_agendamentos %}
             {
                 id: "{{ agendamento.id }}",
                 nome_cliente: "{{ agendamento.nome_cliente }}",
                 cpf_cliente: "{{ agendamento.cpf_cliente }}",
                 numero_cliente: "{{ agendamento.numero_cliente }}",
-                dia_agendado: "{{ agendamento.dia_agendado_completo }}", // Data completa
-                diaAgendadoFormatado: "{{ agendamento.dia_agendado }}", // Apenas a data
-                atendente_nome: "{{ agendamento.atendente_nome|default:'' }}",
-                loja_nome: "{{ agendamento.loja_nome|default:'' }}",
-                tabulacao_atendente: "{{ agendamento.tabulacao_atendente|default:'' }}",
-                status_dias: "{{ agendamento.status_dias|default:'' }}"
+                dia_agendado: "{{ agendamento.dia_agendado }}",  // Formato YYYY-MM-DD
+                atendente_nome: "{{ agendamento.atendente_agendou }}",  // Primeiro nome do atendente
+                loja_nome: "{{ agendamento.loja_agendada }}",  // Nome da loja após ' - '
+                status_dias: "{{ agendamento.status }}",  // Status do agendamento
+                tabulacao_atendente: "{{ agendamento.tabulacao_atendente }}",
+                total_agendamentos: "{{ agendamento.total_agendamentos }}"  // Nova linha
             }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
 
-
-    // Dicionário de agendamentos para edição
-    const agendamentosEdicao = {
-        {% for agendamento in agendamentos_edicao %}
-            "{{ agendamento.id }}": {
+    // Dicionário de agendamentos para confirmação
+    const agendamentosConfirmacao = [
+        {% for agendamento in agendamentos_agendados %}
+            {
                 id: "{{ agendamento.id }}",
-                nome: "{{ agendamento.nome_cliente }}",
-                cpf: "{{ agendamento.cpf_cliente }}",
-                numero: "{{ agendamento.numero_cliente }}",
-                diaAgendado: "{{ agendamento.dia_agendado }}",  // Formato de exibição
-                diaAgendadoForm: "{{ agendamento.dia_agendado_form }}",  // Formato para input date
-                atendenteNome: "{{ agendamento.atendente_nome }}",
-                lojaNome: "{{ agendamento.loja_nome }}",
-                tabulacaoAtendente: "{{ agendamento.tabulacao_atendente }}"
-            },
+                nome_cliente: "{{ agendamento.nome_cliente }}",
+                cpf_cliente: "{{ agendamento.cpf_cliente }}",
+                numero_cliente: "{{ agendamento.numero_cliente }}",
+                dia_agendado: "{{ agendamento.dia_agendado }}",  // Formato YYYY-MM-DD
+                atendente_nome: "{{ agendamento.atendente_agendou }}",  // Primeiro nome do atendente
+                loja_nome: "{{ agendamento.loja_agendada }}",  // Nome da loja após ' - '
+                tabulacao_atendente: "{{ agendamento.tabulacao_atendente }}"
+            }{% if not forloop.last %},{% endif %}
         {% endfor %}
-    };
-</script>
+    ];
 
+    // Dicionário de agendamentos para reagendar
+    const agendamentosReagendar = [
+        {% for agendamento in agendamentos_reagendados %}
+            {
+                id: "{{ agendamento.id }}",
+                nome_cliente: "{{ agendamento.nome_cliente }}",
+                cpf_cliente: "{{ agendamento.cpf_cliente }}",
+                numero_cliente: "{{ agendamento.numero_cliente }}",
+                dia_agendado: "{{ agendamento.dia_agendado }}",  // Formato YYYY-MM-DD
+                atendente_nome: "{{ agendamento.atendente_agendou }}",  // Primeiro nome do atendente
+                loja_nome: "{{ agendamento.loja_agendada }}",  // Nome da loja após ' - '
+                tabulacao_atendente: "{{ agendamento.tabulacao_atendente }}"
+            }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    // Dicionário de clientes na loja (agendamentos confirmados)
+    const clientesLoja = [
+        {% for agendamento in agendamentos_confirmados %}
+            {
+                id: "{{ agendamento.id }}",
+                nome_cliente: "{{ agendamento.nome_cliente }}",
+                cpf_cliente: "{{ agendamento.cpf_cliente }}",
+                numero_cliente: "{{ agendamento.numero_cliente }}",
+                dia_agendado: "{{ agendamento.dia_agendado }}",  // Formato YYYY-MM-DD
+                atendente_nome: "{{ agendamento.atendente_agendou }}",  // Primeiro nome do atendente
+                loja_nome: "{{ agendamento.loja_agendada }}",  // Nome da loja após ' - '
+                tabulacao_atendente: "{{ agendamento.tabulacao_atendente }}"
+            }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    // Log dos dicionários no console para verificação
+    console.log("Todos os Agendamentos:", todosAgendamentos);
+    console.log("Agendamentos para Confirmação:", agendamentosConfirmacao);
+    console.log("Agendamentos para Reagendar:", agendamentosReagendar);
+    console.log("Clientes na Loja:", clientesLoja);
+</script>
 <!-- ========================= SCRIPTS DEPENDENTES ========================= -->
 <!-- Carrega scripts que dependem das definições anteriores -->
 <script src="{% static 'modais.js' %}"></script>

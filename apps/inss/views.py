@@ -12,6 +12,7 @@ from django.db.models import Count, F, Max, Q, Sum
 from django.db.models.functions import Coalesce, TruncDate
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from datetime import timedelta
 
 # Local imports
 from custom_tags_app.permissions import check_access
@@ -329,14 +330,14 @@ def post_confirmacao_agem(form_data, funcionario):
 
     return mensagem
 
-def post_agendamento(form_data, funcionario):
+def post_agendamento(request, funcionario):
     '''Processa o agendamento baseado nos dados recebidos.'''
     print("\n\n----- Iniciando post_agendamento -----\n")
     print(f'\n\n ------------------------POST Agendamento ABERTO!!------------------------\n\n')
     mensagem = {'texto': '', 'classe': ''}
 
     try:
-        dia_agendado = form_data.get('dia_agendado')
+        dia_agendado = request.POST.get('dia_agendado')
         print(f"Data recebida: {dia_agendado}")
 
         # Converter a data para datetime e adicionar a hora atual
@@ -347,12 +348,12 @@ def post_agendamento(form_data, funcionario):
         dia_agendado_com_hora = timezone.make_aware(datetime.combine(dia_agendado, hora_atual))
 
         agendamento_data = {
-            'nome_cliente': form_data.get('nome_cliente'),
-            'cpf_cliente': form_data.get('cpf_cliente'),
-            'numero_cliente': form_data.get('numero_cliente'),
+            'nome_cliente': request.POST.get('nome_cliente'),
+            'cpf_cliente': request.POST.get('cpf_cliente'),
+            'numero_cliente': request.POST.get('numero_cliente'),
             'dia_agendado': dia_agendado_com_hora,
-            'loja_agendada_id': form_data.get('loja_agendada'),
-            'atendente_agendou_id': form_data.get('atendente_agendou')
+            'loja_agendada_id': request.POST.get('loja_agendada'),
+            'atendente_agendou_id': request.POST.get('atendente_agendou')
         }
 
         print(f"Dados do agendamento: {agendamento_data}")
@@ -628,135 +629,130 @@ def get_all_forms_and_objects(request_post):
             }
 
     # Obtém lista de funcionários baseada no nível de acesso
-    if request_post.user.is_superuser or nivel_cargo == 'COORDENADOR':
+    if request_post.user.is_superuser:
+        # Se for superuser, pega todos os funcionários
         funcionarios = Funcionario.objects.all()
-    elif nivel_cargo == 'GERENTE':
-        funcionarios = Funcionario.objects.filter(loja=loja_funcionario)
     else:
-        funcionarios = Funcionario.objects.filter(id=funcionario_logado.id)
+        # Se não for superuser, verifica o nível do funcionário logado
+        if nivel_cargo in ['ESTAGIO', 'PADRÃO']:
+            funcionarios = [funcionario_logado]  # Apenas o próprio funcionário
+        else:
+            funcionarios = Funcionario.objects.all()  # Todos os funcionários
+
+    # Cria o dicionário de vendedores
+    vendedores_lista_clientes = {
+        funcionario.id: {
+            'id': funcionario.id,
+            'nome': funcionario.nome.split()[0]  # Primeiro nome
+        }
+        for funcionario in funcionarios
+    }
+    print(f"Vendedores: {vendedores_lista_clientes}")
 
     # Configuração de formulários
     form_agendamento = AgendamentoForm(funcionarios=funcionarios)
     form_confirmacao = ConfirmacaoAgendamentoForm()
 
-    # Lista de lojas
-    if request_post.user.is_superuser or nivel_cargo == 'COORDENADOR':
-        lojas = Loja.objects.all()
-    elif nivel_cargo == 'GERENTE':
-        lojas = Loja.objects.filter(id=loja_funcionario.id)
-    else:
-        lojas = Loja.objects.filter(id=loja_funcionario.id) if loja_funcionario else Loja.objects.none()
-    
-    lojas_dicionario = [{'id': str(loja.id), 'nome': loja.nome} for loja in lojas]
-
-    # Lista de vendedores
-    vendedores_lista_clientes = [{'id': f.id, 'nome': f.nome} for f in funcionarios]
-
-    # Query base de agendamentos por nível de acesso
+    # Query base de agendamentos
     agendamentos_base_query = Agendamento.objects.select_related('loja_agendada', 'atendente_agendou')
-    if request_post.user.is_superuser or nivel_cargo == 'COORDENADOR':
-        pass
-    elif nivel_cargo == 'GERENTE':
-        agendamentos_base_query = agendamentos_base_query.filter(loja_agendada=loja_funcionario)
-    elif funcionario_logado:
-        agendamentos_base_query = agendamentos_base_query.filter(atendente_agendou=funcionario_logado)
-    else:
-        agendamentos_base_query = agendamentos_base_query.none()
 
-    # Obtém os clientes na loja
-    clientes_loja_dicionario = get_cliente_loja(
-        agendamentos_base_query, 
-        hoje,
-        funcionario_logado=funcionario_logado,
-        is_superuser=request_post.user.is_superuser
-    )
-
-    # Primeiro, busca todos os agendamentos e armazena em um dicionário
-    todos_agendamentos = Agendamento.objects.all().order_by('cpf_cliente', '-dia_agendado')
-    
-    # Cria o dicionário com todos os agendamentos
+    # Obtém todos os agendamentos sem filtro
+    todos_agendamentos = agendamentos_base_query.all().order_by('cpf_cliente', '-dia_agendado')
     todos_agendamentos_dict = [{
         'id': a.id,
         'nome_cliente': a.nome_cliente,
         'cpf_cliente': a.cpf_cliente,
         'numero_cliente': a.numero_cliente,
-        'dia_agendado': a.dia_agendado,
-        'atendente_agendou': a.atendente_agendou,
-        'loja_agendada': a.loja_agendada,
+        'dia_agendado': a.dia_agendado.strftime('%Y-%m-%d'),  # Formato para input date
+        'atendente_agendou': a.atendente_agendou.nome.split()[0] if a.atendente_agendou else '',  # Primeiro nome do atendente
+        'loja_agendada': a.loja_agendada.nome.split(' - ')[-1] if a.loja_agendada and ' - ' in a.loja_agendada.nome else a.loja_agendada.nome,  # Nome da loja após ' - '
         'tabulacao_atendente': a.tabulacao_atendente,
-        'tabulacao_vendedor': a.tabulacao_vendedor
+        'tabulacao_vendedor': a.tabulacao_vendedor,
+        'status': calcular_status_dias(a, timezone.now().date())  # Chama a função para calcular o status
     } for a in todos_agendamentos]
 
-    # Agora passa o dicionário para get_all_agem e recebe tanto os agendamentos quanto as mensagens
-    todos_agendamentos_dicionario, mensagens_log = get_all_agem(todos_agendamentos_dict, hoje)
+    # Query base de agendamentos
+    agendamentos_base_query = Agendamento.objects.select_related('loja_agendada', 'atendente_agendou')
 
-    # Imprime as mensagens de log
-    for mensagem in mensagens_log:
-        print(mensagem)
+    # Agendamentos com filtro de tabulacao_atendente 'AGENDADO'
+    if request_post.user.is_superuser:
+        agendamentos_agendados = agendamentos_base_query.filter(tabulacao_atendente='AGENDADO').order_by('dia_agendado')
+    else:
+        if nivel_cargo in ['ESTAGIO', 'PADRÃO']:
+            agendamentos_agendados = agendamentos_base_query.filter(tabulacao_atendente='AGENDADO', atendente_agendou=funcionario_logado).order_by('dia_agendado')
+        else:
+            agendamentos_agendados = agendamentos_base_query.filter(tabulacao_atendente='AGENDADO').order_by('dia_agendado')
 
-    print("\nBuscando agendamentos para confirmação...")
-    # Agendamentos para confirmação
-    agendamentos_confirmacao = agendamentos_base_query.filter(
-        Q(tabulacao_atendente='AGENDADO') |
-        Q(tabulacao_atendente='REAGENDADO')
-    ).order_by('dia_agendado')
-    print(f"\nTotal de agendamentos para confirmação: {agendamentos_confirmacao.count()}")
-
-    agendamentos_confirmacao_list = [{
+    agendamentos_agendados_dict = [{
         'id': a.id,
         'nome_cliente': a.nome_cliente,
         'cpf_cliente': a.cpf_cliente,
         'numero_cliente': a.numero_cliente,
-        'dia_agendado_completo': a.dia_agendado.strftime('%Y-%m-%d %H:%M:%S'),
-        'dia_agendado': a.dia_agendado.strftime('%d/%m/%Y'),
-        'dia_agendado_form': a.dia_agendado.strftime('%Y-%m-%d'),
-        'atendente_nome': a.atendente_agendou.nome if a.atendente_agendou else None,
-        'loja_nome': a.loja_agendada.nome if a.loja_agendada else None,
+        'dia_agendado': a.dia_agendado.strftime('%Y-%m-%d'),  # Formato para input date
+        'atendente_agendou': a.atendente_agendou.nome.split()[0] if a.atendente_agendou else '',  # Primeiro nome do atendente
+        'loja_agendada': a.loja_agendada.nome.split(' - ')[-1] if a.loja_agendada and ' - ' in a.loja_agendada.nome else a.loja_agendada.nome,  # Nome da loja após ' - '
         'tabulacao_atendente': a.tabulacao_atendente,
         'tabulacao_vendedor': a.tabulacao_vendedor,
-        'status_dias': calcular_status_dias(a, hoje)
-    } for a in agendamentos_confirmacao]
+        'status': calcular_status_dias(a, timezone.now().date())  # Chama a função para calcular o status
+    } for a in agendamentos_agendados]
 
-    # Obtém os agendamentos reagendados
-    agendamentos_reagendados_dicionario = get_reagem(agendamentos_base_query, hoje)
+    # Agendamentos com filtro de tabulacao_atendente 'REAGENDADO'
+    if request_post.user.is_superuser:
+        agendamentos_reagendados = agendamentos_base_query.filter(tabulacao_atendente='REAGENDADO').order_by('dia_agendado')
+    else:
+        if nivel_cargo in ['ESTAGIO', 'PADRÃO']:
+            agendamentos_reagendados = agendamentos_base_query.filter(tabulacao_atendente='REAGENDADO', atendente_agendou=funcionario_logado).order_by('dia_agendado')
+        else:
+            agendamentos_reagendados = agendamentos_base_query.filter(tabulacao_atendente='REAGENDADO').order_by('dia_agendado')
 
-    print("\nBuscando agendamentos com TAC...")
-    # Agendamentos com TAC (FECHOU NEGOCIO)
-    agendamentos_tac = agendamentos_base_query.filter(
-        tabulacao_vendedor='FECHOU NEGOCIO',
-        tac__isnull=False
-    ).order_by('-dia_agendado')  # Ordenado por data, mais recente primeiro
-
-    agendamentos_tac_dicionario = [{
+    agendamentos_reagendados_dict = [{
         'id': a.id,
         'nome_cliente': a.nome_cliente,
         'cpf_cliente': a.cpf_cliente,
-        'tac': a.tac,
-        'status_tac': a.status_tac,
-        'get_status_tac_display': a.get_status_tac_display(),
-        'data_pagamento_tac': a.data_pagamento_tac.strftime('%d/%m/%Y') if a.data_pagamento_tac else None,
-        'loja_nome': a.loja_agendada.nome if a.loja_agendada else None,
-        'vendedor_nome': a.vendedor_loja.nome if a.vendedor_loja else None
-    } for a in agendamentos_tac]
+        'numero_cliente': a.numero_cliente,
+        'dia_agendado': a.dia_agendado.strftime('%Y-%m-%d'),  # Formato para input date
+        'atendente_agendou': a.atendente_agendou.nome.split()[0] if a.atendente_agendou else '',  # Primeiro nome do atendente
+        'loja_agendada': a.loja_agendada.nome.split(' - ')[-1] if a.loja_agendada and ' - ' in a.loja_agendada.nome else a.loja_agendada.nome,  # Nome da loja após ' - '
+        'tabulacao_atendente': a.tabulacao_atendente,
+        'tabulacao_vendedor': a.tabulacao_vendedor,
+        'status': calcular_status_dias(a, timezone.now().date())  # Chama a função para calcular o status
+    } for a in agendamentos_reagendados]
 
-    print(f"\nTotal de agendamentos com TAC encontrados: {len(agendamentos_tac_dicionario)}")
+    # Agendamentos com filtro de tabulacao_atendente 'CONFIRMADO'
+    agendamentos_confirmados = agendamentos_base_query.filter(tabulacao_atendente='CONFIRMADO').order_by('dia_agendado')
+    agendamentos_confirmados_dict = [{
+        'id': a.id,
+        'nome_cliente': a.nome_cliente,
+        'cpf_cliente': a.cpf_cliente,
+        'numero_cliente': a.numero_cliente,
+        'dia_agendado': a.dia_agendado.strftime('%Y-%m-%d'),  # Formato para input date
+        'atendente_agendou': a.atendente_agendou.nome.split()[0] if a.atendente_agendou else '',  # Primeiro nome do atendente
+        'loja_agendada': a.loja_agendada.nome.split(' - ')[-1] if a.loja_agendada and ' - ' in a.loja_agendada.nome else a.loja_agendada.nome,  # Nome da loja após ' - '
+        'tabulacao_atendente': a.tabulacao_atendente,
+        'tabulacao_vendedor': a.tabulacao_vendedor,
+        'status': calcular_status_dias(a, timezone.now().date())  # Chama a função para calcular o status
+    } for a in agendamentos_confirmados]
+
+    print("\n----- Total de agendamentos -----")
+    print(f"Todos os agendamentos: {len(todos_agendamentos_dict)}")
+    print(f"Agendamentos AGENDADO: {len(agendamentos_agendados_dict)}")
+    print(f"Agendamentos REAGENDADO: {len(agendamentos_reagendados_dict)}")
+    print(f"Agendamentos CONFIRMADO: {len(agendamentos_confirmados_dict)}")
+
     print("\n----- Finalizando get_all_forms_and_objects -----\n")
     
     return {
         'form_agendamento': form_agendamento,
         'form_confirmacao': form_confirmacao,
         'funcionarios': funcionarios,
-        'lojas': lojas_dicionario,
-        'clientes_loja': clientes_loja_dicionario,
-        'vendedores_lista_clientes': vendedores_lista_clientes,
-        'agendamentos_confirmacao': agendamentos_confirmacao_list,
-        'agendamentos_edicao': agendamentos_confirmacao_list,
-        'agendamentos_reagendamento': agendamentos_reagendados_dicionario,
-        'todos_agendamentos': todos_agendamentos_dicionario,
+        'todos_agendamentos': todos_agendamentos_dict,
+        'agendamentos_agendados': agendamentos_agendados_dict,
+        'agendamentos_reagendados': agendamentos_reagendados_dict,
+        'agendamentos_confirmados': agendamentos_confirmados_dict,
         'funcionario_logado': funcionario_logado,
         'nivel_cargo': nivel_cargo,
         'loja_funcionario': loja_funcionario,
-        'agendamentos_tac': agendamentos_tac_dicionario
+        'vendedores_lista_clientes': vendedores_lista_clientes,  # Adiciona o dicionário de vendedores ao retorno
     }
 
 @verificar_autenticacao
@@ -785,20 +781,11 @@ def render_all_forms(request):
 
         if form_type == 'agendamento':
             print("\nProcessando formulário de agendamento...")
-            agendamento_data = {
-                'nome_cliente': request.POST.get('nome_cliente'),
-                'cpf_cliente': request.POST.get('cpf_cliente'),
-                'numero_cliente': request.POST.get('numero_cliente'),
-                'dia_agendado': request.POST.get('dia_agendado'),
-                'loja_agendada': request.POST.get('loja_agendada'),
-                'atendente_agendou': request.POST.get('atendente_agendou')
-            }
-            print(f"Dados recebidos: {agendamento_data}")
 
-            if all([agendamento_data['nome_cliente'], 
-                   agendamento_data['cpf_cliente'], 
-                   agendamento_data['numero_cliente']]):
-                mensagem = post_agendamento(agendamento_data, funcionario_logado)
+            if all([request.POST.get('nome_cliente'), 
+                     request.POST.get('cpf_cliente'), 
+                     request.POST.get('numero_cliente')]):
+                mensagem = post_agendamento(request, funcionario_logado)  # Passando request diretamente
                 print("Agendamento processado.")
             else:
                 mensagem = {
@@ -916,6 +903,10 @@ def get_cards(periodo='mes'):
     
     hoje = timezone.now()
     
+    # Define o primeiro e o último dia do mês atual
+    primeiro_dia_mes = hoje.replace(day=1)
+    ultimo_dia_mes = (hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1)).replace(hour=23, minute=59, second=59)
+
     # Busca a meta geral ativa
     meta_geral = RegisterMeta.objects.filter(
         tipo='GERAL',
@@ -926,16 +917,15 @@ def get_cards(periodo='mes'):
     
     # Se encontrou meta geral ativa, usa o range de datas dela
     if meta_geral:
-        primeiro_dia = meta_geral.range_data_inicio
-        ultimo_dia = datetime.combine(meta_geral.range_data_final, time(23, 59, 59))
+        primeiro_dia_meta = meta_geral.range_data_inicio
+        ultimo_dia_meta = datetime.combine(meta_geral.range_data_final, time(23, 59, 59))
     else:
-        # Se não encontrou meta, usa o mês atual
-        primeiro_dia = hoje.replace(day=1)
-        ultimo_dia = datetime.combine((hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1)), time(23, 59, 59))
-    
-    # Busca todos os registros de valores no período
+        primeiro_dia_meta = None
+        ultimo_dia_meta = None
+
+    # Busca todos os registros de valores no período do mês atual
     valores_range = RegisterMoney.objects.filter(
-        data__range=[primeiro_dia, ultimo_dia]
+        data__range=[primeiro_dia_mes, ultimo_dia_mes]
     )
     
     # Obtém os IDs dos funcionários com registros
@@ -958,19 +948,20 @@ def get_cards(periodo='mes'):
         valor_venda = Decimal(str(venda.valor_est))
         faturamento_total += valor_venda
     
-    # Busca quantidade de vendas (agendamentos com FECHOU NEGOCIO)
+    # Busca quantidade de vendas (agendamentos com TAC preenchido e status_tac 'PAGO')
     qtd_vendas = Agendamento.objects.filter(
-        dia_agendado__date__range=[primeiro_dia, ultimo_dia],
-        tabulacao_vendedor='FECHOU NEGOCIO'
+        dia_agendado__date__range=[primeiro_dia_mes, ultimo_dia_mes],
+        tac__isnull=False,  # Verifica se o campo TAC está preenchido
+        status_tac='PAGO'   # Verifica se o status_tac é 'PAGO'
     ).count()
     
     # Busca quantidade de agendamentos confirmados
     qtd_agendamentos = Agendamento.objects.filter(
-        dia_agendado__date__range=[primeiro_dia, ultimo_dia],
+        dia_agendado__date__range=[primeiro_dia_mes, ultimo_dia_mes],
         tabulacao_atendente='CONFIRMADO'
     ).count()
     
-    # Calcula o percentual em relação à meta
+    # Calcula o percentual em relação à meta geral, se existir
     if meta_geral and meta_geral.valor:
         percentual_meta = round((faturamento_total / meta_geral.valor * 100), 2)
     else:
@@ -986,8 +977,8 @@ def get_cards(periodo='mes'):
         'qtd_vendas': qtd_vendas,
         'qtd_agendamentos': qtd_agendamentos,
         'periodo': {
-            'inicio': primeiro_dia.date() if isinstance(primeiro_dia, datetime) else primeiro_dia,
-            'fim': ultimo_dia.date() if isinstance(ultimo_dia, datetime) else ultimo_dia
+            'inicio': primeiro_dia_mes.date(),
+            'fim': ultimo_dia_mes.date()
         }
     }
     
@@ -1112,39 +1103,21 @@ def get_tabela_ranking(periodo='mes'):
     
     hoje = timezone.now().date()
     
-    # Busca meta ativa do INSS
-    meta_inss = RegisterMeta.objects.filter(
-        status=True,
-        setor='INSS',
-        range_data_inicio__lte=hoje,
-        range_data_final__gte=hoje
-    ).first()
-    
-    # Se encontrou meta ativa, usa o range de datas dela
-    if meta_inss:
-        print(f"Meta INSS ativa encontrada: {meta_inss.titulo}")
-        primeiro_dia = meta_inss.range_data_inicio
-        ultimo_dia = meta_inss.range_data_final
-    else:
-        print("Nenhuma meta INSS ativa encontrada, usando semana atual")
-        # Calcula o domingo da semana atual
-        primeiro_dia = hoje - timezone.timedelta(days=hoje.weekday() + 1)
-        # Calcula o sábado da semana atual
-        ultimo_dia = primeiro_dia + timezone.timedelta(days=6)
-    
-    print(f"Período do ranking: {primeiro_dia} até {ultimo_dia}")
-    
-    # Filtro para o período da meta
-    filtro_data = Q(
-        dia_agendado__date__gte=primeiro_dia,
-        dia_agendado__date__lte=ultimo_dia
-    )
+    # Calcula o primeiro e o último dia da semana atual
+    primeiro_dia_semana = hoje - timedelta(days=hoje.weekday())  # Domingo
+    ultimo_dia_semana = primeiro_dia_semana + timedelta(days=6)  # Sábado
 
-    # Busca agendamentos do período
+    print(f"Período do ranking: {primeiro_dia_semana} até {ultimo_dia_semana}")
+    
+    # Busca todos os agendamentos do período
     agendamentos = Agendamento.objects.filter(
-        filtro_data,
-        atendente_agendou__isnull=False    # Apenas agendamentos com atendente definido
+        dia_agendado__date__gte=primeiro_dia_semana,
+        dia_agendado__date__lte=ultimo_dia_semana,
+        atendente_agendou__isnull=False,    # Apenas agendamentos com atendente definido
+        tabulacao_atendente__isnull=False    # Apenas agendamentos com tabulação atendente não vazia
     ).select_related('atendente_agendou')  # Otimiza a consulta
+
+    print(f"Total de agendamentos encontrados: {agendamentos.count()}")
 
     # Agrupa agendamentos por atendente
     ranking_por_atendente = {}
@@ -1159,51 +1132,49 @@ def get_tabela_ranking(periodo='mes'):
                 'total_agendamentos': 0,
                 'confirmados': 0,
                 'fechamentos': 0,
-                'taxa_efetividade': 0,
-                'percentual_conf': 0
             }
         
-        # Ignora agendamentos com tabulação "NÃO QUIS OUVIR"
-        if agendamento.tabulacao_vendedor == 'NÃO QUIS OUVIR':
-            continue
-            
         ranking_por_atendente[atendente]['total_agendamentos'] += 1
         
         # Conta confirmações e fechamentos
         if agendamento.tabulacao_atendente == 'CONFIRMADO':
             ranking_por_atendente[atendente]['confirmados'] += 1
-            if agendamento.tabulacao_vendedor == 'FECHOU NEGOCIO':
+            if agendamento.tabulacao_vendedor:  # Verifica se tabulação vendedor não é vazia
                 ranking_por_atendente[atendente]['fechamentos'] += 1
 
-    # Calcula taxa de efetividade e percentual de confirmação
+    # Calcula percentual de confirmação e efetividade
     ranking_data = []
-    for dados in ranking_por_atendente.values():
-        # Calcula o percentual de confirmação
-        if dados['total_agendamentos'] > 0:
-            dados['percentual_conf'] = round(
-                (dados['confirmados'] / dados['total_agendamentos']) * 100
-            )
-        
-        # Só inclui atendentes com pelo menos 1 fechamento
-        if dados['fechamentos'] > 0:
-            # Calcula taxa de efetividade (fechamentos / confirmados)
-            if dados['confirmados'] > 0:
-                dados['taxa_efetividade'] = round(
-                    (dados['fechamentos'] / dados['confirmados']) * 100, 2
-                )
-            ranking_data.append(dados)
+    for atendente, dados in ranking_por_atendente.items():
+        total_agendamentos = dados['total_agendamentos']
+        confirmados = dados['confirmados']
+        fechamentos = dados['fechamentos']
+
+        # Calcula percentual de confirmação
+        percentual_conf = (confirmados / total_agendamentos * 100) if total_agendamentos > 0 else 0
+        percentual_conf_str = f"{confirmados}/{total_agendamentos}"  # Formato "confirmados/total"
+
+        # Calcula percentual de efetividade
+        percentual_efetividade = (fechamentos / confirmados * 100) if confirmados > 0 else 0
+
+        ranking_data.append({
+            'posicao': len(ranking_data) + 1,  # Posição no ranking
+            'foto': dados['foto'],
+            'nome': dados['nome'],
+            'percentual_conf': round(percentual_conf, 2),
+            'percentual_conf_str': percentual_conf_str,
+            'percentual_efetividade': round(percentual_efetividade, 2)
+        })
 
     # Ordena o ranking por número de fechamentos (decrescente)
-    ranking_data.sort(key=lambda x: x['fechamentos'], reverse=True)
+    ranking_data.sort(key=lambda x: x['percentual_efetividade'], reverse=True)
     
     print(f"Dados do ranking calculados para {len(ranking_data)} atendentes")
     
     # Log para debug dos percentuais
     for dados in ranking_data:
         print(f"Atendente: {dados['nome']}")
-        print(f"Total Agendamentos: {dados['total_agendamentos']}")
-        print(f"Confirmados: {dados['confirmados']}")
-        print(f"Percentual de Confirmação: {dados['percentual_conf']}%")
+        print(f"Percentual de Confirmação: {dados['percentual_conf_str']} ({dados['percentual_conf']}%)")
+        print(f"Percentual de Efetividade: {dados['percentual_efetividade']}%")
         print("---")
     
     print("\n----- Finalizando get_tabela_ranking -----\n")
@@ -1211,8 +1182,8 @@ def get_tabela_ranking(periodo='mes'):
     return {
         'ranking_data': ranking_data,
         'periodo': {
-            'inicio': primeiro_dia,
-            'fim': ultimo_dia
+            'inicio': primeiro_dia_semana,
+            'fim': ultimo_dia_semana
         },
         'total_agendamentos': agendamentos.count()
     }

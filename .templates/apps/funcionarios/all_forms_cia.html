@@ -532,7 +532,7 @@
                                 <tr>
                                     <td>{{ funcionario.id }}</td>
                                     <td>
-                                        <a href="{% url 'funcionarios:render_ficha_funcionario' funcionario.id funcionario.fullname|slugify %}" target="_blank">
+                                        <a href="{% url 'funcionarios:render_ficha_funcionario' funcionario.id %}" target="_blank">
                                             {{ funcionario.fullname }}
                                         </a>
                                     </td>

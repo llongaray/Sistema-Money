@@ -145,18 +145,18 @@
                         <td class="progress-cell">
                             <div class="progress-container">
                                 <!-- Barra de progresso com largura fixa baseada em percentual_conf -->
-                                <div class="progress-bar" style="width: {{ item.percentual_conf}}%;">
+                                <div class="progress-bar" style="width: {{ item.percentual_conf }}%;">
                                     <span class="progress-text">
-                                        {{ item.confirmados }}/{{ item.total_agendamentos }}
+                                        {{ item.percentual_conf_str }}
                                     </span>
                                 </div>
                             </div>
                         </td>
-                        <td class="valor">{{ item.taxa_efetividade }}% </td>
+                        <td class="valor">{{ item.percentual_efetividade }}% </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="8" class="text-center">Nenhum dado disponível para o período</td>
+                        <td colspan="5" class="text-center">Nenhum dado disponível para o período</td>
                     </tr>
                     {% endfor %}
                 </tbody>
