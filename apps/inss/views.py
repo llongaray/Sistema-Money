@@ -1282,14 +1282,8 @@ def get_tabela_ranking(periodo='mes'):
 
     print(f"Período do ranking: {primeiro_dia_semana} até {ultimo_dia_semana}")
     
-    # Busca todos os agendamentos do período
-    agendamentos = Agendamento.objects.filter(
-        dia_agendado__date__gte=primeiro_dia_semana,
-        dia_agendado__date__lte=ultimo_dia_semana,
-        atendente_agendou__isnull=False,    # Apenas agendamentos com atendente definido
-        tabulacao_atendente__isnull=False    # Apenas agendamentos com tabulação atendente não vazia
-    ).select_related('atendente_agendou')  # Otimiza a consulta
-
+    # Busca todos os agendamentos sem filtros
+    agendamentos = Agendamento.objects.all().select_related('atendente_agendou')  # Otimiza a consulta
     print(f"Total de agendamentos encontrados: {agendamentos.count()}")
 
     # Agrupa agendamentos por atendente
@@ -1308,37 +1302,45 @@ def get_tabela_ranking(periodo='mes'):
             }
         
         ranking_por_atendente[atendente]['total_agendamentos'] += 1
-        
-        # Conta confirmações e fechamentos
-        if agendamento.tabulacao_atendente == 'CONFIRMADO':
-            ranking_por_atendente[atendente]['confirmados'] += 1
-            if agendamento.tabulacao_vendedor:  # Verifica se tabulação vendedor não é vazia
-                ranking_por_atendente[atendente]['fechamentos'] += 1
+
+    # Filtra agendamentos dentro do intervalo de datas
+    agendamentos_data_range = Agendamento.objects.filter(
+        dia_agendado__date__gte=primeiro_dia_semana,
+        dia_agendado__date__lte=ultimo_dia_semana,
+        atendente_agendou__isnull=False,    # Apenas agendamentos com atendente definido
+        tabulacao_atendente__isnull=False    # Apenas agendamentos com tabulação atendente não vazia
+    ).select_related('atendente_agendou')  # Otimiza a consulta
+
+    print(f"Total de agendamentos no intervalo de datas: {agendamentos_data_range.count()}")
 
     # Calcula percentual de confirmação e efetividade
     ranking_data = []
     for atendente, dados in ranking_por_atendente.items():
         total_agendamentos = dados['total_agendamentos']
-        confirmados = dados['confirmados']
-        fechamentos = dados['fechamentos']
+        print(f"Total de agendamentos para {dados['nome']}: {total_agendamentos}")
 
-        # Calcula percentual de confirmação
-        percentual_conf = (confirmados / total_agendamentos * 100) if total_agendamentos > 0 else 0
-        percentual_conf_str = f"{confirmados}/{total_agendamentos}"  # Formato "confirmados/total"
+        # Passo 3: Conte os Agendamentos Confirmados pelo Atendente
+        agem_confi_atend = sum(1 for agendamento in agendamentos_data_range if agendamento.atendente_agendou == atendente and agendamento.tabulacao_atendente == 'CONFIRMADO')
+        print(f"Agendamentos confirmados pelo atendente {dados['nome']}: {agem_confi_atend}")
 
-        # Calcula percentual de efetividade
-        percentual_efetividade = (fechamentos / confirmados * 100) if confirmados > 0 else 0
+        # Passo 4: Conte os Agendamentos Confirmados e Fechados pelo Vendedor
+        agem_fechado = sum(1 for agendamento in agendamentos_data_range if agendamento.atendente_agendou == atendente and agendamento.tabulacao_atendente == 'CONFIRMADO' and agendamento.tabulacao_vendedor)
+        print(f"Agendamentos fechados pelo atendente {dados['nome']}: {agem_fechado}")
+
+        # Passo 5: Calcule o Percentual de Efetividade
+        percentual_efetividade = (100 * agem_fechado / agem_confi_atend) if agem_confi_atend > 0 else 0
+        print(f"Percentual de efetividade para {dados['nome']}: {percentual_efetividade}%")
 
         ranking_data.append({
             'posicao': len(ranking_data) + 1,  # Posição no ranking
             'foto': dados['foto'],
             'nome': dados['nome'],
-            'percentual_conf': round(percentual_conf, 2),
-            'percentual_conf_str': percentual_conf_str,
+            'percentual_conf': round((agem_confi_atend / total_agendamentos * 100), 2) if total_agendamentos > 0 else 0,
+            'percentual_conf_str': f"{agem_confi_atend}/{total_agendamentos}",  # Formato "confirmados/total"
             'percentual_efetividade': round(percentual_efetividade, 2)
         })
 
-    # Ordena o ranking por número de fechamentos (decrescente)
+    # Ordena o ranking por percentual de efetividade (decrescente)
     ranking_data.sort(key=lambda x: x['percentual_efetividade'], reverse=True)
     
     print(f"Dados do ranking calculados para {len(ranking_data)} atendentes")
