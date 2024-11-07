@@ -398,6 +398,48 @@ def post_agendamento(request, funcionario):
     print("\n----- Finalizando post_agendamento -----\n")
     return mensagem
 
+def post_tac(request, funcionario_logado):
+    """Atualiza o status do agendamento e registra o valor em RegisterMoney."""
+    agendamento_id = request.POST.get('agendamento_id')
+    novo_status = request.POST.get('status_tac')
+
+    print(f"Atualizando status TAC para o agendamento ID: {agendamento_id} com o novo status: {novo_status}")
+
+    # Obtém o agendamento correspondente
+    agendamento = get_object_or_404(Agendamento, id=agendamento_id)
+    print(f"Agendamento encontrado: {agendamento}")
+
+    # Atualiza o status do agendamento
+    agendamento.status_tac = novo_status
+    agendamento.save()
+    print(f"Status TAC do agendamento ID: {agendamento_id} atualizado para: {novo_status}")
+
+    # Adiciona um registro em RegisterMoney se o novo_status for 'PAGO'
+    if novo_status == 'PAGO':
+        # Usa o valor do campo 'tac' do agendamento
+        valor_tac = agendamento.tac  # Supondo que tac é o valor que você quer registrar
+        if valor_tac is not None:  # Verifica se o valor do tac não é None
+            RegisterMoney.objects.create(
+                funcionario=agendamento.vendedor_loja,  # Usa o vendedor_loja do agendamento
+                cpf_cliente=agendamento.cpf_cliente,  # Passa o CPF do cliente
+                valor_est=valor_tac,  # Usa o valor do tac
+                status=True,  # Define o status como True
+                data=timezone.now()  # Data atual
+            )
+            print(f"Registro em RegisterMoney criado para o funcionário: {agendamento.vendedor_loja} com valor TAC: {valor_tac}")
+        else:
+            print("Erro: O valor do TAC está vazio ou não é válido.")
+    else:
+        print("O status TAC não é 'PAGO', portanto, não será criado um registro em RegisterMoney.")
+
+    return {
+        'texto': 'Status TAC atualizado com sucesso!',
+        'classe': 'success'
+    }
+
+
+
+
 def criar_dicionario_agendamento(agendamento, hoje, incluir_status=True):
     dicionario = {
         'id': agendamento.id,
@@ -603,6 +645,9 @@ def get_all_forms_and_objects(request_post):
     
     hoje = timezone.now().date()
     
+    # Inicializa a query base de agendamentos
+    agendamentos_base_query = Agendamento.objects.select_related('loja_agendada', 'atendente_agendou')
+
     # Obtém informações do funcionário logado
     try:
         funcionario_logado = Funcionario.objects.get(usuario_id=request_post.user.id)
@@ -632,12 +677,15 @@ def get_all_forms_and_objects(request_post):
     if request_post.user.is_superuser:
         # Se for superuser, pega todos os funcionários
         funcionarios = Funcionario.objects.all()
+        lojas = Loja.objects.all()  # Mostra todas as lojas para superuser
     else:
         # Se não for superuser, verifica o nível do funcionário logado
         if nivel_cargo in ['ESTAGIO', 'PADRÃO']:
             funcionarios = [funcionario_logado]  # Apenas o próprio funcionário
+            lojas = Loja.objects.filter(id=funcionario_logado.loja.id)  # Apenas a loja do funcionário
         else:
             funcionarios = Funcionario.objects.all()  # Todos os funcionários
+            lojas = Loja.objects.all()  # Mostra todas as lojas
 
     # Cria o dicionário de vendedores
     vendedores_lista_clientes = {
@@ -653,9 +701,6 @@ def get_all_forms_and_objects(request_post):
     form_agendamento = AgendamentoForm(funcionarios=funcionarios)
     form_confirmacao = ConfirmacaoAgendamentoForm()
 
-    # Query base de agendamentos
-    agendamentos_base_query = Agendamento.objects.select_related('loja_agendada', 'atendente_agendou')
-
     # Obtém todos os agendamentos sem filtro
     todos_agendamentos = agendamentos_base_query.all().order_by('cpf_cliente', '-dia_agendado')
     todos_agendamentos_dict = [{
@@ -670,9 +715,6 @@ def get_all_forms_and_objects(request_post):
         'tabulacao_vendedor': a.tabulacao_vendedor,
         'status': calcular_status_dias(a, timezone.now().date())  # Chama a função para calcular o status
     } for a in todos_agendamentos]
-
-    # Query base de agendamentos
-    agendamentos_base_query = Agendamento.objects.select_related('loja_agendada', 'atendente_agendou')
 
     # Agendamentos com filtro de tabulacao_atendente 'AGENDADO'
     if request_post.user.is_superuser:
@@ -719,7 +761,18 @@ def get_all_forms_and_objects(request_post):
     } for a in agendamentos_reagendados]
 
     # Agendamentos com filtro de tabulacao_atendente 'CONFIRMADO'
-    agendamentos_confirmados = agendamentos_base_query.filter(tabulacao_atendente='CONFIRMADO').order_by('dia_agendado')
+    if not request_post.user.is_superuser and nivel_cargo in ['ESTAGIO', 'PADRÃO']:
+        agendamentos_confirmados = agendamentos_base_query.filter(
+            tabulacao_atendente='CONFIRMADO',
+            loja_agendada=loja_funcionario,
+            tabulacao_vendedor__isnull=True  # Adiciona filtro para tabulacao_vendedor ser nulo
+        ).order_by('dia_agendado')
+    else:
+        agendamentos_confirmados = agendamentos_base_query.filter(
+            tabulacao_atendente='CONFIRMADO',
+            tabulacao_vendedor__isnull=True  # Adiciona filtro para tabulacao_vendedor ser nulo
+        ).order_by('dia_agendado')
+
     agendamentos_confirmados_dict = [{
         'id': a.id,
         'nome_cliente': a.nome_cliente,
@@ -739,12 +792,27 @@ def get_all_forms_and_objects(request_post):
     print(f"Agendamentos REAGENDADO: {len(agendamentos_reagendados_dict)}")
     print(f"Agendamentos CONFIRMADO: {len(agendamentos_confirmados_dict)}")
 
+    # Cria o dicionário de agendamentos com subsidio não vazio
+    agendamentos_tac = [
+        {
+            'cpf_cliente': a.cpf_cliente,
+            'nome_cliente': a.nome_cliente,
+            'subsidio': a.subsidio,
+            'tac': a.tac,
+            'acao': a.acao,
+            'status': a.status_tac,
+            'agendamento_id': a.id  # Adiciona o ID do agendamento
+        }
+        for a in todos_agendamentos if a.subsidio
+    ]
+
     print("\n----- Finalizando get_all_forms_and_objects -----\n")
     
     return {
         'form_agendamento': form_agendamento,
         'form_confirmacao': form_confirmacao,
         'funcionarios': funcionarios,
+        'lojas': lojas,
         'todos_agendamentos': todos_agendamentos_dict,
         'agendamentos_agendados': agendamentos_agendados_dict,
         'agendamentos_reagendados': agendamentos_reagendados_dict,
@@ -753,6 +821,7 @@ def get_all_forms_and_objects(request_post):
         'nivel_cargo': nivel_cargo,
         'loja_funcionario': loja_funcionario,
         'vendedores_lista_clientes': vendedores_lista_clientes,  # Adiciona o dicionário de vendedores ao retorno
+        'agendamentos_tac': agendamentos_tac,  # Adiciona o dicionário de agendamentos TAC ao retorno
     }
 
 @verificar_autenticacao
@@ -857,21 +926,23 @@ def render_all_forms(request):
                 }
                 print("Erro no formulário de lista de clientes.")
 
-        # Atualizar o trecho do form_type == 'status_tac' no render_all_forms
         elif form_type == 'status_tac':
             print("\nProcessando atualização de status TAC...")
-            status_data = {
-                'agendamento_id': request.POST.get('agendamento_id'),
-                'status': request.POST.get('status_tac')
-            }
-            
-            if not status_data['agendamento_id']:
+            agendamento_id = request.POST.get('agendamento_id')
+            status_tac = request.POST.get('status_tac')
+            print(f"ID do agendamento: {agendamento_id}, Status TAC: {status_tac}")
+
+            if not agendamento_id:
+                print("Erro: ID do agendamento não fornecido")
                 mensagem = {
                     'texto': 'Erro: ID do agendamento não fornecido',
                     'classe': 'error'
                 }
             else:
-                mensagem = post_status_tac(status_data, funcionario_logado)
+                print("ID do agendamento fornecido, chamando a função post_tac...")
+                # Chama a função post_tac passando o request e o funcionário logado
+                mensagem = post_tac(request, funcionario_logado)
+                print(f"Mensagem retornada da função post_tac: {mensagem}")
     else:
         print("\nRequest não é POST. Carregando formulários vazios...")
 
@@ -903,10 +974,6 @@ def get_cards(periodo='mes'):
     
     hoje = timezone.now()
     
-    # Define o primeiro e o último dia do mês atual
-    primeiro_dia_mes = hoje.replace(day=1)
-    ultimo_dia_mes = (hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1)).replace(hour=23, minute=59, second=59)
-
     # Busca a meta geral ativa
     meta_geral = RegisterMeta.objects.filter(
         tipo='GERAL',
@@ -915,70 +982,62 @@ def get_cards(periodo='mes'):
         range_data_final__gte=hoje.date()
     ).first()
     
-    # Se encontrou meta geral ativa, usa o range de datas dela
     if meta_geral:
-        primeiro_dia_meta = meta_geral.range_data_inicio
-        ultimo_dia_meta = datetime.combine(meta_geral.range_data_final, time(23, 59, 59))
+        print(f"Meta geral encontrada: {meta_geral}")
+        primeiro_dia_geral = timezone.make_aware(datetime.combine(meta_geral.range_data_inicio, time(0, 1)))  # Início às 00:01
+        ultimo_dia_geral = timezone.make_aware(datetime.combine(meta_geral.range_data_final, time(23, 59, 59)))  # Fim às 23:59
     else:
-        primeiro_dia_meta = None
-        ultimo_dia_meta = None
+        print("Nenhuma meta geral encontrada.")
+        primeiro_dia_geral = timezone.make_aware(hoje.replace(day=1))
+        ultimo_dia_geral = timezone.make_aware(datetime.combine((hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1)), time(23, 59, 59)))
 
-    # Busca todos os registros de valores no período do mês atual
-    valores_range = RegisterMoney.objects.filter(
-        data__range=[primeiro_dia_mes, ultimo_dia_mes]
-    )
+    # Armazena todos os registros de RegisterMoney em um dicionário
+    registros_dicionario = {valor.id: valor for valor in RegisterMoney.objects.all()}
+    print(f"Registros de RegisterMoney encontrados: {len(registros_dicionario)}")
     
-    # Obtém os IDs dos funcionários com registros
-    funcionarios_ids = valores_range.values_list('funcionario_id', flat=True).distinct()
+    # Filtra os registros financeiros no período da meta geral
+    valores_range = [valor for valor in registros_dicionario.values() if primeiro_dia_geral <= valor.data <= ultimo_dia_geral]
     
-    # Busca todos os funcionários e separa por departamento
-    funcionarios = Funcionario.objects.filter(
-        id__in=funcionarios_ids
-    ).select_related('departamento', 'loja')
+    print(f"Valores range filtrados encontrados: {len(valores_range)}")  # Verifica quantos registros foram encontrados
     
-    # Inicializa variáveis para cálculo
-    faturamento_total = Decimal('0')
+    # Calcula faturamento total para a meta geral
+    faturamento_total = 0.0  # Inicializa como float
+    for valor in valores_range:
+        print(f"Valor: {valor.valor_est}")  # Imprime cada valor
+        faturamento_total += float(valor.valor_est) if valor.valor_est is not None else 0.0  # Soma diretamente como float, tratando None
     
-    # Calcula faturamento total
-    for venda in valores_range:
-        funcionario = next((f for f in funcionarios if f.id == venda.funcionario_id), None)
-        if not funcionario:
-            continue
-            
-        valor_venda = Decimal(str(venda.valor_est))
-        faturamento_total += valor_venda
+    # Formata o faturamento total
+    faturamento_total_formatado = f"R$ {faturamento_total:,.2f}".replace(',', '_').replace('.', ',').replace('_', '.')
+    
+    print(f"Faturamento total calculado: {faturamento_total_formatado}")  # Verifica o total
     
     # Busca quantidade de vendas (agendamentos com TAC preenchido e status_tac 'PAGO')
     qtd_vendas = Agendamento.objects.filter(
-        dia_agendado__date__range=[primeiro_dia_mes, ultimo_dia_mes],
+        dia_agendado__date__range=[primeiro_dia_geral, ultimo_dia_geral],
         tac__isnull=False,  # Verifica se o campo TAC está preenchido
         status_tac='PAGO'   # Verifica se o status_tac é 'PAGO'
     ).count()
     
     # Busca quantidade de agendamentos confirmados
     qtd_agendamentos = Agendamento.objects.filter(
-        dia_agendado__date__range=[primeiro_dia_mes, ultimo_dia_mes],
+        dia_agendado__date__range=[primeiro_dia_geral, ultimo_dia_geral],
         tabulacao_atendente='CONFIRMADO'
     ).count()
     
     # Calcula o percentual em relação à meta geral, se existir
+    percentual_meta = 0
     if meta_geral and meta_geral.valor:
-        percentual_meta = round((faturamento_total / meta_geral.valor * 100), 2)
-    else:
-        percentual_meta = 0
-    
-    # Formata o valor monetário
-    valor_formatado = f"R$ {faturamento_total:,.2f}".replace(',', '_').replace('.', ',').replace('_', '.')
+        percentual_meta = round((faturamento_total / float(meta_geral.valor) * 100), 2)  # Converte meta_geral.valor para float
     
     # Prepara o contexto com os dados formatados
     context_data = {
-        'valor_total': valor_formatado,
+        'valor_total': faturamento_total_formatado,
         'percentual': percentual_meta,
         'qtd_vendas': qtd_vendas,
         'qtd_agendamentos': qtd_agendamentos,
         'periodo': {
-            'inicio': primeiro_dia_mes.date(),
-            'fim': ultimo_dia_mes.date()
+            'inicio': primeiro_dia_geral,  # Removido .date()
+            'fim': ultimo_dia_geral.date()  # Aqui está correto
         }
     }
     
@@ -1236,6 +1295,4 @@ def render_ranking(request):
     
     print("\n----- Finalizando render_ranking -----\n")
     return render(request, 'inss/ranking.html', context)
-
-
 

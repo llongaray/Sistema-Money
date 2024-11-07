@@ -327,25 +327,25 @@
                         </thead>
                         <tbody>
                             {% for agendamento in agendamentos_tac %}
-                            <tr data-agendamento-id="{{ agendamento.id }}" class="tac-row {% if agendamento.status_tac == 'PAGO' %}status-pago{% elif agendamento.status_tac == 'NAO_PAGO' %}status-nao-pago{% elif agendamento.status_tac == 'EM_ESPERA' %}status-espera{% endif %}">
+                            <tr data-agendamento-id="{{ agendamento.id }}" class="tac-row {% if agendamento.status == 'PAGO' %}status-pago{% elif agendamento.status == 'NAO_PAGO' %}status-nao-pago{% elif agendamento.status == 'EM_ESPERA' %}status-espera{% endif %}">
                                 <td class="td-nome">{{ agendamento.nome_cliente }}</td>
                                 <td class="td-cpf">{{ agendamento.cpf_cliente }}</td>
                                 <td class="td-valor">R$ {{ agendamento.tac|floatformat:2 }}</td>
                                 <td class="td-status">
-                                    <span class="status-badge status-{{ agendamento.status_tac|lower }}">
-                                        {{ agendamento.get_status_tac_display }}
+                                    <span class="status-badge status-{{ agendamento.status|lower }}">
+                                        {{ agendamento.status }}
                                     </span>
                                 </td>
                                 <td class="td-acao">
                                     <form method="POST" action="{% url 'inss:all_forms' %}" class="status-tac-form">
                                         {% csrf_token %}
                                         <input type="hidden" name="form_type" value="status_tac">
-                                        <input type="hidden" name="agendamento_id" value="{{ agendamento.id }}">
+                                        <input type="hidden" name="agendamento_id" value="{{ agendamento.agendamento_id }}">
                                         <select class="status-select" name="status_tac" onchange="this.form.submit()">
                                             <option value="">Alterar status...</option>
-                                            <option value="PAGO" {% if agendamento.status_tac == 'PAGO' %}selected{% endif %}>PAGO</option>
-                                            <option value="NAO_PAGO" {% if agendamento.status_tac == 'NAO_PAGO' %}selected{% endif %}>NÃO PAGO</option>
-                                            <option value="EM_ESPERA" {% if agendamento.status_tac == 'EM_ESPERA' %}selected{% endif %}>EM ESPERA</option>
+                                            <option value="PAGO" {% if agendamento.status == 'PAGO' %}selected{% endif %}>PAGO</option>
+                                            <option value="NAO_PAGO" {% if agendamento.status == 'NAO_PAGO' %}selected{% endif %}>NÃO PAGO</option>
+                                            <option value="EM_ESPERA" {% if agendamento.status == 'EM_ESPERA' %}selected{% endif %}>EM ESPERA</option>
                                         </select>
                                     </form>
                                 </td>
@@ -672,7 +672,8 @@
                 dia_agendado: "{{ agendamento.dia_agendado }}",  // Formato YYYY-MM-DD
                 atendente_nome: "{{ agendamento.atendente_agendou }}",  // Primeiro nome do atendente
                 loja_nome: "{{ agendamento.loja_agendada }}",  // Nome da loja após ' - '
-                tabulacao_atendente: "{{ agendamento.tabulacao_atendente }}"
+                tabulacao_atendente: "{{ agendamento.tabulacao_atendente }}",
+                status: "{{ agendamento.status }}"  // Adicionando status_tac ao dicionário
             }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];

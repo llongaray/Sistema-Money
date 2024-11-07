@@ -568,6 +568,46 @@ def post_deleteMoney(registro_id):
     print("\n----- Finalizando post_deleteMoney -----\n")
     return mensagem
 
+def post_csv_money(form_data):
+    """Processa a importação de registros em RegisterMoney a partir de um arquivo CSV."""
+    print("\n\n----- Iniciando post_csv_money -----\n")
+    mensagem = {'texto': '', 'classe': ''}
+
+    try:
+        # Obtém o arquivo CSV do form_data
+        csv_file = form_data.get('csv_file')
+        if not csv_file:
+            raise ValueError("Nenhum arquivo CSV fornecido.")
+
+        # Lê o arquivo CSV
+        df = pd.read_csv(csv_file, sep=';', encoding='utf-8-sig')
+
+        for index, row in df.iterrows():
+            funcionario_id = row['funcionario_id']
+            cpf_cliente = row['cpf_cliente']
+            valor_est = parse_float(row['valor_est'])
+            data = parse_date(row['data'])
+
+            # Cria um novo registro em RegisterMoney
+            RegisterMoney.objects.create(
+                funcionario_id=funcionario_id,
+                cpf_cliente=cpf_cliente,
+                valor_est=valor_est,
+                status=True,
+                data=data
+            )
+            print(f"Registro adicionado: Funcionario ID={funcionario_id}, CPF={cpf_cliente}, Valor={valor_est}")
+
+        mensagem['texto'] = 'Registros importados com sucesso!'
+        mensagem['classe'] = 'success'
+
+    except Exception as e:
+        mensagem['texto'] = f'Erro ao importar registros: {str(e)}'
+        mensagem['classe'] = 'error'
+        print(f"Erro: {str(e)}")
+
+    return mensagem
+
 # ===== FIM DA SEÇÃO DOS POSTS =====
 
 # ===== INÍCIO DA SEÇÃO DE ALL FORMS =====
@@ -665,19 +705,25 @@ def all_forms(request):
             if not cpf_cliente:
                 mensagem = {'texto': 'CPF não fornecido. Por favor, insira um CPF válido.', 'classe': 'warning'}
                 print("Aviso: CPF não fornecido")
+                messages.warning(request, mensagem['texto'])
             else:
                 cpf_cliente_limpo = normalize_cpf(cpf_cliente)
                 print(f"CPF normalizado: {cpf_cliente_limpo}")
-                try:
-                    cliente = Cliente.objects.get(cpf=cpf_cliente_limpo)
-                    print(f"Cliente encontrado: {cliente.nome}")
-                    return get_ficha_cliente(request, cliente.id)
-                except Cliente.DoesNotExist:
-                    mensagem = {'texto': f"Cliente com CPF {cpf_cliente} não encontrado na base de dados.", 'classe': 'warning'}
-                    print(f"Aviso: Cliente com CPF {cpf_cliente} não encontrado")
-                except Exception as e:
-                    mensagem = {'texto': f"Ocorreu um erro ao processar sua solicitação: {str(e)}", 'classe': 'error'}
-                    print(f"Erro: {str(e)}")
+                
+                if cpf_cliente_limpo is None:
+                    mensagem = {'texto': 'CPF inválido após normalização.', 'classe': 'warning'}
+                    print("Aviso: CPF inválido após normalização")
+                    messages.warning(request, mensagem['texto'])
+                else:
+                    # Verifica se o cliente existe antes de chamar get_ficha_cliente
+                    cliente_exists = Cliente.objects.filter(cpf=cpf_cliente_limpo).exists()
+                    if cliente_exists:
+                        print(f"Cliente encontrado: {cpf_cliente_limpo}")
+                        return get_ficha_cliente(request, cpf_cliente_limpo)  # Passando o CPF para a função
+                    else:
+                        mensagem = {'texto': f"Cliente com CPF {cpf_cliente} não encontrado na base de dados.", 'classe': 'warning'}
+                        print(f"Aviso: Cliente com CPF {cpf_cliente} não encontrado")
+                        messages.warning(request, mensagem['texto'])
         
         elif form_type == 'importar_csv':
             print("Iniciando importação de CSV")
@@ -729,6 +775,10 @@ def all_forms(request):
                     'texto': f'Erro ao excluir meta: {str(e)}',
                     'classe': 'error'
                 }
+        
+        elif form_type == 'importar_csv_money':
+            print("Iniciando importação de CSV para RegisterMoney")
+            mensagem = post_csv_money(request.FILES)
     
     # Obtém o contexto atualizado APÓS processar o POST
     context = get_all_forms()
@@ -758,7 +808,6 @@ def get_cards(periodo='mes'):
     # Busca a meta da equipe SIAPE ativa
     meta_equipe = RegisterMeta.objects.filter(
         tipo='EQUIPE',
-        setor='SIAPE',
         status=True,
         range_data_inicio__lte=hoje.date(),
         range_data_final__gte=hoje.date()
@@ -772,10 +821,10 @@ def get_cards(periodo='mes'):
         primeiro_dia_geral = hoje.replace(day=1)
         ultimo_dia_geral = datetime.combine((hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1)), time(23, 59, 59))
     
-    # Busca os registros financeiros no período da meta geral
+    # Busca os registros financeiros no período da meta geral (sem filtro de departamento)
     valores_range = RegisterMoney.objects.filter(
         data__range=[primeiro_dia_geral, ultimo_dia_geral]
-    ).select_related('funcionario', 'funcionario__departamento', 'funcionario__departamento__grupo')
+    ).select_related('funcionario')  # Removido o filtro de departamento
     print(f"Valores range encontrados: {valores_range.count()}")
     
     # Calcula faturamentos para a meta geral
@@ -789,7 +838,7 @@ def get_cards(periodo='mes'):
         primeiro_dia_siape = meta_equipe.range_data_inicio
         ultimo_dia_siape = datetime.combine(meta_equipe.range_data_final, time(23, 59, 59))
         
-        # Busca os registros financeiros dentro do intervalo da meta EQUIPE
+        # Busca os registros financeiros dentro do intervalo da meta EQUIPE (com filtro de departamento e setor)
         valores_siape_range = RegisterMoney.objects.filter(
             data__range=[primeiro_dia_siape, ultimo_dia_siape]
         ).select_related('funcionario', 'funcionario__departamento', 'funcionario__departamento__grupo')
@@ -804,11 +853,11 @@ def get_cards(periodo='mes'):
     
     # Calcula percentuais
     percentual_geral = 0
-    if meta_geral and meta_geral.valor > 0:
+    if meta_geral and meta_geral.valor is not None and meta_geral.valor > 0:
         percentual_geral = round((faturamento_total / meta_geral.valor) * 100, 2)
         
     percentual_siape = 0  
-    if meta_equipe and meta_equipe.valor > 0:
+    if meta_equipe and meta_equipe.valor is not None and meta_equipe.valor > 0:
         percentual_siape = round((faturamento_siape / meta_equipe.valor) * 100, 2)
     
     context = {
@@ -829,7 +878,6 @@ def get_cards(periodo='mes'):
     print(f"Faturamento SIAPE: {context['meta_siape']['valor_total']}")
     print(f"Percentual Meta SIAPE: {context['meta_siape']['percentual']}%")
     print("\n----- Finalizando get_cards -----\n")
-    
     return context
 
 def get_podium(periodo='mes'):

@@ -42,6 +42,9 @@
             <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalImportarCSV')">
                 Importar Base
             </button>
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalImportarCSV_money')">
+                Importar CSV para Registros de Dinheiro
+            </button>
         {% endif %}
         
         {% can_view_button user 'registro' as can_manage_register %}
@@ -73,7 +76,7 @@
                     <button type="button" class="btn-close" onclick="fecharModal('modalConsultaCliente')"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="consultaClienteForm" class="wp-style-form" onsubmit="return abrirFichaCliente(event)">
+                    <form id="consultaClienteForm" class="wp-style-form" method="POST" action="{% url 'siape:all_forms' %}">
                         {% csrf_token %}
                         <input type="hidden" name="form_type" value="consulta_cliente">
                         
@@ -88,22 +91,6 @@
             </div>
         </div>
     </div>
-
-    <script>
-    function abrirFichaCliente(event) {
-        event.preventDefault(); // Impede o envio padrão do formulário
-        const cpfCliente = document.getElementById('cpf_cliente').value;
-        
-        if (cpfCliente) {
-            // Normaliza o CPF (se necessário)
-            const cpfClienteLimpo = cpfCliente.replace(/\D/g, ''); // Remove caracteres não numéricos
-            const url = "{% url 'siape:ficha_cliente' 0 %}".replace('0', cpfClienteLimpo); // Substitui 0 pelo CPF normalizado
-            window.open(url, '_blank'); // Abre a URL em uma nova aba
-        } else {
-            alert('Por favor, insira um CPF válido.');
-        }
-    }
-    </script>
     
     <!-- Modal para Criar Campanha -->
     <div class="modal" id="modalCriarCampanha">
@@ -218,6 +205,36 @@
             </div>
         </div>
     </div>
+
+    <!-- ... código existente ... -->
+
+    <!-- Modal para Importar CSV -->
+    <div class="modal" id="modalImportarCSV_money" tabindex="-1" aria-labelledby="modalImportarCSVLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalImportarCSVLabel">Importar CSV para Registros de Dinheiro</h5>
+                    <button type="button" class="btn-close" onclick="fecharModal('modalImportarCSV')"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="{% url 'siape:all_forms' %}" enctype="multipart/form-data" class="wp-style-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="importar_csv_money">
+                        
+                        <div class="mb-3">
+                            <label for="csv_file" class="form-label">Arquivo CSV:</label>
+                            <input type="file" id="csv_file" name="csv_file" required accept=".csv" class="form-control">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Importar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- ... código existente ... -->
+
     
     <!-- Modal para Adicionar Registro de Dinheiro -->
     <div class="modal" id="modalAdicionarRegistro">

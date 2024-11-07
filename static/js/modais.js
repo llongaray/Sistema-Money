@@ -271,10 +271,10 @@ function preencherTabelaClientes() {
                 <td>${nomeElement}</td>
                 <td>${cliente.cpf_cliente}</td>
                 <td>${cliente.numero_cliente}</td>
-                <td>${cliente.diaAgendadoFormatado}</td>
-                <td>${cliente.atendenteNome}</td>
-                <td>${cliente.lojaNome}</td>
-                <td>${cliente.statusDias}</td>
+                <td>${cliente.dia_agendado}</td>
+                <td>${cliente.atendente_nome}</td>
+                <td>${cliente.loja_nome}</td>
+                <td>${cliente.status || 'N/A'}</td>
             </tr>
         `;
         
@@ -618,7 +618,8 @@ function handleSubModalFormSubmit(event) {
         'criar_empresa', 
         'associar_grupos', 
         'cadastrar_usuario', 
-        'cadastro_funcionario'
+        'cadastro_funcionario',
+        'importar_csv_money'
     ];
 
     // Se o tipo de formulário estiver na lista permitida, permite o submit normal

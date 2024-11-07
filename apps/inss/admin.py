@@ -4,8 +4,16 @@ from .models import Agendamento, LogAlteracao
 
 @admin.register(Agendamento)
 class AgendamentoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nome_cliente', 'cpf_cliente', 'dia_agendado', 'loja_agendada', 'tabulacao_atendente', 'atendente_agendou', 'tabulacao_vendedor')
-    list_filter = ('dia_agendado', 'loja_agendada', 'tabulacao_atendente', 'atendente_agendou')
+    list_display = (
+        'id', 'nome_cliente', 'cpf_cliente', 'dia_agendado', 
+        'loja_agendada', 'atendente_agendou', 'vendedor_loja', 
+        'status_tac', 'tac', 'subsidio', 'tabulacao_atendente', 
+        'tabulacao_vendedor'
+    )
+    list_filter = (
+        'dia_agendado', 'loja_agendada', 'tabulacao_atendente', 
+        'atendente_agendou', 'status_tac', 'subsidio'
+    )
     search_fields = ('nome_cliente', 'cpf_cliente', 'numero_cliente')
     date_hierarchy = 'dia_agendado'
 
@@ -17,7 +25,10 @@ class AgendamentoAdmin(admin.ModelAdmin):
             'fields': ('dia_agendado', 'loja_agendada', 'atendente_agendou', 'tabulacao_atendente')
         }),
         ('Informações de Vendas', {
-            'fields': ('vendedor_loja', 'tabulacao_vendedor', 'observacao_vendedor')
+            'fields': ('vendedor_loja', 'tabulacao_vendedor', 'observacao_vendedor', 'tac', 'subsidio')
+        }),
+        ('Status do TAC', {
+            'fields': ('status_tac', 'data_pagamento_tac')
         }),
         ('Logs de Alteração', {
             'fields': ('logs_alteracao',),
@@ -37,7 +48,7 @@ class AgendamentoAdmin(admin.ModelAdmin):
     logs_alteracao.short_description = "Logs de Alteração"
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('loja_agendada', 'atendente_agendou')
+        return super().get_queryset(request).select_related('loja_agendada', 'atendente_agendou', 'vendedor_loja')
 
     def has_delete_permission(self, request, obj=None):
         return True  # Permite a exclusão de agendamentos
