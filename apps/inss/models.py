@@ -60,6 +60,11 @@ class Agendamento(models.Model):
     # Registro de quando o TAC foi pago
     data_pagamento_tac = models.DateTimeField(null=True, blank=True)
 
+    # Novos campos
+    data_confirmacao_loja = models.DateTimeField(null=True, blank=True)  # Data de confirmação da loja
+    data_add_tac = models.DateTimeField(null=True, blank=True)  # Data de adição do TAC
+    data_tac_paga = models.DateTimeField(null=True, blank=True)  # Data em que o TAC foi pago
+
     def __str__(self):
         return f'{self.nome_cliente} - {self.loja_agendada} ({self.dia_agendado})'
 

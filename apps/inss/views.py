@@ -264,15 +264,15 @@ def post_confirmacao_agem(form_data, funcionario):
     try:
         agendamento_id = form_data.get('agendamento_id')
         print(f"ID do agendamento recebido: {agendamento_id}")
-        
+
         if not agendamento_id:
             print("ERRO: ID do agendamento não fornecido ou vazio")
             raise ValueError("ID do agendamento não fornecido")
-        
+
         # Tenta converter para int para garantir que é um ID válido
         agendamento_id = int(agendamento_id)
         print(f"ID do agendamento convertido: {agendamento_id}")
-        
+
         agendamento = Agendamento.objects.get(id=agendamento_id)
         print(f"Agendamento encontrado: {agendamento}")
 
@@ -291,18 +291,15 @@ def post_confirmacao_agem(form_data, funcionario):
 
         # Verifica o status do agendamento
         if form_data['tabulacao_atendente'] == 'CONFIRMADO':
-            # Apenas atualiza a tabulação
             dados_atualizacao['tabulacao_atendente'] = 'CONFIRMADO'
         
         elif form_data['tabulacao_atendente'] == 'REAGENDADO':
-            # Atualiza a tabulação e a nova data
             dados_atualizacao['tabulacao_atendente'] = 'REAGENDADO'
             if form_data.get('nova_dia_agendado'):
                 nova_dia_agendado = datetime.strptime(form_data['nova_dia_agendado'], '%Y-%m-%d').date()
                 dados_atualizacao['dia_agendado'] = timezone.make_aware(datetime.combine(nova_dia_agendado, hora_atual))
 
         elif form_data['tabulacao_atendente'] == 'DESISTIU':
-            # Atualiza a tabulação e a observação
             dados_atualizacao['tabulacao_atendente'] = 'DESISTIU'
             dados_atualizacao['observacao_atendente'] = form_data.get('observacao', '')
 
@@ -327,6 +324,63 @@ def post_confirmacao_agem(form_data, funcionario):
         print(f"Erro ao processar confirmação de agendamento: {e}")
         mensagem['texto'] = 'Erro ao atualizar confirmação de agendamento.'
         mensagem['classe'] = 'danger'
+
+    return mensagem
+
+def post_conf_loja(form_data, funcionario):
+    print("\n\n----- Iniciando post_conf_loja -----\n")
+    mensagem = {'texto': '', 'classe': ''}
+
+    try:
+        agendamento_id = form_data.get('agendamento_id')
+        vendedor_id = form_data.get('vendedor_id')
+        tabulacao_vendedor = form_data.get('tabulacao_vendedor')
+
+        print(f"ID do agendamento: {agendamento_id}, Vendedor ID: {vendedor_id}, Tabulação Vendedor: {tabulacao_vendedor}")
+
+        if not agendamento_id or not vendedor_id:
+            print("Erro: ID do agendamento ou ID do vendedor não fornecido.")
+            raise ValueError("ID do agendamento ou ID do vendedor não fornecido.")
+
+        # Obtém o agendamento e o vendedor
+        print("Buscando agendamento e vendedor...")
+        agendamento = Agendamento.objects.get(id=agendamento_id)
+        vendedor_loja = Funcionario.objects.get(id=vendedor_id)
+        print(f"Agendamento encontrado: {agendamento}, Vendedor encontrado: {vendedor_loja.nome}")
+
+        # Atualiza os campos necessários
+        agendamento.vendedor_loja = vendedor_loja
+        agendamento.tabulacao_vendedor = tabulacao_vendedor
+        agendamento.data_confirmacao_loja = timezone.now()  # Atualiza a data de confirmação da loja
+        print("Campos atualizados: vendedor_loja, tabulacao_vendedor e data_confirmacao_loja.")
+
+        # Salva as alterações
+        agendamento.save()
+        print("Agendamento salvo com as novas informações.")
+
+        # Criar log de alteração
+        LogAlteracao.objects.create(
+            agendamento_id=str(agendamento.id),
+            mensagem=f"Confirmação de loja atualizada. Vendedor: {vendedor_loja.nome}, Tabulação: {tabulacao_vendedor}",
+            status=True,
+            funcionario=funcionario
+        )
+        print("Log de alteração criado com sucesso.")
+
+        mensagem['texto'] = 'Confirmação de loja atualizada com sucesso!'
+        mensagem['classe'] = 'success'
+
+    except Exception as e:
+        mensagem['texto'] = f'Erro ao atualizar confirmação de loja: {str(e)}'
+        mensagem['classe'] = 'error'
+        print(f"Erro: {str(e)}")
+        LogAlteracao.objects.create(
+            agendamento_id=str(agendamento_id) if agendamento_id else 'N/A',
+            mensagem=f"Erro ao atualizar confirmação de loja: {str(e)}",
+            status=False,
+            funcionario=funcionario
+        )
+        print("Log de erro criado.")
 
     return mensagem
 
@@ -411,6 +465,11 @@ def post_tac(request, funcionario_logado):
 
     # Atualiza o status do agendamento
     agendamento.status_tac = novo_status
+
+    # Se o novo_status for 'PAGO', atualiza a data_tac_paga
+    if novo_status == 'PAGO':
+        agendamento.data_tac_paga = timezone.now()  # Atualiza a data_tac_paga com a data atual
+
     agendamento.save()
     print(f"Status TAC do agendamento ID: {agendamento_id} atualizado para: {novo_status}")
 
@@ -502,9 +561,8 @@ def get_all_agem(agendamentos_dict, hoje):
             'tabulacao_atendente': a['tabulacao_atendente'] or '',
             'tabulacao_vendedor': a['tabulacao_vendedor'] or '',
             'status_dias': calcular_status_dias(a, hoje),
-            'total_agendamentos': contagem_por_cpf[a['cpf_cliente']]
-        }
-        for a in agendamentos_dict
+            'total_agendamentos': contagem_por_cpf[cpf]  # Corrigido para usar a variável cpf
+        } for a in agendamentos_dict  # Corrigido para fechar a lista corretamente
     ]
 
     # 4. Ordenar por data mais recente
@@ -514,7 +572,6 @@ def get_all_agem(agendamentos_dict, hoje):
     mensagem.append(f"Total de CPFs únicos: {len(contagem_por_cpf)}")
 
     return todos_agem_disc, mensagem
-
 
 """
 Função get_reagem
@@ -675,11 +732,9 @@ def get_all_forms_and_objects(request_post):
 
     # Obtém lista de funcionários baseada no nível de acesso
     if request_post.user.is_superuser:
-        # Se for superuser, pega todos os funcionários
         funcionarios = Funcionario.objects.all()
         lojas = Loja.objects.all()  # Mostra todas as lojas para superuser
     else:
-        # Se não for superuser, verifica o nível do funcionário logado
         if nivel_cargo in ['ESTAGIO', 'PADRÃO']:
             funcionarios = [funcionario_logado]  # Apenas o próprio funcionário
             lojas = Loja.objects.filter(id=funcionario_logado.loja.id)  # Apenas a loja do funcionário
@@ -703,6 +758,8 @@ def get_all_forms_and_objects(request_post):
 
     # Obtém todos os agendamentos sem filtro
     todos_agendamentos = agendamentos_base_query.all().order_by('cpf_cliente', '-dia_agendado')
+    hoje = datetime.now().date()  # Obtém a data atual
+
     todos_agendamentos_dict = [{
         'id': a.id,
         'nome_cliente': a.nome_cliente,
@@ -713,55 +770,111 @@ def get_all_forms_and_objects(request_post):
         'loja_agendada': a.loja_agendada.nome.split(' - ')[-1] if a.loja_agendada and ' - ' in a.loja_agendada.nome else a.loja_agendada.nome,  # Nome da loja após ' - '
         'tabulacao_atendente': a.tabulacao_atendente,
         'tabulacao_vendedor': a.tabulacao_vendedor,
-        'status': calcular_status_dias(a, timezone.now().date())  # Chama a função para calcular o status
-    } for a in todos_agendamentos]
+        'observacao_vendedor': a.observacao_vendedor,  # Observação do vendedor
+        'observacao_atendente': a.observacao_atendente,  # Observação do atendente
+        'tipo_negociacao': a.tipo_negociacao,  # Tipo de negociação
+        'banco': a.banco,  # Banco
+        'subsidio': a.subsidio,  # Subsdio
+        'tac': a.tac,  # Valor TAC
+        'acao': a.acao,  # Ação
+        'associacao': a.associacao,  # Associação
+        'aumento': a.aumento,  # Aumento
+        'status_tac': a.status_tac,  # Status do TAC
+        'data_pagamento_tac': a.data_pagamento_tac.strftime('%Y-%m-%d') if a.data_pagamento_tac else None,  # Data de pagamento do TAC
+        'status': (
+            'HOJE' if a.dia_agendado.date() == hoje else
+            'ATRASADO' if a.dia_agendado.date() < hoje else
+            'EM PROCESSO' if a.tabulacao_atendente == 'AGENDADO' else
+            'FECHADO'  # Você pode ajustar essa lógica conforme necessário
+        ),
+        'vendedor_loja': {
+            'id': a.vendedor_loja.id if a.vendedor_loja else None,  # ID do vendedor
+            'nome': a.vendedor_loja.nome if a.vendedor_loja else ''  # Nome do vendedor
+        }
+    } for a in todos_agendamentos]  # Fechamento correto da lista
 
     # Agendamentos com filtro de tabulacao_atendente 'AGENDADO'
-    if request_post.user.is_superuser:
-        agendamentos_agendados = agendamentos_base_query.filter(tabulacao_atendente='AGENDADO').order_by('dia_agendado')
+    if nivel_cargo in ['ESTAGIO', 'PADRÃO']:
+        agendamentos_agendados = agendamentos_base_query.filter(
+            tabulacao_atendente='AGENDADO',
+            atendente_agendou=funcionario_logado,
+            tabulacao_vendedor__isnull=True  # Adiciona filtro para tabulacao_vendedor ser nulo
+        ).order_by('dia_agendado')
     else:
-        if nivel_cargo in ['ESTAGIO', 'PADRÃO']:
-            agendamentos_agendados = agendamentos_base_query.filter(tabulacao_atendente='AGENDADO', atendente_agendou=funcionario_logado).order_by('dia_agendado')
-        else:
-            agendamentos_agendados = agendamentos_base_query.filter(tabulacao_atendente='AGENDADO').order_by('dia_agendado')
+        agendamentos_agendados = agendamentos_base_query.filter(
+            tabulacao_atendente='AGENDADO',
+            tabulacao_vendedor__isnull=True  # Adiciona filtro para tabulacao_vendedor ser nulo
+        ).order_by('dia_agendado')
 
     agendamentos_agendados_dict = [{
         'id': a.id,
         'nome_cliente': a.nome_cliente,
         'cpf_cliente': a.cpf_cliente,
         'numero_cliente': a.numero_cliente,
-        'dia_agendado': a.dia_agendado.strftime('%Y-%m-%d'),  # Formato para input date
-        'atendente_agendou': a.atendente_agendou.nome.split()[0] if a.atendente_agendou else '',  # Primeiro nome do atendente
-        'loja_agendada': a.loja_agendada.nome.split(' - ')[-1] if a.loja_agendada and ' - ' in a.loja_agendada.nome else a.loja_agendada.nome,  # Nome da loja após ' - '
+        'dia_agendado': a.dia_agendado.strftime('%Y-%m-%d'),
+        'atendente_agendou': a.atendente_agendou.nome.split()[0] if a.atendente_agendou else '',
+        'loja_agendada': a.loja_agendada.nome.split(' - ')[-1] if a.loja_agendada and ' - ' in a.loja_agendada.nome else a.loja_agendada.nome,
         'tabulacao_atendente': a.tabulacao_atendente,
         'tabulacao_vendedor': a.tabulacao_vendedor,
-        'status': calcular_status_dias(a, timezone.now().date())  # Chama a função para calcular o status
+        'status': calcular_status_dias(a, hoje)
     } for a in agendamentos_agendados]
 
     # Agendamentos com filtro de tabulacao_atendente 'REAGENDADO'
-    if request_post.user.is_superuser:
-        agendamentos_reagendados = agendamentos_base_query.filter(tabulacao_atendente='REAGENDADO').order_by('dia_agendado')
+    if nivel_cargo in ['ESTAGIO', 'PADRÃO']:
+        agendamentos_reagendados = agendamentos_base_query.filter(
+            tabulacao_atendente='REAGENDADO',
+            atendente_agendou=funcionario_logado,
+            tabulacao_vendedor__isnull=True  # Adiciona filtro para tabulacao_vendedor ser nulo
+        ).order_by('dia_agendado')
     else:
-        if nivel_cargo in ['ESTAGIO', 'PADRÃO']:
-            agendamentos_reagendados = agendamentos_base_query.filter(tabulacao_atendente='REAGENDADO', atendente_agendou=funcionario_logado).order_by('dia_agendado')
-        else:
-            agendamentos_reagendados = agendamentos_base_query.filter(tabulacao_atendente='REAGENDADO').order_by('dia_agendado')
+        agendamentos_reagendados = agendamentos_base_query.filter(
+            tabulacao_atendente='REAGENDADO',
+            tabulacao_vendedor__isnull=True  # Adiciona filtro para tabulacao_vendedor ser nulo
+        ).order_by('dia_agendado')
 
     agendamentos_reagendados_dict = [{
         'id': a.id,
         'nome_cliente': a.nome_cliente,
         'cpf_cliente': a.cpf_cliente,
         'numero_cliente': a.numero_cliente,
-        'dia_agendado': a.dia_agendado.strftime('%Y-%m-%d'),  # Formato para input date
-        'atendente_agendou': a.atendente_agendou.nome.split()[0] if a.atendente_agendou else '',  # Primeiro nome do atendente
-        'loja_agendada': a.loja_agendada.nome.split(' - ')[-1] if a.loja_agendada and ' - ' in a.loja_agendada.nome else a.loja_agendada.nome,  # Nome da loja após ' - '
+        'dia_agendado': a.dia_agendado.strftime('%Y-%m-%d'),
+        'atendente_agendou': a.atendente_agendou.nome.split()[0] if a.atendente_agendou else '',
+        'loja_agendada': a.loja_agendada.nome.split(' - ')[-1] if a.loja_agendada and ' - ' in a.loja_agendada.nome else a.loja_agendada.nome,
         'tabulacao_atendente': a.tabulacao_atendente,
         'tabulacao_vendedor': a.tabulacao_vendedor,
-        'status': calcular_status_dias(a, timezone.now().date())  # Chama a função para calcular o status
+        'status': calcular_status_dias(a, hoje)
     } for a in agendamentos_reagendados]
 
+    # Agendamentos com filtro de tabulacao_vendedor 'FECHOU NEGOCIO'
+    if nivel_cargo not in ['COORDENADOR', 'SUPERVISOR GERAL', 'TOTAL'] and not request_post.user.is_superuser:
+        agendamentos_fechou_negocio = agendamentos_base_query.filter(
+            tabulacao_vendedor='FECHOU NEGOCIO',
+            loja_agendada=loja_funcionario,
+            tac__isnull=True  # Adicionando filtro para 'tac' ser nulo
+        ).order_by('dia_agendado')
+    else:
+        agendamentos_fechou_negocio = agendamentos_base_query.filter(
+            tabulacao_vendedor='FECHOU NEGOCIO',
+            tac__isnull=True  # Adicionando filtro para 'tac' ser nulo
+        ).order_by('dia_agendado')
+
+    agendamentos_fechou_negocio_dict = [{
+        'id': a.id,
+        'nome_cliente': a.nome_cliente,
+        'cpf_cliente': a.cpf_cliente,
+        'numero_cliente': a.numero_cliente,
+        'dia_agendado': a.dia_agendado.strftime('%Y-%m-%d'),
+        'atendente_agendou': a.atendente_agendou.nome.split()[0] if a.atendente_agendou else '',
+        'loja_agendada': a.loja_agendada.nome.split(' - ')[-1] if a.loja_agendada and ' - ' in a.loja_agendada.nome else a.loja_agendada.nome,
+        'tabulacao_atendente': a.tabulacao_atendente,
+        'tabulacao_vendedor': a.tabulacao_vendedor,
+        'vendedor_id': a.vendedor_loja.id if a.vendedor_loja else None,  # Adicionando ID do vendedor
+        'vendedor_nome': a.vendedor_loja.nome if a.vendedor_loja else '',  # Adicionando nome do vendedor
+        'status': a.status_tac if a.tac else 'EM PROCESSO'  # Verifica se 'tac' está vazio
+    } for a in agendamentos_fechou_negocio]
+
     # Agendamentos com filtro de tabulacao_atendente 'CONFIRMADO'
-    if not request_post.user.is_superuser and nivel_cargo in ['ESTAGIO', 'PADRÃO']:
+    if nivel_cargo not in ['COORDENADOR', 'SUPERVISOR GERAL', 'TOTAL'] and not request_post.user.is_superuser:
         agendamentos_confirmados = agendamentos_base_query.filter(
             tabulacao_atendente='CONFIRMADO',
             loja_agendada=loja_funcionario,
@@ -778,12 +891,12 @@ def get_all_forms_and_objects(request_post):
         'nome_cliente': a.nome_cliente,
         'cpf_cliente': a.cpf_cliente,
         'numero_cliente': a.numero_cliente,
-        'dia_agendado': a.dia_agendado.strftime('%Y-%m-%d'),  # Formato para input date
-        'atendente_agendou': a.atendente_agendou.nome.split()[0] if a.atendente_agendou else '',  # Primeiro nome do atendente
-        'loja_agendada': a.loja_agendada.nome.split(' - ')[-1] if a.loja_agendada and ' - ' in a.loja_agendada.nome else a.loja_agendada.nome,  # Nome da loja após ' - '
+        'dia_agendado': a.dia_agendado.strftime('%Y-%m-%d'),
+        'atendente_agendou': a.atendente_agendou.nome.split()[0] if a.atendente_agendou else '',
+        'loja_agendada': a.loja_agendada.nome.split(' - ')[-1] if a.loja_agendada and ' - ' in a.loja_agendada.nome else a.loja_agendada.nome,
         'tabulacao_atendente': a.tabulacao_atendente,
         'tabulacao_vendedor': a.tabulacao_vendedor,
-        'status': calcular_status_dias(a, timezone.now().date())  # Chama a função para calcular o status
+        'status': calcular_status_dias(a, hoje)
     } for a in agendamentos_confirmados]
 
     print("\n----- Total de agendamentos -----")
@@ -791,6 +904,7 @@ def get_all_forms_and_objects(request_post):
     print(f"Agendamentos AGENDADO: {len(agendamentos_agendados_dict)}")
     print(f"Agendamentos REAGENDADO: {len(agendamentos_reagendados_dict)}")
     print(f"Agendamentos CONFIRMADO: {len(agendamentos_confirmados_dict)}")
+    print(f"Agendamentos FECHOU NEGÓCIO: {len(agendamentos_fechou_negocio_dict)}")
 
     # Cria o dicionário de agendamentos com subsidio não vazio
     agendamentos_tac = [
@@ -800,14 +914,12 @@ def get_all_forms_and_objects(request_post):
             'subsidio': a.subsidio,
             'tac': a.tac,
             'acao': a.acao,
-            'status': a.status_tac,
+            'status': a.status_tac if a.tac else 'EM PROCESSO',  # Verifica se 'tac' está vazio
             'agendamento_id': a.id  # Adiciona o ID do agendamento
         }
         for a in todos_agendamentos if a.subsidio
     ]
 
-    print("\n----- Finalizando get_all_forms_and_objects -----\n")
-    
     return {
         'form_agendamento': form_agendamento,
         'form_confirmacao': form_confirmacao,
@@ -815,13 +927,11 @@ def get_all_forms_and_objects(request_post):
         'lojas': lojas,
         'todos_agendamentos': todos_agendamentos_dict,
         'agendamentos_agendados': agendamentos_agendados_dict,
-        'agendamentos_reagendados': agendamentos_reagendados_dict,
         'agendamentos_confirmados': agendamentos_confirmados_dict,
-        'funcionario_logado': funcionario_logado,
-        'nivel_cargo': nivel_cargo,
-        'loja_funcionario': loja_funcionario,
-        'vendedores_lista_clientes': vendedores_lista_clientes,  # Adiciona o dicionário de vendedores ao retorno
-        'agendamentos_tac': agendamentos_tac,  # Adiciona o dicionário de agendamentos TAC ao retorno
+        'agendamentos_reagendados': agendamentos_reagendados_dict,
+        'agendamentos_fechou_negocio': agendamentos_fechou_negocio_dict,
+        'vendedores_lista_clientes': vendedores_lista_clientes,
+        'agendamentos_tac': agendamentos_tac,
     }
 
 @verificar_autenticacao
@@ -876,7 +986,7 @@ def render_all_forms(request):
                 'nova_dia_agendado': request.POST.get('nova_dia_agendado'),
                 'observacao': request.POST.get('observacao')
             }
-            print(f"Dados extraídos do formulário: {form_data}")
+            print(f"\n\nDados extraídos do formulário: {form_data}")
             
             if not form_data['agendamento_id']:
                 mensagem = {
@@ -885,11 +995,11 @@ def render_all_forms(request):
                 }
             else:
                 mensagem = post_confirmacao_agem(form_data, funcionario_logado)
+                print(f"Mensagem retornada: {mensagem}")
 
         elif form_type == 'lista_clientes':
             print("\nProcessando formulário de lista de clientes...")
             lista_clientes_data = {
-                # Campos básicos
                 'agendamento_id': request.POST.get('agendamento_id'),
                 'nome_cliente': request.POST.get('nome_cliente'),
                 'cpf_cliente': request.POST.get('cpf_cliente'),
@@ -898,13 +1008,9 @@ def render_all_forms(request):
                 'tabulacao_atendente': request.POST.get('tabulacao_atendente'),
                 'atendente_agendou': request.POST.get('atendente_agendou'),
                 'loja_agendada': request.POST.get('loja_agendada'),
-                
-                # Campos de vendedor e tabulação
                 'vendedor_id': request.POST.get('vendedor_id'),
                 'tabulacao_vendedor': request.POST.get('tabulacao_vendedor'),
                 'observacao_vendedor': request.POST.get('observacao_vendedor'),
-                
-                # Campos específicos para FECHOU NEGOCIO
                 'tipo_negociacao': request.POST.get('tipo_negociacao'),
                 'banco': request.POST.get('banco'),
                 'subsidio': request.POST.get('subsidio'),
@@ -926,6 +1032,15 @@ def render_all_forms(request):
                 }
                 print("Erro no formulário de lista de clientes.")
 
+        elif form_type == 'confirmacao_loja':
+            print("\nProcessando formulário de confirmação de loja...")
+            form_data = {
+                'agendamento_id': request.POST.get('agendamento_id'),
+                'vendedor_id': request.POST.get('vendedor_id'),
+                'tabulacao_vendedor': request.POST.get('tabulacao_vendedor'),
+            }
+            mensagem = post_conf_loja(form_data, funcionario_logado)
+
         elif form_type == 'status_tac':
             print("\nProcessando atualização de status TAC...")
             agendamento_id = request.POST.get('agendamento_id')
@@ -940,7 +1055,6 @@ def render_all_forms(request):
                 }
             else:
                 print("ID do agendamento fornecido, chamando a função post_tac...")
-                # Chama a função post_tac passando o request e o funcionário logado
                 mensagem = post_tac(request, funcionario_logado)
                 print(f"Mensagem retornada da função post_tac: {mensagem}")
     else:
