@@ -39,7 +39,7 @@ class CargoAdmin(admin.ModelAdmin):
 
 # Classe para customizar a exibição de Funcionário no admin
 class FuncionarioAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nome', 'sobrenome', 'cpf', 'empresa', 'loja', 'cargo', 'status')  # Exibir principais campos, incluindo ID
+    list_display = ('nome', 'sobrenome', 'cpf', 'empresa', 'loja', 'cargo', 'status')  # Exibir principais campos
     search_fields = ('nome', 'sobrenome', 'cpf', 'empresa__nome', 'loja__nome')  # Permite busca por nome, CPF, empresa e loja
     list_filter = ('status', 'empresa', 'loja', 'cargo')  # Filtros por status, empresa, loja e cargo
     fieldsets = (

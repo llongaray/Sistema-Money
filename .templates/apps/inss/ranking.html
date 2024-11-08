@@ -46,7 +46,7 @@
                 <i class="fas fa-chart-bar"></i>
             </div>
             <div class="info__valores">
-                <h3 class="title">Qtd Vendas</h3>
+                <h3 class="title">Qtd Em Loja</h3>
                 <h5 class="valor">{{ cards.qtd_vendas }}</h5>
             </div>
         </div>
@@ -55,7 +55,7 @@
                 <i class="fas fa-calendar-alt"></i>
             </div>
             <div class="info__valores">
-                <h3 class="title">Qtd Agendamentos</h3>
+                <h3 class="title">Qtd Confirmados</h3>
                 <h5 class="valor">{{ cards.qtd_agendamentos }}</h5>
             </div>
         </div>
@@ -64,43 +64,45 @@
 <section>
     <div class="container__ranking">
         <div class="container__top3 container">
-            <div class="top2 box__ranking">
-                <div class="info__foto">
-                    <div class="foto__pos">
-                        <img src="{{ podium.1.logo|default:'/static/img/default-store.png' }}" alt="{{ podium.1.nome|default:'Posição Disponível' }}">
-                        <div class="circle__position">2</div>
+            <div class="subcontainer__top_ranking">
+                <div class="top2 box__ranking">
+                    <div class="info__foto">
+                        <div class="foto__pos">
+                            <img src="{{ podium.1.logo|default:'/static/img/default-store.png' }}" alt="{{ podium.1.nome|default:'Posição Disponível' }}">
+                            <div class="circle__position">2</div>
+                        </div>
+                        <div class="valor">{{ podium.1.total_fechamentos|default:"0" }}</div>
                     </div>
-                    <div class="valor">{{ podium.1.total_fechamentos|default:"0" }}</div>
-                </div>
-                <div class="bar">
-                    <div class="nome">{{ podium.1.nome|default:"Posição Disponível" }}</div>
-                    <div class="icon"><i class="fa fa-medal"></i></div>
-                </div>
-            </div>
-            <div class="top1 box__ranking">
-                <div class="info__foto">
-                    <div class="foto__pos">
-                        <img src="{{ podium.0.logo|default:'/static/img/default-store.png' }}" alt="{{ podium.0.nome|default:'Posição Disponível' }}">
-                        <div class="circle__position">1</div>
+                    <div class="bar">
+                        <div class="nome">{{ podium.1.nome|default:"Posição Disponível" }}</div>
+                        <div class="icon"><i class="fa fa-medal"></i></div>
                     </div>
-                    <div class="valor">{{ podium.0.total_fechamentos|default:"0" }}</div>
                 </div>
-                <div class="bar">
-                    <div class="nome">{{ podium.0.nome|default:"Posição Disponível" }}</div>
-                    <div class="icon"><i class="fa fa-trophy"></i></div>
-                </div>
-            </div>
-            <div class="top3 box__ranking">
-                <div class="info__foto">
-                    <div class="foto__pos">
-                        <img src="{{ podium.2.logo|default:'/static/img/default-store.png' }}" alt="{{ podium.2.nome|default:'Posição Disponível' }}">
-                        <div class="circle__position">3</div>
+                <div class="top1 box__ranking">
+                    <div class="info__foto">
+                        <div class="foto__pos">
+                            <img src="{{ podium.0.logo|default:'/static/img/default-store.png' }}" alt="{{ podium.0.nome|default:'Posição Disponível' }}">
+                            <div class="circle__position">1</div>
+                        </div>
+                        <div class="valor">{{ podium.0.total_fechamentos|default:"0" }}</div>
                     </div>
-                    <div class="valor">{{ podium.2.total_fechamentos|default:"0" }}</div>
+                    <div class="bar">
+                        <div class="nome">{{ podium.0.nome|default:"Posição Disponível" }}</div>
+                        <div class="icon"><i class="fa fa-trophy"></i></div>
+                    </div>
                 </div>
-                <div class="bar">
-                    <div class="nome">{{ podium.2.nome|default:"Posição Disponível" }}</div>
-                    <div class="icon"><i class="fa fa-medal"></i></div>
+                <div class="top3 box__ranking">
+                    <div class="info__foto">
+                        <div class="foto__pos">
+                            <img src="{{ podium.2.logo|default:'/static/img/default-store.png' }}" alt="{{ podium.2.nome|default:'Posição Disponível' }}">
+                            <div class="circle__position">3</div>
+                        </div>
+                        <div class="valor">{{ podium.2.total_fechamentos|default:"0" }}</div>
+                    </div>
+                    <div class="bar">
+                        <div class="nome">{{ podium.2.nome|default:"Posição Disponível" }}</div>
+                        <div class="icon"><i class="fa fa-medal"></i></div>
+                    </div>
                 </div>
             </div>
         </div>

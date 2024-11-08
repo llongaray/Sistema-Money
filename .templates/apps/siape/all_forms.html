@@ -76,7 +76,7 @@
                     <button type="button" class="btn-close" onclick="fecharModal('modalConsultaCliente')"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="consultaClienteForm" class="wp-style-form" method="POST" action="{% url 'siape:all_forms' %}">
+                    <form id="consultaClienteForm" class="wp-style-form" onsubmit="return abrirFichaCliente(event)">
                         {% csrf_token %}
                         <input type="hidden" name="form_type" value="consulta_cliente">
                         
@@ -91,6 +91,22 @@
             </div>
         </div>
     </div>
+
+    <script>
+    function abrirFichaCliente(event) {
+        event.preventDefault(); // Impede o envio padrão do formulário
+        const cpfCliente = document.getElementById('cpf_cliente').value;
+        
+        if (cpfCliente) {
+            // Normaliza o CPF (se necessário)
+            const cpfClienteLimpo = cpfCliente.replace(/\D/g, ''); // Remove caracteres não numéricos
+            const url = "{% url 'siape:ficha_cliente' 0 %}".replace('0', cpfClienteLimpo); // Substitui 0 pelo CPF normalizado
+            window.open(url, '_blank'); // Abre a URL em uma nova aba
+        } else {
+            alert('Por favor, insira um CPF válido.');
+        }
+    }
+    </script>
     
     <!-- Modal para Criar Campanha -->
     <div class="modal" id="modalCriarCampanha">

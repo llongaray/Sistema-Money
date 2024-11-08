@@ -184,12 +184,22 @@ main section {
 
 .container {
     width: 50%;
-    height: 100%;
+    height: 720px;
     padding: 1.5rem;
     display: flex;
     background-color: #FFFFFF;
     border-radius: 1rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    align-items: flex-end;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.container__lista {
+    align-items: flex-start;
+    justify-content: center;
+    max-height: 620px;
+    overflow-y: scroll;
 }
 
 /* Box de Ranking */
@@ -296,7 +306,8 @@ table {
     width: 100%;
     border-collapse: collapse;
     background-color: #FFFFFF;
-    max-width: 100%;
+    max-height: 100%; /* Alterado para 100% */
+    overflow-y: auto; /* Removido do table e adicionado ao tbody */
 }
 
 th, td {
@@ -319,8 +330,8 @@ td {
 
 tbody {
     display: block;
-    max-height: 300px;
-    overflow-y: auto;
+    max-height: 100%; /* Mantido para permitir o scroll */
+    overflow-y: auto; /* Mantido para permitir o scroll */
 }
 
 thead, tbody tr {
@@ -869,4 +880,25 @@ td.valor {
 
 [data-theme="dark"] .progress-text {
     color: #ffffff;
+}
+
+.container__top3 {
+    width: 48%;
+    height: 620px;
+    padding: 1.5rem;
+    display: flex;
+    background-color: #FFFFFF;
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.subcontainer__top_ranking {
+    display: flex;
+}
+
+.container__ranking {
+    align-items: flex-start;
 }

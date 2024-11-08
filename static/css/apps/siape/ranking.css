@@ -109,7 +109,7 @@ main header {
 
 .card.meta-siape .valor,
 .card.meta-siape .porcentagem {
-    color: #fff3ea;
+    color: #d68a00; /* Cor laranja mais escura para melhor legibilidade */
 }
 
 /* Elementos internos dos cards */

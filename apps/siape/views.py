@@ -705,25 +705,19 @@ def all_forms(request):
             if not cpf_cliente:
                 mensagem = {'texto': 'CPF não fornecido. Por favor, insira um CPF válido.', 'classe': 'warning'}
                 print("Aviso: CPF não fornecido")
-                messages.warning(request, mensagem['texto'])
             else:
                 cpf_cliente_limpo = normalize_cpf(cpf_cliente)
                 print(f"CPF normalizado: {cpf_cliente_limpo}")
-                
-                if cpf_cliente_limpo is None:
-                    mensagem = {'texto': 'CPF inválido após normalização.', 'classe': 'warning'}
-                    print("Aviso: CPF inválido após normalização")
-                    messages.warning(request, mensagem['texto'])
-                else:
-                    # Verifica se o cliente existe antes de chamar get_ficha_cliente
-                    cliente_exists = Cliente.objects.filter(cpf=cpf_cliente_limpo).exists()
-                    if cliente_exists:
-                        print(f"Cliente encontrado: {cpf_cliente_limpo}")
-                        return get_ficha_cliente(request, cpf_cliente_limpo)  # Passando o CPF para a função
-                    else:
-                        mensagem = {'texto': f"Cliente com CPF {cpf_cliente} não encontrado na base de dados.", 'classe': 'warning'}
-                        print(f"Aviso: Cliente com CPF {cpf_cliente} não encontrado")
-                        messages.warning(request, mensagem['texto'])
+                try:
+                    cliente = Cliente.objects.get(cpf=cpf_cliente_limpo)
+                    print(f"Cliente encontrado: {cliente.nome}")
+                    return get_ficha_cliente(request, cliente.id)
+                except Cliente.DoesNotExist:
+                    mensagem = {'texto': f"Cliente com CPF {cpf_cliente} não encontrado na base de dados.", 'classe': 'warning'}
+                    print(f"Aviso: Cliente com CPF {cpf_cliente} não encontrado")
+                except Exception as e:
+                    mensagem = {'texto': f"Ocorreu um erro ao processar sua solicitação: {str(e)}", 'classe': 'error'}
+                    print(f"Erro: {str(e)}")
         
         elif form_type == 'importar_csv':
             print("Iniciando importação de CSV")
@@ -840,7 +834,8 @@ def get_cards(periodo='mes'):
         
         # Busca os registros financeiros dentro do intervalo da meta EQUIPE (com filtro de departamento e setor)
         valores_siape_range = RegisterMoney.objects.filter(
-            data__range=[primeiro_dia_siape, ultimo_dia_siape]
+            data__range=[primeiro_dia_siape, ultimo_dia_siape],
+            funcionario__departamento__grupo__name='SIAPE'  # Filtro adicionado para o departamento SIAPE
         ).select_related('funcionario', 'funcionario__departamento', 'funcionario__departamento__grupo')
         
         # Calcula faturamento para a meta SIAPE

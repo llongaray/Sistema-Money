@@ -139,77 +139,34 @@ function preencherDadosImportCSV(subModal, idCampanha) {
 function preencherDadosSubModal(subModal, tipoModal, id) {
     console.log("Iniciando preenchimento do sub-modal para ID:", id);
 
-    // Verifica se o ID é válido e busca os dados correspondentes
-    const dados = todosAgendamentos.find(c => c.id == id);
+    // Declaramos agendamentosEdicao como objeto vazio
+    let agendamentosEdicao = null;
 
-    if (!id || id === 'undefined' || !dados) {
-        console.error(`ID inválido ou cliente com ID ${id} não encontrado em todosAgendamentos`);
-        return;
-    }
+    if (tipoModal === 'listaClientes') {
+        const dados = todosAgendamentos.find(c => c.id === id);
 
-    console.log("Dados do cliente:", dados);
-
-    try {
-        // Preenchendo campos comuns
-        const agendamentoId = subModal.querySelector('#agendamentoId');
-        if (agendamentoId) {
-            agendamentoId.value = dados.id;
-            console.log(`Agendamento ID preenchido com: ${dados.id}`);
+        if (!id || id === 'undefined' || !dados) {
+            console.error(`ID inválido ou cliente com ID ${id} não encontrado em todosAgendamentos`);
+            return;
         }
 
-        if (tipoModal === 'confirmacao') {
+        console.log("Dados do cliente:", dados);
+
+        try {
+            const agendamentoId = subModal.querySelector('#agendamentoId');
+            if (agendamentoId) {
+                agendamentoId.value = dados.id;
+                console.log(`Agendamento ID preenchido com: ${dados.id}`);
+            }
+
             const campos = {
-                '#idAgendamentoConfirmacao': dados.id,  // Adicionando o ID do agendamento
-                '#nomeClienteConfirmacao': dados.nome_cliente,
-                '#diaAgendadoConfirmacao': dados.dia_agendado,
-                '#numeroClienteConfirmacao': dados.numero_cliente,
-                '#lojaAgendadaConfirmacao': dados.loja_nome,
-                '#tabulacaoAtendente': dados.tabulacao_atendente
-            };
-            console.log("Campos preenchidos para confirmação:", campos);
-
-            Object.entries(campos).forEach(([selector, valor]) => {
-                const elemento = subModal.querySelector(selector);
-                if (elemento) {
-                    elemento.value = valor || '';
-                    console.log(`Campo ${selector} preenchido com: ${valor}`);
-                } else {
-                    console.warn(`Elemento ${selector} não encontrado no modal`);
-                }
-            });
-
-        } else if (tipoModal === 'confirmacaoLoja') {
-            const campos = {
-                '#idAgendamentoStatus': dados.id,
-                '#nomeClienteStatus': dados.nome_cliente,
-                '#diaAgendadoStatus': dados.dia_agendado,
-                '#numeroClienteStatus': dados.numero_cliente,
-                '#lojaAgendadaStatus': dados.loja_nome
-            };
-
-            Object.entries(campos).forEach(([selector, valor]) => {
-                const elemento = subModal.querySelector(selector);
-                if (elemento) {
-                    elemento.value = valor || '';
-                    console.log(`Campo ${selector} preenchido com: ${valor}`);
-                } else {
-                    console.warn(`Elemento ${selector} não encontrado no modal`);
-                }
-            });
-
-        } else if (tipoModal === 'confirmacaoTAC') {
-            const campos = {
-                '#agendamentoId': dados.id,  // Preencher ID do agendamento
                 '#nomeCliente': dados.nome_cliente,
                 '#cpfCliente': dados.cpf_cliente,
                 '#numeroCliente': dados.numero_cliente,
-                '#diaAgendado': dados.dia_agendado,
+                '#diaAgendado': dados.dia_agendado, // Ajustado para usar a propriedade correta
                 '#tabulacaoAtendente': dados.tabulacao_atendente,
                 '#atendenteAgendou': dados.atendente_nome,
-                '#lojaAgendada': dados.loja_nome,
-                '#nomeVendedor': dados.vendedor_nome || '', // Preencher nome do vendedor
-                '#vendedorLoja': dados.vendedor_id || '', // Preencher ID do vendedor
-                '#tabulacaoVendedor': dados.tabulacao_vendedor || '' // Preencher com a tabulaão do vendedor
+                '#lojaAgendada': dados.loja_nome
             };
 
             Object.entries(campos).forEach(([selector, valor]) => {
@@ -222,126 +179,109 @@ function preencherDadosSubModal(subModal, tipoModal, id) {
                 }
             });
 
-            // Exibir o container de 'fechouNegocioContainer'
-            document.getElementById('fechouNegocioContainer').style.display = 'block'; // Mantém o container visível
-        } else {
-            console.warn(`Tipo de modal ${tipoModal} não reconhecido.`);
+            const vendedorSelect = subModal.querySelector('#vendedorLoja');
+            if (vendedorSelect) {
+                vendedorSelect.innerHTML = '<option value="">Selecione um vendedor</option>';
+                preencherSelectVendedores(vendedorSelect);
+                
+                if (dados.vendedorLoja) {
+                    vendedorSelect.value = dados.vendedorLoja;
+                    console.log(`Vendedor selecionado: ${dados.vendedorLoja}`);
+                }
+            } else {
+                console.warn('Select de vendedores não encontrado');
+            }
+
+            const tabulacaoVendedor = subModal.querySelector('#tabulacaoVendedor');
+            const observacaoVendedor = subModal.querySelector('#observacaoVendedor');
+            const observacaoContainer = subModal.querySelector('#observacaoVendedorContainer');
+            const fechouNegocioContainer = subModal.querySelector('#fechouNegocioContainer');
+
+            if (tabulacaoVendedor && dados.tabulacaoVendedor) {
+                tabulacaoVendedor.value = dados.tabulacaoVendedor;
+                console.log(`Tabulação do vendedor: ${dados.tabulacaoVendedor}`);
+
+                if (dados.tabulacaoVendedor === 'FECHOU NEGOCIO') {
+                    fechouNegocioContainer.style.display = 'block';
+                    observacaoContainer.style.display = 'block';
+                } else if (dados.tabulacaoVendedor) {
+                    observacaoContainer.style.display = 'block';
+                }
+
+                if (observacaoVendedor && dados.observacaoVendedor) {
+                    observacaoVendedor.value = dados.observacaoVendedor;
+                }
+            }
+
+        } catch (error) {
+            console.error('Erro ao preencher dados do sub-modal:', error);
         }
-
-    } catch (error) {
-        console.error('Erro ao preencher dados do sub-modal:', error);
+    } else if (tipoModal === 'confirmacao') {
+        // Verifica se todosAgendamentos está carregado
+        if (!todosAgendamentos || todosAgendamentos.length === 0) {
+            console.error("todosAgendamentos ainda não foi carregado.");
+            return;
+        }
+    
+        // Convertendo o ID para string para garantir a comparação correta
+        const idExistente = todosAgendamentos.find(agendamento => agendamento.id === String(id));
+    
+        if (idExistente) {
+            console.log('Dados do agendamento encontrados:', idExistente);
+            agendamentosEdicao = idExistente;
+    
+            subModal.querySelector('#idAgendamentoConfirmacao').value = id;
+            subModal.querySelector('#nomeClienteConfirmacao').value = agendamentosEdicao.nome_cliente;
+            subModal.querySelector('#diaAgendadoConfirmacao').value = agendamentosEdicao.dia_agendado;
+            subModal.querySelector('#numeroClienteConfirmacao').value = agendamentosEdicao.numero_cliente;
+            subModal.querySelector('#lojaAgendadaConfirmacao').value = agendamentosEdicao.loja_nome;
+            subModal.querySelector('#tabulacaoAtendente').value = agendamentosEdicao.tabulacao_atendente;
+    
+            console.log('ID do agendamento definido:', id);
+        } else {
+            console.error(`ID inválido ou agendamento com ID ${id} não encontrado`);
+            return;
+        }
     }
+    
 }
 
-function preencherTabelaConfirmacaoTAC(tacData) {
-    console.log('Iniciando preenchimento da tabela de confirmação TAC');
+
+function preencherTabelaClientes() {
+    console.log('Iniciando preenchimento da tabela de clientes');
     
-    const $tabela = $('#modalConfirmacaoValorTAC #tabelaConfirmacaoValorTAC tbody');
+    const $tabela = $('#modalListaClientes #tabelaClientesLoja tbody');
     
     if (!$tabela.length) {
-        console.error('Tabela de confirmação TAC não encontrada!');
+        console.error('Tabela não encontrada!');
         return;
     }
     
     $tabela.empty();
     console.log('Tabela limpa');
 
-    if (tacData.length === 0) {
-        const emptyRow = `
+    clientesLoja.forEach(cliente => {
+        const nomeElement = `<button type="button" class="btn-link abrir-sub-modal" 
+            onclick="abrirSubModal('#modalEdicaoCliente', 'listaClientes', '${cliente.id}')">
+            ${cliente.nome_cliente}
+        </button>`;
+
+        const row = `
             <tr>
-                <td colspan="6" class="text-center">Nenhum registro encontrado.</td>
+                <td>${nomeElement}</td>
+                <td>${cliente.cpf_cliente}</td>
+                <td>${cliente.numero_cliente}</td>
+                <td>${cliente.dia_agendado}</td>
+                <td>${cliente.atendente_nome}</td>
+                <td>${cliente.loja_nome}</td>
+                <td>${cliente.status || 'N/A'}</td>
             </tr>
         `;
-        $tabela.append(emptyRow);
-    } else {
-        tacData.forEach(tac => {
-            const row = `
-                <tr>
-                    <td>
-                        <button type="button" class="btn-link" onclick="abrirSubModal('#modalConfirmacaoTAC', 'confirmacaoTAC', '${tac.id}')">
-                            ${tac.nome_cliente}
-                        </button>
-                    </td>
-                    <td>${tac.cpf_cliente}</td>
-                    <td>${tac.numero_cliente}</td>
-                    <td>${tac.vendedor_nome}</td>
-                    <td>${tac.loja_agendada}</td>
-                    <td>${tac.status}</td>
-                </tr>
-            `;
-            $tabela.append(row);
-        });
-    }
-    
-    console.log('Preenchimento da tabela de confirmação TAC concluído');
-
-    // Chama a função de filtragem após preencher a tabela
-    filtrarTabela();
-}
-
-function filtrarTabela() {
-    var nomeCliente = $('#filtroNomeCliente').val().toLowerCase();
-    var atendente = $('#filtroAtendente').val().toLowerCase();
-    var loja = $('#filtroLoja').val().toLowerCase();
-
-    $('#tabelaConfirmacaoLoja tbody tr').filter(function() {
-        $(this).toggle(
-            ($(this).find('td').eq(0).text().toLowerCase().indexOf(nomeCliente) > -1 || nomeCliente === '') &&
-            ($(this).find('td').eq(4).text().toLowerCase().indexOf(atendente) > -1 || atendente === '') &&
-            ($(this).find('td').eq(5).text().toLowerCase().indexOf(loja) > -1 || loja === '')
-        );
+        
+        $tabela.append(row);
     });
-}
-
-// Adiciona eventos de input para os filtros
-$(document).ready(function() {
-    $('#filtroNomeCliente, #filtroAtendente, #filtroLoja').on('keyup', filtrarTabela);
-});
-
-function preencherTabelaConfirmacaoLoja(clientesLoja) {
-    console.log('Iniciando preenchimento da tabela de confirmação Cliente Loja');
     
-    const $tabela = $('#modalConfiClienteLoja #tabelaConfirmacaoLoja tbody');
-    
-    if (!$tabela.length) {
-        console.error('Tabela de confirmação Cliente Loja não encontrada!');
-        return;
-    }
-    
-    $tabela.empty();
-    console.log('Tabela limpa');
-
-    if (clientesLoja.length === 0) {
-        // Adiciona a linha "Nenhum registro encontrado" se não houver registros
-        const emptyRow = `
-            <tr>
-                <td colspan="7" class="text-center">Nenhum registro encontrado.</td>
-            </tr>
-        `;
-        $tabela.append(emptyRow);
-    } else {
-        clientesLoja.forEach(cliente => {
-            const row = `
-                <tr>
-                    <td>
-                        <button type="button" class="btn-link" onclick="abrirSubModal('#modalConfirmacaoLoja', 'confirmacaoLoja', '${cliente.id}')">
-                            ${cliente.nome_cliente}
-                        </button>
-                    </td>
-                    <td>${cliente.cpf_cliente}</td>
-                    <td>${cliente.numero_cliente}</td>
-                    <td>${cliente.dia_agendado}</td>
-                    <td>${cliente.atendente_nome}</td>
-                    <td>${cliente.loja_nome}</td>
-                    <td>${cliente.status || 'N/A'}</td>
-                </tr>
-            `;
-            
-            $tabela.append(row);
-        });
-    }
-    
-    console.log('Preenchimento da tabela de confirmação Cliente Loja concluído');
+    console.log('Preenchimento da tabela concluído');
 }
 
 let sortDirection = 'desc';
@@ -387,8 +327,8 @@ function preencherTabelaTodosAgendamentos() {
         const agendamentoRecente = agendamentos[0];
         const totalAgendamentos = agendamentos.length;
 
-        const nomeElement = `<button type="button" class="btn-link" 
-            onclick="abrirSubModal('#modalConfirmacaoTAC', 'confirmacaoTAC', '${agendamentoRecente.id}')">
+        const nomeElement = `<button type="button" class="btn-link abrir-sub-modal" 
+            onclick="abrirSubModal('#modalEdicaoCliente', 'listaClientes', '${agendamentoRecente.id}')">
             ${agendamentoRecente.nome_cliente}
         </button>`;
 
@@ -403,7 +343,7 @@ function preencherTabelaTodosAgendamentos() {
                 <td data-date="${agendamentoRecente.dia_agendado}">${dataFormatada}</td>
                 <td>${agendamentoRecente.atendente_nome}</td>
                 <td>${agendamentoRecente.loja_nome}</td>
-                <td>${agendamentoRecente.status}</td>
+                <td>${agendamentoRecente.status_dias}</td>
                 <td>${totalAgendamentos}</td>
             </tr>
         `;
@@ -627,14 +567,6 @@ $(document).ready(function() {
     $('.text-uppercase').on('input', function() {
         this.value = this.value.toUpperCase();
     });
-    
-    $('#filtroNomeCliente, #filtroAtendente, #filtroLoja').on('keyup', filtrarTabela);
-
-    // Preencher a tabela de confirmação de loja ao carregar a página
-    preencherTabelaConfirmacaoLoja(confirmacaoLoja);
-
-    // Preencher a tabela de confirmação TAC ao carregar a página
-    preencherTabelaConfirmacaoTAC(confirmacaoTac);
 });
 
 function closeSubModal(modalId) {
@@ -687,10 +619,7 @@ function handleSubModalFormSubmit(event) {
         'associar_grupos', 
         'cadastrar_usuario', 
         'cadastro_funcionario',
-        'importar_csv_money',
-        'status_agendamento', // Adicionando o novo tipo de formulário
-        'confirmacao_loja',   // Adicionando o novo tipo de formulário
-        'confirmacao_tac'     // Adicionando o novo tipo de formulário
+        'importar_csv_money'
     ];
 
     // Se o tipo de formulário estiver na lista permitida, permite o submit normal
@@ -792,23 +721,4 @@ function fecharSubModal(modalId) {
         console.error(`Sub-modal com ID: ${cleanedModalId} não encontrado`);
     }
 }
-
-function filtrarTabelaAgendados() {
-    var nomeCliente = $('#filtroNomeClienteAgendado').val().toLowerCase();
-    var atendente = $('#filtroAtendenteAgendado').val().toLowerCase();
-    var loja = $('#filtroLojaAgendada').val().toLowerCase();
-
-    $('#modalConfiAgendadosTabela tbody tr').filter(function() {
-        $(this).toggle(
-            ($(this).find('td').eq(0).text().toLowerCase().indexOf(nomeCliente) > -1 || nomeCliente === '') &&
-            ($(this).find('td').eq(3).text().toLowerCase().indexOf(atendente) > -1 || atendente === '') &&
-            ($(this).find('td').eq(4).text().toLowerCase().indexOf(loja) > -1 || loja === '')
-        );
-    });
-}
-
-// Adiciona eventos de input para os filtros
-$(document).ready(function() {
-    $('#filtroNomeClienteAgendado, #filtroAtendenteAgendado, #filtroLojaAgendada').on('keyup', filtrarTabelaAgendados);
-});
 

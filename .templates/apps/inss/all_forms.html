@@ -11,25 +11,33 @@
 <link rel="stylesheet" href="{% static 'geral_forms.css' %}">
 <link rel="stylesheet" href="{% static 'mensagens.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<style>
+    .tac-valor-input {
+        width: 100px;
+        border: 1px solid #ddd;
+        padding: 4px 8px;
+        border-radius: 4px;
+        text-align: right;
+    }
+    
+    .tac-valor-input:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    }
+    
+    .tac-valor-form {
+        margin: 0;
+        padding: 0;
+    }
+</style>
 {% endblock %}
 
+{% block pre_content %}
+{% include 'partials/_dark_mode_toggle.html' %}
+{% include 'partials/_messages.html' %}
+{% endblock %}
 {% block content %}
-<div class="toggleWrapper">
-    <button id="dark-mode-toggle" class="toggle-button">
-        <i class="fas fa-sun"></i> <!-- Ícone para o modo claro -->
-    </button>
-</div>
-<!-- Seção de mensagens -->
-<div id="mensagens" class="mensagens-container">
-    {% if messages %}
-        {% for message in messages %}
-            <div class="mensagem {{ message.tags }}">
-                <span class="mensagem-texto">{{ message }}</span>
-                <button class="fechar-mensagem">&times;</button>
-            </div>
-        {% endfor %}
-    {% endif %}
-</div>
 
 <!--***************************SELETOR DE MODAIS***************************-->
 
@@ -42,33 +50,33 @@
         {% can_view_inss_button user 'agendamento' as can_view_agendamento %}
         {% if can_view_agendamento or user.is_superuser %}
             <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalAgendamento')">
-                Agendamento
+                Registrar Agendamento
             </button>
-            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalConfiAgendadosTabela')">
-                Confirmação Agendados
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalConfiAgendamentoTabela')">
+                Confirmação Agendamento
             </button>
-            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalConfiReagendadosTabela')">
-                Confirmação Reagendados
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalReagendamentoTabela')">
+                Confirmação Reagendamento
             </button>
         {% endif %}
 
         {% can_view_inss_button user 'clientes_loja' as can_view_clientes %}
         {% if can_view_clientes or user.is_superuser %}
-            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalConfiClienteLoja')">
-                Confirmação Cliente Loja
-            </button>
-            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalConfirmacaoValorTAC')">
-                Confirmação Valor TAC
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalListaClientes')">
+                Clientes do Dia
             </button>
             <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalTodosAgendamentos')">
                 Todos os Agendamentos
+            </button>
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalAgendamentosAtrasados')">
+                Não Foi Loja
             </button>
         {% endif %}
 
         {% can_view_inss_button user 'agendamentos_tac' as can_view_tac %}
         {% if can_view_tac or user.is_superuser %}
             <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalAgendamentosTAC')">
-                Lançamento Valores TAC
+                Confirmação Pagamento TAC
             </button>
         {% endif %}
     </div>
@@ -144,30 +152,15 @@
         </div>
     </div>
 
-    <!-- Modal para Confirmação Agendados -->
-    <div class="modal" id="modalConfiAgendadosTabela">
+    <!-- Modal para Confirmação Agendamento -->
+    <div class="modal" id="modalConfiAgendamentoTabela">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Confirmação Agendados</h5>
+                    <h5 class="modal-title">Confirmação Agendamento</h5>
                     <button type="button" class="btn-close" data-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- Campos de Filtro -->
-                    <div class="mb-3 d-flex justify-content-between">
-                        <div class="me-2 flex-fill">
-                            <label for="filtroNomeClienteAgendado" class="form-label">Filtrar por Nome do Cliente:</label>
-                            <input type="text" id="filtroNomeClienteAgendado" class="form-control" placeholder="Digite o nome do cliente">
-                        </div>
-                        <div class="me-2 flex-fill">
-                            <label for="filtroAtendenteAgendado" class="form-label">Filtrar por Atendente:</label>
-                            <input type="text" id="filtroAtendenteAgendado" class="form-control" placeholder="Digite o nome do atendente">
-                        </div>
-                        <div class="flex-fill">
-                            <label for="filtroLojaAgendada" class="form-label">Filtrar por Loja Agendada:</label>
-                            <input type="text" id="filtroLojaAgendada" class="form-control" placeholder="Digite o nome da loja">
-                        </div>
-                    </div>
                     <table class="wp-style-table">
                         <thead>
                             <tr>
@@ -195,7 +188,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="6" class="text-center">Nenhum agendamento para confirmação</td>
+                                <td colspan="5" class="text-center">Nenhum agendamento para confirmação</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -205,13 +198,13 @@
         </div>
     </div>
 
-    <!-- Modal para Confirmação Reagendados -->
-    <div class="modal" id="modalConfiReagendadosTabela">
+    <!-- Modal para Reagendamento -->
+    <div class="modal" id="modalReagendamentoTabela">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Confirmação Reagendados</h5>
-                    <button type="button" class="btn-close" onclick="fecharModal('modalConfiReagendadosTabela')"></button>
+                    <h5 class="modal-title">Reagendamento</h5>
+                    <button type="button" class="btn-close" onclick="fecharModal('modalReagendamentoTabela')"></button>
                 </div>
                 <div class="modal-body">
                     <table class="wp-style-table">
@@ -251,31 +244,16 @@
         </div>
     </div>
 
-    <!-- Modal para Confirmação Cliente Loja -->
-    <div class="modal" id="modalConfiClienteLoja">
+    <!-- Modal para Lista de Clientes (Lojas) -->
+    <div class="modal" id="modalListaClientes">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Confirmação Cliente Loja</h5>
+                    <h5 class="modal-title">Clientes Agendados para Hoje</h5>
                     <button type="button" class="btn-close" data-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- Campos de Filtro -->
-                    <div class="mb-3 d-flex justify-content-between">
-                        <div class="me-2 flex-fill">
-                            <label for="filtroNomeCliente" class="form-label">Filtrar por Nome:</label>
-                            <input type="text" id="filtroNomeCliente" class="form-control" placeholder="Digite o nome do cliente">
-                        </div>
-                        <div class="me-2 flex-fill">
-                            <label for="filtroAtendente" class="form-label">Filtrar por Atendente:</label>
-                            <input type="text" id="filtroAtendente" class="form-control" placeholder="Digite o nome do atendente">
-                        </div>
-                        <div class="flex-fill">
-                            <label for="filtroLoja" class="form-label">Filtrar por Loja:</label>
-                            <input type="text" id="filtroLoja" class="form-control" placeholder="Digite o nome da loja">
-                        </div>
-                    </div>
-                    <table class="wp-style-table" id="tabelaConfirmacaoLoja">
+                    <table class="wp-style-table" id="tabelaClientesLoja">  <!-- Adicionado ID aqui -->
                         <thead>
                             <tr>
                                 <th>Nome</th>
@@ -289,35 +267,6 @@
                         </thead>
                         <tbody>
                             <!-- Será preenchido via jQuery -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para Confirmação Valor TAC -->
-    <div class="modal" id="modalConfirmacaoValorTAC">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Confirmação Valor TAC</h5>
-                    <button type="button" class="btn-close" onclick="fecharModal('modalConfirmacaoValorTAC')"></button>
-                </div>
-                <div class="modal-body">
-                    <table class="wp-style-table" id="tabelaConfirmacaoValorTAC">  <!-- Usando a mesma classe -->
-                        <thead>
-                            <tr>
-                                <th>Nome do Cliente</th>
-                                <th>CPF do Cliente</th>
-                                <th>Número do Cliente</th>
-                                <th>Vendedor</th>
-                                <th>Loja</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            
                         </tbody>
                     </table>
                 </div>
@@ -392,7 +341,18 @@
                             <tr data-agendamento-id="{{ agendamento.id }}" class="tac-row {% if agendamento.status == 'PAGO' %}status-pago{% elif agendamento.status == 'NAO_PAGO' %}status-nao-pago{% elif agendamento.status == 'EM_ESPERA' %}status-espera{% endif %}">
                                 <td class="td-nome">{{ agendamento.nome_cliente }}</td>
                                 <td class="td-cpf">{{ agendamento.cpf_cliente }}</td>
-                                <td class="td-valor">R$ {{ agendamento.tac|floatformat:2 }}</td>
+                                <td class="td-valor">
+                                    <form method="POST" action="{% url 'inss:all_forms' %}" class="tac-valor-form">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="form_type" value="update_tac">
+                                        <input type="hidden" name="agendamento_id" value="{{ agendamento.agendamento_id }}">
+                                        <input type="text" 
+                                               name="valor_tac" 
+                                               class="tac-valor-input money" 
+                                               value="R$ {{ agendamento.tac|floatformat:2 }}"
+                                               onchange="this.form.submit()">
+                                    </form>
+                                </td>
                                 <td class="td-status">
                                     <span class="status-badge status-{{ agendamento.status|lower }}">
                                         {{ agendamento.status }}
@@ -424,114 +384,160 @@
         </div>
     </div>
 
-<!--***************************SUB MODAIS***************************-->
-
-    <!-- Modal para Confirmação TAC -->
-    <div class="modal-sec" id="modalConfirmacaoTAC">
+    <!-- Modal para Agendamentos Atrasados -->
+    <div class="modal" id="modalAgendamentosAtrasados">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Confirmação TAC</h5>
-                    <button type="button" class="btn-close" onclick="fecharModal('#modalConfirmacaoTAC')">
+                    <h5 class="modal-title">Clientes que Não Compareceram</h5>
+                    <button type="button" class="btn-close" data-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="wp-style-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>CPF</th>
+                                <th>Número</th>
+                                <th>Data Agendada</th>
+                                <th>Atendente</th>
+                                <th>Loja</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for agendamento in agendamentos_atrasados %}
+                            <tr>
+                                <td>{{ agendamento.nome_cliente }}</td>
+                                <td>{{ agendamento.cpf_cliente }}</td>
+                                <td>{{ agendamento.numero_cliente }}</td>
+                                <td>{{ agendamento.dia_agendado }}</td>
+                                <td>{{ agendamento.atendente_agendou }}</td>
+                                <td>{{ agendamento.loja_agendada }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">Nenhum cliente atrasado encontrado</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!--***************************SUB MODAIS***************************-->
+
+    <!-- Modal de Edição dos Detalhes do Cliente -->
+    <div class="modal-sec" id="modalEdicaoCliente">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edição de Cliente</h5>
+                    <button type="button" class="btn-close" onclick="fecharModal('#modalEdicaoCliente')">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
-                    <form id="formConfirmacaoTAC" method="POST" action="{% url 'inss:all_forms' %}">
+                    <form id="formEdicaoCliente" method="POST" action="{% url 'inss:all_forms' %}">
                         {% csrf_token %}
                         <input type="hidden" name="form_type" value="lista_clientes">
+                        <!-- Adicione este campo hidden -->
                         <input type="hidden" id="agendamentoId" name="agendamento_id" value="">
-
-                        <h4>Informações do Cliente</h4>
-                        <div class="box">
-                            <div class="mb-3">
-                                <label for="nomeCliente" class="form-label">Nome</label>
-                                <input type="text" class="form-control" id="nomeCliente" name="nome_cliente" autocomplete="off" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="cpfCliente" class="form-label">CPF</label>
-                                <input type="text" class="form-control" id="cpfCliente" name="cpf_cliente" readonly>
-                            </div>
-                            <div class="mb-3">
-                                <label for="numeroCliente" class="form-label">Número</label>
-                                <input type="text" class="form-control" id="numeroCliente" name="numero_cliente" readonly>
-                            </div>
-                            <div class="mb-3">
-                                <label for="diaAgendado" class="form-label">Dia Agendado</label>
-                                <input type="date" class="form-control" id="diaAgendado" name="dia_agendado" readonly>
-                            </div>
+                        
+                        <div class="mb-3">
+                            <label for="nomeCliente" class="form-label">Nome</label>
+                            <input type="text" class="form-control" id="nomeCliente" name="nome_cliente" autocomplete="off" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="cpfCliente" class="form-label">CPF</label>
+                            <input type="text" class="form-control" id="cpfCliente" name="cpf_cliente" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="numeroCliente" class="form-label">Número</label>
+                            <input type="text" class="form-control" id="numeroCliente" name="numero_cliente" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="diaAgendado" class="form-label">Dia Agendado</label>
+                            <input type="date" class="form-control" id="diaAgendado" name="dia_agendado" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="tabulacaoAtendente" class="form-label">Tabulação Atendente</label>
+                            <input type="text" class="form-control" id="tabulacaoAtendente" name="tabulacao_atendente" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="atendenteAgendou" class="form-label">Atendente</label>
+                            <input type="text" class="form-control" id="atendenteAgendou" name="atendente_agendou" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="lojaAgendada" class="form-label">Loja</label>
+                            <input type="text" class="form-control" id="lojaAgendada" name="loja_agendada" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="vendedorLoja" class="form-label">Vendedor</label>
+                            <select class="form-control" id="vendedorLoja" name="vendedor_id" required>
+                                <option value="">Selecione um vendedor</option>
+                                <!-- Será preenchido via JavaScript -->
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="tabulacaoVendedor" class="form-label">Tabulação Vendedor</label>
+                            <select class="form-select" id="tabulacaoVendedor" name="tabulacao_vendedor" onchange="handleTabulacaoVendedorChange()">
+                                <option value="">Selecione uma opção</option>
+                                <option value="FECHOU NEGOCIO">FECHOU NEGOCIO</option>
+                                <option value="INELEGIVEL">INELEGIVEL</option>
+                                <option value="NÃO ACEITOU">NÃO ACEITOU</option>
+                                <option value="NÃO QUIS OUVIR">NÃO QUIS OUVIR</option>
+                            </select>
                         </div>
 
-                        <h4>Informações de Atendimento</h4>
-                        <div class="box">
-                            <div class="mb-3">
-                                <label for="tabulacaoAtendente" class="form-label">Tabulação Atendente</label>
-                                <input type="text" class="form-control" id="tabulacaoAtendente" name="tabulacao_atendente" readonly>
-                            </div>
-                            <div class="mb-3">
-                                <label for="atendenteAgendou" class="form-label">Atendente</label>
-                                <input type="text" class="form-control" id="atendenteAgendou" name="atendente_agendou" readonly>
-                            </div>
-                            <div class="mb-3">
-                                <label for="lojaAgendada" class="form-label">Loja</label>
-                                <input type="text" class="form-control" id="lojaAgendada" name="loja_agendada" readonly>
-                            </div>
-                        </div>
-
-                        <h4>Informações do Vendedor</h4>
-                        <div class="box">
-                            <div class="mb-3">
-                                <label for="nomeVendedor" class="form-label">Nome do Vendedor</label>
-                                <input type="hidden" id="vendedorLoja" name="vendedor_id" value="">
-                                <input type="text" class="form-control" id="nomeVendedor" name="nome_vendedor" value="" required readonly>
-                            </div>
-                            <div class="mb-3">
-                                <label for="tabulacaoVendedor" class="form-label">Tabulação Vendedor</label>
-                                <input type="text" class="form-control" id="tabulacaoVendedor" name="tabulacao_vendedor" placeholder="Digite a tabulação do vendedor" required>
-                            </div>
-                        </div>
-
-                        <h4>Dados TAC</h4>
-                        <div class="box">
+                        <!-- Grupo de campos para FECHOU NEGOCIO -->
+                        <div id="fechouNegocioContainer" style="display: none;">
                             <div class="mb-3">
                                 <label for="tipoNegociacao" class="form-label">Tipo Negociação</label>
-                                <input type="text" class="form-control text-uppercase" name="tipo_negociacao">
+                                <input type="text" class="form-control text-uppercase" id="tipoNegociacao" name="tipo_negociacao">
                             </div>
+                            
                             <div class="mb-3">
                                 <label for="banco" class="form-label">Banco</label>
-                                <input type="text" class="form-control text-uppercase" name="banco">
+                                <input type="text" class="form-control text-uppercase" id="banco" name="banco">
                             </div>
+                            
                             <div class="mb-3">
                                 <label for="subsidio" class="form-label">Subsídio</label>
-                                <select class="form-select" name="subsidio">
+                                <select class="form-select" id="subsidio" name="subsidio">
                                     <option value="">Selecione uma opção</option>
                                     <option value="VIDEO">VIDEO</option>
                                     <option value="SELFIE">SELFIE</option>
                                 </select>
                             </div>
+                            
                             <div class="mb-3">
                                 <label for="tac" class="form-label">TAC</label>
-                                <input type="text" class="form-control money" name="tac">
+                                <input type="text" class="form-control money" id="tac" name="tac">
                             </div>
+                            
                             <div class="mb-3">
                                 <label for="acao" class="form-label">Ação</label>
-                                <select class="form-select" name="acao">
+                                <select class="form-select" id="acao" name="acao">
                                     <option value="">Selecione uma opção</option>
                                     <option value="COM AÇÃO">COM AÇÃO</option>
                                     <option value="SEM AÇÃO">SEM AÇÃO</option>
                                 </select>
                             </div>
+                            
                             <div class="mb-3">
                                 <label for="associacao" class="form-label">Associação</label>
-                                <select class="form-select" name="associacao">
+                                <select class="form-select" id="associacao" name="associacao">
                                     <option value="">Selecione uma opção</option>
-                                    <option value="COM ASSOCIAÇÃO">COM ASSOCIAÇÃO</option>
+                                    <option value="COM ASSOCIAÇÃO">COM ASSOCIAÃO</option>
                                     <option value="SEM ASSOCIAÇÃO">SEM ASSOCIAÇÃO</option>
                                 </select>
                             </div>
+                            
                             <div class="mb-3">
                                 <label for="aumento" class="form-label">Aumento</label>
-                                <select class="form-select" name="aumento">
+                                <select class="form-select" id="aumento" name="aumento">
                                     <option value="">Selecione uma opção</option>
                                     <option value="COM AUMENTO">COM AUMENTO</option>
                                     <option value="SEM AUMENTO">SEM AUMENTO</option>
@@ -539,7 +545,7 @@
                             </div>
                         </div>
 
-                        <div class="mb-3" style="display: none;">
+                        <div class="mb-3" id="observacaoVendedorContainer" style="display: none;">
                             <label for="observacaoVendedor" class="form-label">Observação do Vendedor</label>
                             <textarea class="form-control" id="observacaoVendedor" name="observacao_vendedor" rows="3"></textarea>
                         </div>
@@ -549,74 +555,6 @@
             </div>
         </div>
     </div>
-
-    
-    <!-- Modal para Confirmação Loja -->
-    <div class="modal-sec" id="modalConfirmacaoLoja">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Confirmação Loja</h5>
-                    <button type="button" class="btn-close" onclick="fecharModal('#modalConfirmacaoLoja')">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="formConfirmacaoLoja" method="POST" action="{% url 'inss:all_forms' %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="form_type" value="confirmacao_loja">
-                        <input type="hidden" id="idAgendamentoStatus" name="agendamento_id" value="">
-
-                        <div class="mb-3">
-                            <label for="nomeClienteStatus" class="form-label">Nome do Cliente</label>
-                            <input type="text" class="form-control" id="nomeClienteStatus" name="nome_cliente" readonly>
-                        </div>
-                        <div class="mb-3">
-                            <label for="diaAgendadoStatus" class="form-label">Dia Agendado</label>
-                            <input type="date" class="form-control" id="diaAgendadoStatus" name="dia_agendado" readonly>
-                        </div>
-                        <div class="mb-3">
-                            <label for="numeroClienteStatus" class="form-label">Número do Cliente</label>
-                            <input type="text" class="form-control" id="numeroClienteStatus" name="numero_cliente" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="lojaAgendadaStatus" class="form-label">Loja Agendada</label>
-                            <input type="text" class="form-control" id="lojaAgendadaStatus" name="loja_agendada" readonly>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="vendedorLoja" class="form-label">Vendedor</label>
-                            <select class="form-control" id="vendedorLoja" name="vendedor_id" required>
-                                <option value="">Selecione um vendedor</option>
-                                {% for vendedor_id, vendedor in vendedores_lista_clientes.items %}
-                                    <option value="{{ vendedor.id }}">{{ vendedor.nome }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="tabulacaoVendedor" class="form-label">Status do Agendamento</label>
-                            <select class="form-select" id="tabulacaoVendedor" name="tabulacao_vendedor">
-                                <option value="">Selecione uma opção</option>
-                                <option value="FECHOU NEGOCIO">FECHOU NEGÓCIO</option>
-                                <option value="INELEGIVEL">INELEGÍVEL</option>
-                                <option value="NÃO ACEITOU">NÃO ACEITOU</option>
-                                <option value="NÃO QUIS OUVIR">NÃO QUIS OUVIR</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3" id="observacaoContainerStatus" style="display: none;">
-                            <label for="observacaoStatus" class="form-label">Observação</label>
-                            <textarea class="form-control" id="observacaoStatus" name="observacao"></textarea>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary btn-submit">Atualizar Status</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
 
     <!-- Modal para Confirmação do Agendamento -->
     <div class="modal-sec" id="modalConfirmacaoAgendamento">
@@ -679,7 +617,7 @@
     </div>
 
     
-    
+
 </div>
 
 {% endblock %}
@@ -703,6 +641,7 @@
 
 <!-- ========================= DADOS INICIAIS ========================= -->
 
+
 <!-- ========================= FUNÇÕES DE FILTRO ========================= -->
 <script>
     $(document).ready(function() {
@@ -718,6 +657,7 @@
 
 <!-- ========================= FUNÇÕES LOCAIS E DICIONÁRIOS ========================= -->
 <script>
+    
     // Dicionário de vendedores
     const vendedoresListaClientes = {
         {% for vendedor_id, vendedor in vendedores_lista_clientes.items %}
@@ -728,74 +668,12 @@
         {% endfor %}
     };
 
-    // Dicionário de agendamentos confirmados
-    const confirmacaoAgendado = [
-        {% for agendamento in agendamentos_agendados %}
-            {
-                id: "{{ agendamento.id }}",
-                nome_cliente: "{{ agendamento.nome_cliente }}",
-                cpf_cliente: "{{ agendamento.cpf_cliente }}",
-                numero_cliente: "{{ agendamento.numero_cliente }}",
-                dia_agendado: "{{ agendamento.dia_agendado }}",  // Formato YYYY-MM-DD
-                atendente_nome: "{{ agendamento.atendente_agendou }}",
-                loja_nome: "{{ agendamento.loja_agendada }}",
-                tabulacao_atendente: "{{ agendamento.tabulacao_atendente }}"
-            }{% if not forloop.last %},{% endif %}
-        {% endfor %}
-    ];
+    // Log do dicionário de vendedores no console para verificação
+    console.log("Vendedores Lista Clientes:", vendedoresListaClientes);
+</script>
 
-    // Dicionário de agendamentos reagendados
-    const confirmacaoReagendado = [
-        {% for agendamento in agendamentos_reagendados %}
-            {
-                id: "{{ agendamento.id }}",
-                nome_cliente: "{{ agendamento.nome_cliente }}",
-                cpf_cliente: "{{ agendamento.cpf_cliente }}",
-                numero_cliente: "{{ agendamento.numero_cliente }}",
-                dia_agendado: "{{ agendamento.dia_agendado }}",  // Formato YYYY-MM-DD
-                atendente_nome: "{{ agendamento.atendente_agendou }}",
-                loja_nome: "{{ agendamento.loja_agendada }}",
-                tabulacao_atendente: "{{ agendamento.tabulacao_atendente }}"
-            }{% if not forloop.last %},{% endif %}
-        {% endfor %}
-    ];
-
-    // Dicion��rio de agendamentos para confirmação de loja
-    const confirmacaoLoja = [
-        {% for agendamento in agendamentos_confirmados %}
-            {
-                id: "{{ agendamento.id }}",
-                nome_cliente: "{{ agendamento.nome_cliente }}",
-                cpf_cliente: "{{ agendamento.cpf_cliente }}",
-                numero_cliente: "{{ agendamento.numero_cliente }}",
-                dia_agendado: "{{ agendamento.dia_agendado }}",  // Formato YYYY-MM-DD
-                atendente_nome: "{{ agendamento.atendente_agendou }}",
-                loja_nome: "{{ agendamento.loja_agendada }}",
-                tabulacao_atendente: "{{ agendamento.tabulacao_atendente }}"
-            }{% if not forloop.last %},{% endif %}
-        {% endfor %}
-    ];
-
-    // Dicionário de agendamentos para confirmação TAC
-    const confirmacaoTac = [
-        {% for agendamento in agendamentos_fechou_negocio %}
-            {
-                id: "{{ agendamento.id }}",  // ID do agendamento
-                nome_cliente: "{{ agendamento.nome_cliente }}",  // Nome do cliente
-                cpf_cliente: "{{ agendamento.cpf_cliente }}",  // CPF do cliente
-                numero_cliente: "{{ agendamento.numero_cliente }}",  // Número do cliente
-                dia_agendado: "{{ agendamento.dia_agendado }}",  // Dia agendado
-                atendente_agendou: "{{ agendamento.atendente_agendou }}",  // Nome do atendente
-                loja_agendada: "{{ agendamento.loja_agendada }}",  // Nome da loja agendada
-                tabulacao_atendente: "{{ agendamento.tabulacao_atendente }}",  // Tabulação do atendente
-                tabulacao_vendedor: "{{ agendamento.tabulacao_vendedor }}",  // Tabulação do vendedor
-                vendedor_id: "{{ agendamento.vendedor_id }}",  // ID do vendedor
-                vendedor_nome: "{{ agendamento.vendedor_nome }}",  // Nome do vendedor
-                status: "{{ agendamento.status }}"  // Status do agendamento
-            }{% if not forloop.last %},{% endif %}
-        {% endfor %}
-    ];
-
+<!-- ========================= DADOS INICIAIS ========================= -->
+<script>
     // Dados iniciais dos agendamentos
     const todosAgendamentos = [
         {% for agendamento in todos_agendamentos %}
@@ -805,52 +683,86 @@
                 cpf_cliente: "{{ agendamento.cpf_cliente }}",
                 numero_cliente: "{{ agendamento.numero_cliente }}",
                 dia_agendado: "{{ agendamento.dia_agendado }}",  // Formato YYYY-MM-DD
-                atendente_nome: "{{ agendamento.atendente_agendou }}",
-                loja_nome: "{{ agendamento.loja_agendada }}",
+                atendente_nome: "{{ agendamento.atendente_agendou }}",  // Primeiro nome do atendente
+                loja_nome: "{{ agendamento.loja_agendada }}",  // Nome da loja após ' - '
+                status_dias: "{{ agendamento.status }}",  // Status do agendamento
                 tabulacao_atendente: "{{ agendamento.tabulacao_atendente }}",
-                tabulacao_vendedor: "{{ agendamento.tabulacao_vendedor }}",  // Adicionando tabulação do vendedor
-                observacao_vendedor: "{{ agendamento.observacao_vendedor }}",  // Observação do vendedor
-                observacao_atendente: "{{ agendamento.observacao_atendente }}",  // Observação do atendente
-                tipo_negociacao: "{{ agendamento.tipo_negociacao }}",  // Tipo de negociação
-                banco: "{{ agendamento.banco }}",  // Banco
-                subsidio: "{{ agendamento.subsidio }}",  // Subsídio
-                tac: "{{ agendamento.tac }}",  // Valor TAC
-                acao: "{{ agendamento.acao }}",  // Ação
-                associacao: "{{ agendamento.associacao }}",  // Associação
-                aumento: "{{ agendamento.aumento }}",  // Aumento
-                status_tac: "{{ agendamento.status_tac }}",  // Status do TAC
-                data_pagamento_tac: "{{ agendamento.data_pagamento_tac }}",  // Data de pagamento do TAC
-                status: "{{ agendamento.status }}",  // Status calculado
-                vendedor_loja: {
-                    id: "{{ agendamento.vendedor_loja.id }}",  // ID do vendedor
-                    nome: "{{ agendamento.vendedor_loja.nome }}"  // Nome do vendedor
-                },
-                vendedor_id: "{{ agendamento.vendedor_loja.id }}",  // ID do vendedor
-                vendedor_nome: "{{ agendamento.vendedor_loja.nome }}"  // Nome do vendedor
+                total_agendamentos: "{{ agendamento.total_agendamentos }}"  // Nova linha
             }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
 
-    // Dicionário de lojas
-    const lojas = [
-        {% for loja in lojas %}
+    // Dicionário de agendamentos para confirmação
+    const agendamentosConfirmacao = [
+        {% for agendamento in agendamentos_agendados %}
             {
-                id: "{{ loja.id }}",
-                nome: "{{ loja.nome }}"
+                id: "{{ agendamento.id }}",
+                nome_cliente: "{{ agendamento.nome_cliente }}",
+                cpf_cliente: "{{ agendamento.cpf_cliente }}",
+                numero_cliente: "{{ agendamento.numero_cliente }}",
+                dia_agendado: "{{ agendamento.dia_agendado }}",  // Formato YYYY-MM-DD
+                atendente_nome: "{{ agendamento.atendente_agendou }}",  // Primeiro nome do atendente
+                loja_nome: "{{ agendamento.loja_agendada }}",  // Nome da loja após ' - '
+                tabulacao_atendente: "{{ agendamento.tabulacao_atendente }}"
+            }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    // Dicionário de agendamentos para reagendar
+    const agendamentosReagendar = [
+        {% for agendamento in agendamentos_reagendados %}
+            {
+                id: "{{ agendamento.id }}",
+                nome_cliente: "{{ agendamento.nome_cliente }}",
+                cpf_cliente: "{{ agendamento.cpf_cliente }}",
+                numero_cliente: "{{ agendamento.numero_cliente }}",
+                dia_agendado: "{{ agendamento.dia_agendado }}",  // Formato YYYY-MM-DD
+                atendente_nome: "{{ agendamento.atendente_agendou }}",  // Primeiro nome do atendente
+                loja_nome: "{{ agendamento.loja_agendada }}",  // Nome da loja após ' - '
+                tabulacao_atendente: "{{ agendamento.tabulacao_atendente }}"
+            }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    // Dicionário de clientes na loja (agendamentos confirmados)
+    const clientesLoja = [
+        {% for agendamento in agendamentos_confirmados %}
+            {
+                id: "{{ agendamento.id }}",
+                nome_cliente: "{{ agendamento.nome_cliente }}",
+                cpf_cliente: "{{ agendamento.cpf_cliente }}",
+                numero_cliente: "{{ agendamento.numero_cliente }}",
+                dia_agendado: "{{ agendamento.dia_agendado }}",  // Formato YYYY-MM-DD
+                atendente_nome: "{{ agendamento.atendente_agendou }}",  // Primeiro nome do atendente
+                loja_nome: "{{ agendamento.loja_agendada }}",  // Nome da loja após ' - '
+                tabulacao_atendente: "{{ agendamento.tabulacao_atendente }}",
+                status: "{{ agendamento.status }}"  // Adicionando status_tac ao dicionário
+            }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    // Dicionário de agendamentos atrasados
+    const agendamentosAtrasados = [
+        {% for agendamento in agendamentos_atrasados %}
+            {
+                id: "{{ agendamento.id }}",
+                nome_cliente: "{{ agendamento.nome_cliente }}",
+                cpf_cliente: "{{ agendamento.cpf_cliente }}",
+                numero_cliente: "{{ agendamento.numero_cliente }}",
+                dia_agendado: "{{ agendamento.dia_agendado }}",
+                atendente_nome: "{{ agendamento.atendente_agendou }}",
+                loja_nome: "{{ agendamento.loja_agendada }}"
             }{% if not forloop.last %},{% endif %}
         {% endfor %}
     ];
 
     // Log dos dicionários no console para verificação
-    console.log("Vendedores Lista Clientes:", vendedoresListaClientes);
-    console.log("Confirmação Agendado:", confirmacaoAgendado);
-    console.log("Confirmação Reagendado:", confirmacaoReagendado);
-    console.log("Confirmação Loja:", confirmacaoLoja);
-    console.log("Confirmação TAC:", confirmacaoTac);
-    console.log("Todos Agendamentos:", todosAgendamentos);
-    console.log("Lojas:", lojas);
+    console.log("Todos os Agendamentos:", todosAgendamentos);
+    console.log("Agendamentos para Confirmação:", agendamentosConfirmacao);
+    console.log("Agendamentos para Reagendar:", agendamentosReagendar);
+    console.log("Clientes na Loja:", clientesLoja);
+    console.log("Agendamentos Atrasados:", agendamentosAtrasados);
 </script>
-
 <!-- ========================= SCRIPTS DEPENDENTES ========================= -->
 <!-- Carrega scripts que dependem das definições anteriores -->
 <script src="{% static 'modais.js' %}"></script>

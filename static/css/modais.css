@@ -359,7 +359,7 @@ main.darkmode tbody tr:hover {
     }
 }
 
-/* Ajuste para campos especficos que precisam de mais espaço */
+/* Ajuste para campos específicos que precisam de mais espaço */
 .modal-sec input[name="nome_cliente"],
 .modal-sec input[name="nomeClienteConfirmacao"] {
     width: 100%;
@@ -636,114 +636,4 @@ main.darkmode .modal-body::-webkit-scrollbar-thumb {
 
 main.darkmode .modal-body::-webkit-scrollbar-thumb:hover {
     background: var(--dark-hover-background);
-}
-
-/* Estilos específicos para o modal de confirmação TAC */
-#modalConfirmacaoTAC .modal-body form {
-    display: flex;
-    align-items: flex-start; /* Alinhamento ao topo */
-    flex-direction: column;
-    justify-content: flex-start;
-    padding: 20px; /* Espaçamento interno do formulário */
-}
-
-#modalConfirmacaoTAC .modal-body form .box {
-    display: grid;
-    gap: 15px; /* Espaçamento entre os elementos da grade */
-    width: 100%; /* Largura total da caixa */
-}
-
-#modalConfirmacaoTAC .modal-header {
-    background-color: #007bff; /* Cor de fundo do cabeçalho */
-    color: white; /* Cor do texto do cabeçalho */
-    padding: 15px; /* Espaçamento interno do cabeçalho */
-    border-top-left-radius: 8px; /* Bordas arredondadas */
-    border-top-right-radius: 8px; /* Bordas arredondadas */
-}
-
-#modalConfirmacaoTAC .modal-title {
-    font-weight: bold; /* Título em negrito */
-    font-size: 1.5rem; /* Tamanho da fonte do título */
-}
-
-#modalConfirmacaoTAC .form-label {
-    font-weight: 500; /* Peso da fonte das labels */
-    margin-bottom: 5px; /* Margem inferior das labels */
-    display: inline-block; /* Permite que o label tenha largura dinâmica */
-}
-
-#modalConfirmacaoTAC .mb-3 {
-    display: flex; /* Flex para alinhar label e input */
-    flex-direction: column; /* Coluna para label e input */
-    width: auto; /* Largura automática para o container */
-    min-height: 60px; /* Altura mínima para o container */
-}
-
-#modalConfirmacaoTAC .form-control {
-    border: 1px solid #ced4da; /* Borda padrão */
-    border-radius: 4px; /* Bordas arredondadas para os inputs */
-    padding: 10px; /* Espaçamento interno dos inputs */
-    transition: border-color 0.3s, box-shadow 0.3s; /* Transição suave */
-    width: auto; /* Largura flexível */
-    min-width: 200px; /* Largura mínima para o input */
-}
-
-#modalConfirmacaoTAC .form-control:focus {
-    border-color: #80bdff; /* Cor da borda ao focar */
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); /* Sombra ao focar */
-}
-
-#modalConfirmacaoTAC .btn-primary {
-    background-color: #007bff; /* Cor do botão primário */
-    border-color: #007bff; /* Cor da borda do botão primário */
-    padding: 10px 20px; /* Espaçamento interno do botão */
-    font-size: 1rem; /* Tamanho da fonte do botão */
-    border-radius: 4px; /* Bordas arredondadas para o botão */
-    transition: background-color 0.3s, border-color 0.3s; /* Transição suave */
-}
-
-#modalConfirmacaoTAC .btn-primary:hover {
-    background-color: #0056b3; /* Cor do botão ao passar o mouse */
-    border-color: #0056b3; /* Cor da borda ao passar o mouse */
-}
-
-#modalConfirmacaoTAC h4 {
-    margin-top: 20px; /* Margem superior para os títulos das seções */
-    margin-bottom: 10px; /* Margem inferior para os títulos das seções */
-    color: #333; /* Cor do texto dos títulos */
-    font-size: 1.25rem; /* Tamanho da fonte dos títulos */
-    border-bottom: 2px solid #007bff; /* Linha abaixo do título */
-    padding-bottom: 5px; /* Espaçamento inferior do título */
-}
-
-/* Estilos para os campos de filtro nos modais */
-.modal-body .d-flex {
-    display: flex; /* Ativa o Flexbox */
-    flex-wrap: wrap; /* Permite que os itens se movam para a próxima linha se não houver espaço */
-    gap: 10px; /* Espaçamento entre os filtros */
-}
-
-.modal-body .flex-fill {
-    flex: 1; /* Faz com que cada filtro ocupe espaço igual */
-    min-width: 150px; /* Largura mínima para cada filtro */
-}
-
-.modal-body .form-label {
-    font-weight: 500; /* Peso da fonte das labels */
-    margin-bottom: 5px; /* Margem inferior das labels */
-    display: inline-block; /* Permite que o label tenha largura dinâmica */
-    color: #495057; /* Cor do texto das labels */
-}
-
-.modal-body .form-control {
-    border: 1px solid #ced4da; /* Borda padrão */
-    border-radius: 4px; /* Bordas arredondadas para os inputs */
-    padding: 10px; /* Espaçamento interno dos inputs */
-    transition: border-color 0.3s, box-shadow 0.3s; /* Transição suave */
-    width: 100%; /* Largura total do input */
-}
-
-.modal-body .form-control:focus {
-    border-color: #80bdff; /* Cor da borda ao focar */
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); /* Sombra ao focar */
 }
