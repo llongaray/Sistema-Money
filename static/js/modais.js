@@ -43,6 +43,10 @@ function openModal(modalId) {
             console.log('Chamando preencherTabelaTodosAgendamentos');
             preencherTabelaTodosAgendamentos();
         }
+        else if (cleanedModalId === 'modalAgendamentosAtrasados') {
+            console.log('Chamando preencherTabelaAtrasados');
+            preencherTabelaAtrasados();
+        }
         
         console.log(`Modal com ID: ${cleanedModalId} aberto com sucesso`);
     } else {
@@ -567,6 +571,124 @@ $(document).ready(function() {
     $('.text-uppercase').on('input', function() {
         this.value = this.value.toUpperCase();
     });
+
+    // Função para aplicar todos os filtros
+    function aplicarFiltros() {
+        const filtroNome = $("#filtroNome").val().toLowerCase();
+        const filtroCPF = $("#filtroCPF").val().toLowerCase();
+        const filtroData = $("#filtroData").val();
+        const filtroAtendente = $("#filtroAtendente").val().toLowerCase();
+        const filtroLoja = $("#filtroLoja").val().toLowerCase();
+
+        $("#tabelaTodosAgendamentos tbody tr").each(function() {
+            const $row = $(this);
+            const nome = $row.find("td:eq(0)").text().toLowerCase();
+            const cpf = $row.find("td:eq(1)").text().toLowerCase();
+            const data = $row.find("td:eq(3)").attr("data-date");
+            const atendente = $row.find("td:eq(4)").text().toLowerCase();
+            const loja = $row.find("td:eq(5)").text().toLowerCase();
+
+            const matchNome = !filtroNome || nome.includes(filtroNome);
+            const matchCPF = !filtroCPF || cpf.includes(filtroCPF);
+            const matchData = !filtroData || data.includes(filtroData);
+            const matchAtendente = !filtroAtendente || atendente.includes(filtroAtendente);
+            const matchLoja = !filtroLoja || loja.includes(filtroLoja);
+
+            const shouldShow = matchNome && matchCPF && matchData && 
+                             matchAtendente && matchLoja;
+            
+            $row.toggle(shouldShow);
+        });
+    }
+
+    // Adicionar eventos para todos os campos de filtro
+    $("#filtroNome, #filtroCPF, #filtroData, #filtroAtendente, #filtroLoja")
+        .on("keyup change", aplicarFiltros);
+
+    // Evento para limpar todos os filtros
+    $("#limparFiltros").on("click", function() {
+        $("#filtroNome, #filtroCPF, #filtroData, #filtroAtendente, #filtroLoja")
+            .val('');
+        $("#tabelaTodosAgendamentos tbody tr").show();
+    });
+
+    // Adicionar debounce para melhor performance
+    let timeoutId;
+    $(".form-control").on("keyup change", function() {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(aplicarFiltros, 300);
+    });
+
+    // Função para aplicar filtros na tabela de clientes loja
+    function aplicarFiltrosClientesLoja() {
+        const filtroNome = $("#filtroNomeClientes").val().toLowerCase();
+        const filtroCPF = $("#filtroCPFClientes").val().toLowerCase();
+        const filtroAtendente = $("#filtroAtendenteClientes").val().toLowerCase();
+        const filtroLoja = $("#filtroLojaClientes").val().toLowerCase();
+
+        $("#tabelaClientesLoja tbody tr").each(function() {
+            const $row = $(this);
+            const nome = $row.find("td:eq(0)").text().toLowerCase();
+            const cpf = $row.find("td:eq(1)").text().toLowerCase();
+            const atendente = $row.find("td:eq(4)").text().toLowerCase();
+            const loja = $row.find("td:eq(5)").text().toLowerCase();
+
+            const matchNome = !filtroNome || nome.includes(filtroNome);
+            const matchCPF = !filtroCPF || cpf.includes(filtroCPF);
+            const matchAtendente = !filtroAtendente || atendente.includes(filtroAtendente);
+            const matchLoja = !filtroLoja || loja.includes(filtroLoja);
+
+            const shouldShow = matchNome && matchCPF && matchAtendente && matchLoja;
+            
+            $row.toggle(shouldShow);
+        });
+    }
+
+    // Eventos para os filtros da tabela de clientes loja
+    let timeoutIdClientesLoja;
+    $("#filtroNomeClientes, #filtroCPFClientes, #filtroAtendenteClientes, #filtroLojaClientes")
+        .on("keyup change", function() {
+            clearTimeout(timeoutIdClientesLoja);
+            timeoutIdClientesLoja = setTimeout(aplicarFiltrosClientesLoja, 300);
+        });
+
+    // Função para aplicar filtros na tabela de agendamentos atrasados
+    function aplicarFiltrosAtrasados() {
+        const filtroNome = $("#filtroNomeAtrasados").val().toLowerCase();
+        const filtroCPF = $("#filtroCPFAtrasados").val().toLowerCase();
+        const filtroAtendente = $("#filtroAtendenteAtrasados").val().toLowerCase();
+        const filtroLoja = $("#filtroLojaAtrasados").val().toLowerCase();
+
+        $("#modalAgendamentosAtrasados .wp-style-table tbody tr").each(function() {
+            const $row = $(this);
+            
+            // Ignora a linha de "nenhum cliente encontrado"
+            if ($row.find('td[colspan]').length) return;
+
+            // Garantir que os índices correspondam à ordem das colunas na tabela
+            const nome = $row.find("td:eq(0)").text().toLowerCase();
+            const cpf = $row.find("td:eq(1)").text().toLowerCase();
+            const atendente = $row.find("td:eq(4)").text().toLowerCase();
+            const loja = $row.find("td:eq(5)").text().toLowerCase();
+
+            const matchNome = !filtroNome || nome.includes(filtroNome);
+            const matchCPF = !filtroCPF || cpf.includes(filtroCPF);
+            const matchAtendente = !filtroAtendente || atendente.includes(filtroAtendente);
+            const matchLoja = !filtroLoja || loja.includes(filtroLoja);
+
+            const shouldShow = matchNome && matchCPF && matchAtendente && matchLoja;
+            
+            $row.toggle(shouldShow);
+        });
+    }
+
+    // Eventos para os filtros da tabela de agendamentos atrasados
+    let timeoutIdAtrasados;
+    $("#filtroNomeAtrasados, #filtroCPFAtrasados, #filtroAtendenteAtrasados, #filtroLojaAtrasados")
+        .on("keyup change", function() {
+            clearTimeout(timeoutIdAtrasados);
+            timeoutIdAtrasados = setTimeout(aplicarFiltrosAtrasados, 300);
+        });
 });
 
 function closeSubModal(modalId) {
@@ -720,5 +842,77 @@ function fecharSubModal(modalId) {
     } else {
         console.error(`Sub-modal com ID: ${cleanedModalId} não encontrado`);
     }
+}
+
+function preencherTabelaAtrasados() {
+    console.log('Iniciando preenchimento da tabela de agendamentos atrasados');
+    
+    // Corrigir o seletor da tabela para incluir o ID correto
+    const $tabela = $('#modalAgendamentosAtrasados .wp-style-table tbody');
+    
+    if (!$tabela.length) {
+        console.error('Tabela de atrasados não encontrada!');
+        return;
+    }
+    
+    $tabela.empty();
+    console.log('Tabela de atrasados limpa');
+
+    if (!agendamentosAtrasados || agendamentosAtrasados.length === 0) {
+        $tabela.append(`
+            <tr>
+                <td colspan="6" class="text-center">Nenhum cliente atrasado encontrado</td>
+            </tr>
+        `);
+        return;
+    }
+
+    agendamentosAtrasados.forEach(agendamento => {
+        // Garantir que os campos correspondam exatamente aos do dicionário
+        const row = `
+            <tr>
+                <td>${agendamento.nome_cliente || ''}</td>
+                <td>${agendamento.cpf_cliente || ''}</td>
+                <td>${agendamento.numero_cliente || ''}</td>
+                <td data-date="${agendamento.dia_agendado || ''}">${agendamento.dia_agendado || ''}</td>
+                <td>${agendamento.atendente_nome || ''}</td>
+                <td>${agendamento.loja_nome || ''}</td>
+            </tr>
+        `;
+        
+        $tabela.append(row);
+    });
+    
+    console.log('Preenchimento da tabela de atrasados concluído');
+}
+
+// Função para aplicar filtros na tabela de atrasados
+function aplicarFiltrosAtrasados() {
+    const filtroNome = $("#filtroNomeAtrasados").val().toLowerCase();
+    const filtroCPF = $("#filtroCPFAtrasados").val().toLowerCase();
+    const filtroAtendente = $("#filtroAtendenteAtrasados").val().toLowerCase();
+    const filtroLoja = $("#filtroLojaAtrasados").val().toLowerCase();
+
+    $("#modalAgendamentosAtrasados .wp-style-table tbody tr").each(function() {
+        const $row = $(this);
+        
+        // Ignora a linha de "nenhum cliente encontrado"
+        if ($row.find('td[colspan]').length) return;
+
+        // Garantir que os índices correspondam à ordem das colunas na tabela
+        const nome = $row.find("td:eq(0)").text().toLowerCase();
+        const cpf = $row.find("td:eq(1)").text().toLowerCase();
+        const atendente = $row.find("td:eq(4)").text().toLowerCase();
+        const loja = $row.find("td:eq(5)").text().toLowerCase();
+
+        const matchNome = !filtroNome || nome.includes(filtroNome);
+        const matchCPF = !filtroCPF || cpf.includes(filtroCPF);
+        const matchAtendente = !filtroAtendente || atendente.includes(filtroAtendente);
+        const matchLoja = !filtroLoja || loja.includes(filtroLoja);
+
+        const shouldShow = matchNome && matchCPF && matchAtendente && matchLoja;
+        
+        $row.toggle(shouldShow);
+    });
 }
 

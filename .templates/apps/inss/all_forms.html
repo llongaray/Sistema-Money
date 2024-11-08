@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="{% static 'divider.css' %}">
 <link rel="stylesheet" href="{% static 'geral_forms.css' %}">
 <link rel="stylesheet" href="{% static 'mensagens.css' %}">
+<link rel="stylesheet" href="{% static 'filtros.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
     .tac-valor-input {
@@ -253,6 +254,32 @@
                     <button type="button" class="btn-close" data-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <!-- Dentro do modalListaClientes, antes da tabela -->
+                    <div class="filtros-wrapper">
+                        <div class="filtros-container">
+                            <input type="text" 
+                                id="filtroNomeClientes" 
+                                class="filtro-input" 
+                                placeholder="Nome...">
+                            
+                            <input type="text" 
+                                id="filtroCPFClientes" 
+                                class="filtro-input" 
+                                placeholder="CPF...">
+                            
+                            <input type="text" 
+                                id="filtroAtendenteClientes" 
+                                class="filtro-input" 
+                                placeholder="Atendente...">
+                            
+                            <input type="text" 
+                                id="filtroLojaClientes" 
+                                class="filtro-input" 
+                                placeholder="Loja...">
+                        </div>
+                    </div>
+
+                    <div class="tabela-separator"></div>
                     <table class="wp-style-table" id="tabelaClientesLoja">  <!-- Adicionado ID aqui -->
                         <thead>
                             <tr>
@@ -283,14 +310,34 @@
                     <button type="button" class="btn-close" data-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- Filtro por CPF -->
-                    <div class="mb-3">
+                    <!-- Filtros atualizados -->
+                    <div class="filtros-container">
                         <input type="text" 
-                               id="filtroCPF" 
-                               class="form-control" 
-                               placeholder="Filtrar por CPF..."
-                               style="max-width: 300px;">
+                            id="filtroNome" 
+                            class="filtro-input" 
+                            placeholder="Nome...">
+                        
+                        <input type="text" 
+                            id="filtroCPF" 
+                            class="filtro-input" 
+                            placeholder="CPF...">
+                        
+                        <input type="date" 
+                            id="filtroData" 
+                            class="filtro-input">
+                        
+                        <input type="text" 
+                            id="filtroAtendente" 
+                            class="filtro-input" 
+                            placeholder="Atendente...">
+                        
+                        <input type="text" 
+                            id="filtroLoja" 
+                            class="filtro-input" 
+                            placeholder="Loja...">
                     </div>
+
+                    <div class="tabela-separator"></div>
 
                     <table class="wp-style-table" id="tabelaTodosAgendamentos">
                         <thead>
@@ -393,6 +440,33 @@
                     <button type="button" class="btn-close" data-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <!-- Adicionar os filtros -->
+                    <div class="filtros-wrapper">
+                        <div class="filtros-container">
+                            <input type="text" 
+                                id="filtroNomeAtrasados" 
+                                class="filtro-input" 
+                                placeholder="Nome...">
+                            
+                            <input type="text" 
+                                id="filtroCPFAtrasados" 
+                                class="filtro-input" 
+                                placeholder="CPF...">
+                            
+                            <input type="text" 
+                                id="filtroAtendenteAtrasados" 
+                                class="filtro-input" 
+                                placeholder="Atendente...">
+                            
+                            <input type="text" 
+                                id="filtroLojaAtrasados" 
+                                class="filtro-input" 
+                                placeholder="Loja...">
+                        </div>
+                    </div>
+
+                    <div class="tabela-separator"></div>
+
                     <table class="wp-style-table">
                         <thead>
                             <tr>
@@ -405,20 +479,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for agendamento in agendamentos_atrasados %}
-                            <tr>
-                                <td>{{ agendamento.nome_cliente }}</td>
-                                <td>{{ agendamento.cpf_cliente }}</td>
-                                <td>{{ agendamento.numero_cliente }}</td>
-                                <td>{{ agendamento.dia_agendado }}</td>
-                                <td>{{ agendamento.atendente_agendou }}</td>
-                                <td>{{ agendamento.loja_agendada }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="6" class="text-center">Nenhum cliente atrasado encontrado</td>
-                            </tr>
-                            {% endfor %}
+                            <!-- Será preenchido via JavaScript -->
                         </tbody>
                     </table>
                 </div>
