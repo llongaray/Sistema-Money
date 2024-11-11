@@ -97,47 +97,79 @@
                 <div class="modal-body">
                     <form method="POST" action="{% url 'inss:all_forms' %}" class="wp-style-form">
                         {% csrf_token %}
-                        <input type="hidden" name="form_type" value="agendamento">
+                        <input type="hidden" name="form_type" value="agendamento" required>
                         
                         <div class="form-row">
-                            <label for="nome_cliente">Nome do Cliente:</label>
-                            <input type="text" id="nome_cliente" name="nome_cliente" required maxlength="255">
+                            <label for="nome_cliente">Nome do Cliente:*</label>
+                            <input type="text" 
+                                   id="nome_cliente" 
+                                   name="nome_cliente" 
+                                   required 
+                                   maxlength="255"
+                                   oninvalid="this.setCustomValidity('Por favor, preencha o nome do cliente')"
+                                   oninput="this.setCustomValidity('')">
                         </div>
                     
                         <div class="form-row">
-                            <label for="cpf_cliente">CPF do Cliente:</label>
-                            <input type="text" id="cpf_cliente" name="cpf_cliente" required maxlength="14" placeholder="000.000.000-00">
+                            <label for="cpf_cliente">CPF do Cliente:*</label>
+                            <input type="text" 
+                                   id="cpf_cliente" 
+                                   name="cpf_cliente" 
+                                   required 
+                                   maxlength="14" 
+                                   placeholder="000.000.000-00"
+                                   oninvalid="this.setCustomValidity('Por favor, insira um CPF válido')"
+                                   oninput="this.setCustomValidity('')">
                         </div>
                     
                         <div class="form-row">
-                            <label for="numero_cliente">Número de Celular:</label>
-                            <input type="text" id="numero_cliente" name="numero_cliente" required maxlength="15" placeholder="(00) 0 0000-0000">
+                            <label for="numero_cliente">Número de Celular:*</label>
+                            <input type="text" 
+                                   id="numero_cliente" 
+                                   name="numero_cliente" 
+                                   required 
+                                   maxlength="15" 
+                                   placeholder="(00) 0 0000-0000"
+                                   oninvalid="this.setCustomValidity('Por favor, insira um número de celular válido')"
+                                   oninput="this.setCustomValidity('')">
                         </div>
                     
                         <div class="form-row">
-                            <label for="dia_agendado">Dia Agendado:</label>
-                            <input type="date" id="dia_agendado" name="dia_agendado" required>
+                            <label for="dia_agendado">Dia Agendado:*</label>
+                            <input type="date" 
+                                   id="dia_agendado" 
+                                   name="dia_agendado" 
+                                   required
+                                   oninvalid="this.setCustomValidity('Por favor, selecione uma data')"
+                                   oninput="this.setCustomValidity('')">
                         </div>
                     
                         <div class="form-row">
-                            <label for="loja_agendada">Loja Agendada:</label>
-                            <select id="loja_agendada" name="loja_agendada" required>
+                            <label for="loja_agendada">Loja Agendada:*</label>
+                            <select id="loja_agendada" 
+                                    name="loja_agendada" 
+                                    required
+                                    oninvalid="this.setCustomValidity('Por favor, selecione uma loja')"
+                                    onchange="this.setCustomValidity('')">
                                 <option value="">Selecione uma loja</option>
-                                {% for loja in lojas %}
+                                {% for id, loja in lojas.items %}
                                     <option value="{{ loja.id }}">{{ loja.nome }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                     
-                        <input type="hidden" name="funcionario" value="{{ funcionario_logado.id }}">
+                        <input type="hidden" name="funcionario" value="{{ funcionario_logado.id }}" required>
                         
                         <div class="form-row">
-                            <label>Funcionário:</label>
+                            <label>Funcionário:*</label>
                             {% if funcionario_logado %}
-                                <input type="hidden" name="atendente_agendou" value="{{ funcionario_logado.id }}">
-                                <input type="text" value="{{ funcionario_logado.nome }}" readonly>
+                                <input type="hidden" name="atendente_agendou" value="{{ funcionario_logado.id }}" required>
+                                <input type="text" value="{{ funcionario_logado.nome }}" readonly required>
                             {% else %}
-                                <select name="atendente_agendou" required>
+                                <select name="atendente_agendou" 
+                                        required
+                                        oninvalid="this.setCustomValidity('Por favor, selecione um funcionário')"
+                                        onchange="this.setCustomValidity('')">
                                     <option value="">Selecione um funcionário</option>
                                     {% for funcionario in funcionarios %}
                                         <option value="{{ funcionario.id }}">{{ funcionario.nome }}</option>

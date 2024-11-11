@@ -233,3 +233,59 @@ tr:nth-child(even) {
 #info-pessoal p:nth-child(3)::before { content: '\f3cd'; font-family: 'Font Awesome 5 Free'; margin-right: 0.5rem; color: var(--color-600); }
 #info-pessoal p:nth-child(4)::before { content: '\f015'; font-family: 'Font Awesome 5 Free'; margin-right: 0.5rem; color: var(--color-600); }
 #info-pessoal li::before { content: '\f0e0'; font-family: 'Font Awesome 5 Free'; margin-right: 0.5rem; color: var(--color-600); }
+
+
+.cards-box {
+    padding: 20px;
+    margin: 20px 0;
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card-container {
+    display: flex;
+    justify-content: space-around;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.info-card {
+    flex: 1;
+    min-width: 200px;
+    max-width: 300px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.card-header {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    text-align: center;
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.card-body {
+    padding: 20px;
+    text-align: center;
+}
+
+.card-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #28a745;
+}
+
+@media (max-width: 576px) {
+    .info-card {
+        min-width: 100%;
+    }
+}

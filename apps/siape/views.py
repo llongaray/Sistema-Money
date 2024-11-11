@@ -180,6 +180,15 @@ def get_ficha_cliente(request, cpf):
         info_pessoal_data = {}
         print("Nenhuma informação pessoal encontrada")
 
+    # Obtém o débito/margem mais recente para os cards
+    debito_recente = DebitoMargem.objects.filter(cliente=cliente).first()
+    
+    cards_data = {
+        'saldo_5': debito_recente.saldo_5 if debito_recente else Decimal('0.00'),
+        'benef_saldo_5': debito_recente.benef_saldo_5 if debito_recente else Decimal('0.00')
+    }
+    print(f"Dados dos cards coletados: Saldo 5 = {cards_data['saldo_5']}, Benef Saldo 5 = {cards_data['benef_saldo_5']}")
+
     # Filtra os débitos e margens associados ao cliente com prazo maior que zero
     debitos_margens = DebitoMargem.objects.filter(cliente=cliente, prazo__gt=0)
     print(f"Total de débitos/margens encontrados: {debitos_margens.count()}")
@@ -228,6 +237,8 @@ def get_ficha_cliente(request, cpf):
         'cliente': cliente_data,
         'informacoes_pessoais': info_pessoal_data,
         'debitos_margens': debitos_margens_data,
+        'cards_data': cards_data,  # Adiciona os dados dos cards ao contexto
+        'debito_recente': debito_recente,  # Passa o objeto completo também
     }
     
     print("Contexto da ficha do cliente montado")
@@ -381,6 +392,65 @@ def importar_dados_csv(request):
         print(f"Aviso: {message}")
         return redirect('siape:all_forms')
 
+    # Mapeamento de nomes de colunas possíveis para nomes padronizados
+    COLUMN_MAPPING = {
+        # Dados básicos
+        'BANCO': 'BANCO',
+        'ORGAO': 'ORGAO',
+        'MATRICULA INSTITUIDOR': 'MATRICULA_INSTITUIDOR',
+        'MATRICULA': 'MATRICULA',
+        'UPAG': 'UPAG',
+        'UF': 'UF',
+        'NOME': 'NOME',
+        'CPF': 'CPF',
+        'CONTRATO': 'CONTRATO',
+        
+        # Campos de saldo e benefício
+        'Saldo5': 'Saldo5',
+        'Saldo 5%': 'Saldo5',
+        'Beneficio5': 'Beneficio5',
+        'Beneficio Bruta 5%': 'Beneficio5',
+        'BenefUtil5': 'BenefUtil5',
+        'Beneficio Utilizado 5%': 'BenefUtil5',
+        'BenefSaldo5': 'BenefSaldo5',
+        'Beneficio Saldo 5%': 'BenefSaldo5',
+        
+        # Campos de margem
+        'Bruta 35': 'Bruta35',
+        'Bruta 35%': 'Bruta35',
+        'Util.35': 'Util35',
+        'Utilz 35%': 'Util35',
+        'Saldo 35': 'Saldo35',
+        'Saldo 35%': 'Saldo35',
+        
+        # Campos 70%
+        'Bruta 70': 'Bruta70',
+        'Bruta 70%': 'Bruta70',
+        'Saldo 70': 'Saldo70',
+        'Saldo 70%': 'Saldo70',
+        
+        # Outros campos
+        'Rend.Bruto': 'RendBruto',
+        'Créditos': 'RendBruto',
+        'Situacao Funcional': 'SITUACAO_FUNCIONAL',
+        'Sit Func': 'SITUACAO_FUNCIONAL',
+    }
+
+    # Normaliza os nomes das colunas do DataFrame
+    df.columns = df.columns.str.strip()
+    normalized_columns = {}
+    
+    for col in df.columns:
+        # Procura o nome normalizado no mapeamento
+        normalized_name = COLUMN_MAPPING.get(col, col)
+        if normalized_name:
+            normalized_columns[col] = normalized_name
+    
+    # Renomeia as colunas do DataFrame
+    df = df.rename(columns=normalized_columns)
+    
+    print("Colunas normalizadas:", df.columns.tolist())
+
     # Obter os campos do modelo Cliente
     cliente_fields = {field.name for field in Cliente._meta.get_fields()}
     informacoes_fields = {field.name for field in InformacoesPessoais._meta.get_fields()}
@@ -499,16 +569,16 @@ def importar_dados_csv(request):
                     'pmt': pmt_valor,
                     'prazo': prazo_valor,
                     'contrato': str(row.get('CONTRATO', 'nao existe')).strip() or "nao existe",
-                    'saldo_5': parse_float(row.get('Saldo 5', '0')),  # Se não existir, usa 0
+                    'saldo_5': parse_float(row.get('Saldo5', '0')),  # Se não existir, usa 0
                     'beneficio_5': parse_float(row.get('Beneficio5', '0')),  # Se não existir, usa 0
                     'benef_util_5': parse_float(row.get('BenefUtil5', '0')),  # Se não existir, usa 0
                     'benef_saldo_5': parse_float(row.get('BenefSaldo5', '0')),  # Se não existir, usa 0
                     'bruta_35': bruta_35_valor,
-                    'util_35': parse_float(row.get('Util.35', '0')),  # Se não existir, usa 0
-                    'saldo_35': parse_float(row.get('Saldo 35', '0')),  # Se não existir, usa 0
-                    'bruta_70': parse_float(row.get('Bruta 70', '0')),  # Se não existir, usa 0
-                    'saldo_70': parse_float(row.get('Saldo 70', '0')),  # Se não existir, usa 0
-                    'rend_bruto': parse_float(row.get('Rend.Bruto', '0')),  # Se não existir, usa 0
+                    'util_35': parse_float(row.get('Util35', '0')),  # Se não existir, usa 0
+                    'saldo_35': parse_float(row.get('Saldo35', '0')),  # Se não existir, usa 0
+                    'bruta_70': parse_float(row.get('Bruta70', '0')),  # Se não existir, usa 0
+                    'saldo_70': parse_float(row.get('Saldo70', '0')),  # Se não existir, usa 0
+                    'rend_bruto': parse_float(row.get('RendBruto', '0')),  # Se não existir, usa 0
                     'data_envio': data_hora  # Usa diretamente o data_hora do formulário
                 }
 
@@ -608,6 +678,125 @@ def post_csv_money(form_data):
 
     return mensagem
 
+def post_import_situacao(request):
+    """
+    Processa o arquivo CSV para atualizar a situação funcional dos clientes.
+    Formato esperado do CSV:
+    cpf_cliente;situacao_funcional
+    03418758215;APOSENTADO
+    24154571249;APOSENTADO
+    """
+    print("\n----- Iniciando post_import_situacao -----\n")
+    mensagem = {'texto': '', 'classe': ''}
+    
+    if 'arquivo_situacao' not in request.FILES:
+        mensagem['texto'] = 'Nenhum arquivo CSV foi enviado.'
+        mensagem['classe'] = 'error'
+        print(f"Aviso: {mensagem['texto']}")
+        return mensagem
+
+    arquivo = request.FILES['arquivo_situacao']
+    print(f"Nome do arquivo: {arquivo.name}")
+    print(f"Tamanho do arquivo: {arquivo.size} bytes")
+    
+    if not arquivo.name.endswith('.csv'):
+        mensagem['texto'] = 'O arquivo deve ser um CSV.'
+        mensagem['classe'] = 'error'
+        print(f"Aviso: {mensagem['texto']}")
+        return mensagem
+
+    try:
+        # Tenta diferentes encodings e separadores
+        encodings = ['utf-8-sig', 'utf-8', 'latin1', 'iso-8859-1']
+        separators = [';', ',']
+        df = None
+        
+        for encoding in encodings:
+            for sep in separators:
+                try:
+                    print(f"Tentando ler com encoding {encoding} e separador '{sep}'")
+                    df = pd.read_csv(
+                        arquivo,
+                        encoding=encoding,
+                        sep=sep,
+                        dtype=str  # Força todos os campos como string
+                    )
+                    # Verifica se as colunas esperadas existem
+                    if 'cpf_cliente' in df.columns and 'situacao_funcional' in df.columns:
+                        print(f"Arquivo lido com sucesso usando {encoding} e separador '{sep}'")
+                        print(f"Colunas encontradas: {df.columns.tolist()}")
+                        break
+                    else:
+                        print(f"Colunas esperadas não encontradas. Colunas presentes: {df.columns.tolist()}")
+                        df = None
+                except Exception as e:
+                    print(f"Erro ao tentar {encoding} com separador '{sep}': {str(e)}")
+                    continue
+            if df is not None:
+                break
+
+        if df is None:
+            raise Exception("Não foi possível ler o arquivo com nenhuma combinação de encoding e separador")
+
+        print(f"Total de linhas no arquivo: {len(df)}")
+        print("Primeiras linhas do arquivo:")
+        print(df.head())
+        
+        # Remove espaços em branco
+        df['cpf_cliente'] = df['cpf_cliente'].str.strip()
+        df['situacao_funcional'] = df['situacao_funcional'].str.strip()
+        
+        atualizados = 0
+        erros = 0
+        erros_log = []
+
+        for index, row in df.iterrows():
+            try:
+                # Normaliza o CPF
+                cpf = ''.join(filter(str.isdigit, str(row['cpf_cliente'])))
+                if len(cpf) != 11:
+                    erro_msg = f"CPF inválido na linha {index + 1}: {row['cpf_cliente']}"
+                    erros_log.append(erro_msg)
+                    erros += 1
+                    print(erro_msg)
+                    continue
+
+                situacao = row['situacao_funcional'].upper()
+                
+                # Atualiza o cliente
+                cliente = Cliente.objects.filter(cpf=cpf).first()
+                if cliente:
+                    cliente.situacao_funcional = situacao
+                    cliente.save()
+                    atualizados += 1
+                    print(f"Cliente {cpf} atualizado com situação: {situacao}")
+                else:
+                    erro_msg = f"CPF não encontrado: {cpf}"
+                    erros_log.append(erro_msg)
+                    erros += 1
+                    print(erro_msg)
+                    
+            except Exception as e:
+                erro_msg = f"Erro na linha {index + 1}: {str(e)}"
+                erros_log.append(erro_msg)
+                erros += 1
+                print(erro_msg)
+
+        mensagem['texto'] = f'Importação concluída. {atualizados} clientes atualizados, {erros} erros encontrados.'
+        mensagem['classe'] = 'success'
+        
+        if erros_log:
+            mensagem['texto'] += "\nErros encontrados:\n" + "\n".join(erros_log)
+            mensagem['classe'] = 'warning' if atualizados > 0 else 'error'
+            
+    except Exception as e:
+        mensagem['texto'] = f'Erro ao processar arquivo: {str(e)}'
+        mensagem['classe'] = 'error'
+        print(f"Erro: {mensagem['texto']}")
+
+    print("\n----- Finalizando post_import_situacao -----\n")
+    return mensagem
+
 # ===== FIM DA SEÇÃO DOS POSTS =====
 
 # ===== INÍCIO DA SEÇÃO DE ALL FORMS =====
@@ -705,19 +894,25 @@ def all_forms(request):
             if not cpf_cliente:
                 mensagem = {'texto': 'CPF não fornecido. Por favor, insira um CPF válido.', 'classe': 'warning'}
                 print("Aviso: CPF não fornecido")
+                messages.warning(request, mensagem['texto'])
             else:
                 cpf_cliente_limpo = normalize_cpf(cpf_cliente)
                 print(f"CPF normalizado: {cpf_cliente_limpo}")
-                try:
-                    cliente = Cliente.objects.get(cpf=cpf_cliente_limpo)
-                    print(f"Cliente encontrado: {cliente.nome}")
-                    return get_ficha_cliente(request, cliente.id)
-                except Cliente.DoesNotExist:
-                    mensagem = {'texto': f"Cliente com CPF {cpf_cliente} não encontrado na base de dados.", 'classe': 'warning'}
-                    print(f"Aviso: Cliente com CPF {cpf_cliente} não encontrado")
-                except Exception as e:
-                    mensagem = {'texto': f"Ocorreu um erro ao processar sua solicitação: {str(e)}", 'classe': 'error'}
-                    print(f"Erro: {str(e)}")
+                
+                if cpf_cliente_limpo is None:
+                    mensagem = {'texto': 'CPF inválido após normalização.', 'classe': 'warning'}
+                    print("Aviso: CPF inválido após normalização")
+                    messages.warning(request, mensagem['texto'])
+                else:
+                    # Verifica se o cliente existe antes de chamar get_ficha_cliente
+                    cliente_exists = Cliente.objects.filter(cpf=cpf_cliente_limpo).exists()
+                    if cliente_exists:
+                        print(f"Cliente encontrado: {cpf_cliente_limpo}")
+                        return get_ficha_cliente(request, cpf_cliente_limpo)  # Passando o CPF para a função
+                    else:
+                        mensagem = {'texto': f"Cliente com CPF {cpf_cliente} não encontrado na base de dados.", 'classe': 'warning'}
+                        print(f"Aviso: Cliente com CPF {cpf_cliente} não encontrado")
+                        messages.warning(request, mensagem['texto'])
         
         elif form_type == 'importar_csv':
             print("Iniciando importação de CSV")
@@ -773,6 +968,11 @@ def all_forms(request):
         elif form_type == 'importar_csv_money':
             print("Iniciando importação de CSV para RegisterMoney")
             mensagem = post_csv_money(request.FILES)
+
+        elif form_type == 'importar_situacao':
+            print("Iniciando importação de situação funcional")
+            mensagem = post_import_situacao(request)
+            print(f"Resultado da importação: {mensagem}")
     
     # Obtém o contexto atualizado APÓS processar o POST
     context = get_all_forms()

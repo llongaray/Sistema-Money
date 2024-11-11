@@ -123,9 +123,9 @@
                                 <i class="fas fa-sort"></i>
                             </span>
                         </th>
-                        <th>Confirmação</th>
+                        <th>Agendados</th>
                         <th>
-                            Efetividade
+                            Em Loja
                             <span class="sort-icon" data-column="taxa">
                                 <i class="fas fa-sort"></i>
                             </span>
@@ -144,17 +144,8 @@
                             {% endif %}
                         </td>
                         <td>{{ item.nome }}</td>
-                        <td class="progress-cell">
-                            <div class="progress-container">
-                                <!-- Barra de progresso com largura fixa baseada em percentual_conf -->
-                                <div class="progress-bar" style="width: {{ item.percentual_conf }}%;">
-                                    <span class="progress-text">
-                                        {{ item.percentual_conf_str }}
-                                    </span>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="valor">{{ item.percentual_efetividade }}% </td>
+                        <td>{{ item.total_confirmados }}</td>
+                        <td>{{ item.total_em_loja }}</td>
                     </tr>
                     {% empty %}
                     <tr>

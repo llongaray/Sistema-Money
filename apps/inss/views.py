@@ -453,7 +453,11 @@ def get_all_agendamentos(agendamentos_base_query, funcionario_logado, nivel_carg
         'numero_cliente': a.numero_cliente,
         'dia_agendado': a.dia_agendado.strftime('%Y-%m-%d'),  # Formato para input date
         'atendente_agendou': a.atendente_agendou.nome.split()[0] if a.atendente_agendou else '',  # Primeiro nome do atendente
-        'loja_agendada': a.loja_agendada.nome.split(' - ')[-1] if a.loja_agendada and ' - ' in a.loja_agendada.nome else a.loja_agendada.nome,  # Nome da loja após ' - '
+        'loja_agendada': (
+                a.loja_agendada.nome.split(' - ')[-1] 
+                if a.loja_agendada and a.loja_agendada.nome and ' - ' in a.loja_agendada.nome 
+                else (a.loja_agendada.nome if a.loja_agendada else '')
+            ),
         'tabulacao_atendente': a.tabulacao_atendente,
         'tabulacao_vendedor': a.tabulacao_vendedor,
         'observacao_vendedor': a.observacao_vendedor,
@@ -867,7 +871,7 @@ def render_all_forms(request):
                 agendamento.save()
                 print(f"Agendamento {agendamento_id} atualizado com sucesso!")
                 
-                # Registra o log de alteração
+                # Registra o log de alteraç��o
                 LogAlteracao.objects.create(
                     agendamento_id=str(agendamento.id),
                     mensagem=f"Valor TAC atualizado para R$ {valor_tac}",
@@ -915,6 +919,7 @@ def render_all_forms(request):
     print("\n----- Finalizando render_all_forms -----\n")
     return render(request, 'inss/all_forms.html', context_data)
 
+''' INICIO BLOCO RACKING '''
 
 def get_cards(periodo='mes'):
     print("\n----- Iniciando get_cards -----\n")
@@ -1101,8 +1106,7 @@ def get_podium(periodo='mes'):
 
 def get_tabela_ranking(periodo='mes'):
     """
-    Calcula o ranking dos atendentes baseado nos agendamentos que resultaram em atendimento em loja
-    usando o período da meta ativa do INSS
+    Calcula o ranking dos atendentes baseado nos agendamentos confirmados e presentes em loja
     """
     print("\n----- Iniciando get_tabela_ranking -----\n")
     
@@ -1114,75 +1118,64 @@ def get_tabela_ranking(periodo='mes'):
 
     print(f"Período do ranking: {primeiro_dia_semana} até {ultimo_dia_semana}")
     
-    # Busca todos os agendamentos sem filtros
-    agendamentos = Agendamento.objects.all().select_related('atendente_agendou')  # Otimiza a consulta
-    print(f"Total de agendamentos encontrados: {agendamentos.count()}")
+    # Filtra agendamentos dentro do intervalo de datas
+    agendamentos_data_range = Agendamento.objects.filter(
+        dia_agendado__date__gte=primeiro_dia_semana,
+        dia_agendado__date__lte=ultimo_dia_semana,
+        atendente_agendou__isnull=False
+    ).select_related('atendente_agendou')
+
+    print(f"Total de agendamentos no intervalo de datas: {agendamentos_data_range.count()}")
 
     # Agrupa agendamentos por atendente
     ranking_por_atendente = {}
     
-    for agendamento in agendamentos:
+    for agendamento in agendamentos_data_range:
         atendente = agendamento.atendente_agendou
         if atendente not in ranking_por_atendente:
             ranking_por_atendente[atendente] = {
                 'funcionario': atendente,
                 'nome': atendente.nome,
                 'foto': atendente.foto.url if atendente.foto else None,
-                'total_agendamentos': 0,
-                'confirmados': 0,
-                'fechamentos': 0,
+                'total_confirmados': 0,  # Agendamentos com tabulacao 'CONFIRMADO'
+                'total_em_loja': 0,      # Agendamentos confirmados e com tabulação do vendedor
             }
         
-        ranking_por_atendente[atendente]['total_agendamentos'] += 1
+        # Conta agendamentos confirmados
+        if agendamento.tabulacao_atendente == 'CONFIRMADO':
+            ranking_por_atendente[atendente]['total_confirmados'] += 1
+            
+            # Conta agendamentos que foram para loja (tabulação diferente de 'NÃO QUIS OUVIR')
+            if agendamento.tabulacao_vendedor and agendamento.tabulacao_vendedor != 'NÃO QUIS OUVIR':
+                ranking_por_atendente[atendente]['total_em_loja'] += 1
 
-    # Filtra agendamentos dentro do intervalo de datas
-    agendamentos_data_range = Agendamento.objects.filter(
-        dia_agendado__date__gte=primeiro_dia_semana,
-        dia_agendado__date__lte=ultimo_dia_semana,
-        atendente_agendou__isnull=False,    # Apenas agendamentos com atendente definido
-        tabulacao_atendente__isnull=False    # Apenas agendamentos com tabulação atendente não vazia
-    ).select_related('atendente_agendou')  # Otimiza a consulta
-
-    print(f"Total de agendamentos no intervalo de datas: {agendamentos_data_range.count()}")
-
-    # Calcula percentual de confirmação e efetividade
+    # Prepara dados para o ranking
     ranking_data = []
     for atendente, dados in ranking_por_atendente.items():
-        total_agendamentos = dados['total_agendamentos']
-        print(f"Total de agendamentos para {dados['nome']}: {total_agendamentos}")
-
-        # Passo 3: Conte os Agendamentos Confirmados pelo Atendente
-        agem_confi_atend = sum(1 for agendamento in agendamentos_data_range if agendamento.atendente_agendou == atendente and agendamento.tabulacao_atendente == 'CONFIRMADO')
-        print(f"Agendamentos confirmados pelo atendente {dados['nome']}: {agem_confi_atend}")
-
-        # Passo 4: Conte os Agendamentos Confirmados e Fechados pelo Vendedor
-        agem_fechado = sum(1 for agendamento in agendamentos_data_range if agendamento.atendente_agendou == atendente and agendamento.tabulacao_atendente == 'CONFIRMADO' and agendamento.tabulacao_vendedor)
-        print(f"Agendamentos fechados pelo atendente {dados['nome']}: {agem_fechado}")
-
-        # Passo 5: Calcule o Percentual de Efetividade
-        percentual_efetividade = (100 * agem_fechado / agem_confi_atend) if agem_confi_atend > 0 else 0
-        print(f"Percentual de efetividade para {dados['nome']}: {percentual_efetividade}%")
-
         ranking_data.append({
-            'posicao': len(ranking_data) + 1,  # Posição no ranking
+            'posicao': len(ranking_data) + 1,
             'foto': dados['foto'],
             'nome': dados['nome'],
-            'percentual_conf': round((agem_confi_atend / total_agendamentos * 100), 2) if total_agendamentos > 0 else 0,
-            'percentual_conf_str': f"{agem_confi_atend}/{total_agendamentos}",  # Formato "confirmados/total"
-            'percentual_efetividade': round(percentual_efetividade, 2),
-            'confirmados': agem_confi_atend
+            'total_confirmados': dados['total_confirmados'],
+            'total_em_loja': dados['total_em_loja']
         })
 
-    # Ordena o ranking pelo número total de agendamentos 'CONFIRMADO' (decrescente)
-    ranking_data.sort(key=lambda x: x['confirmados'], reverse=True)
+    # Ordena o ranking pelo número total de clientes em loja (decrescente)
+    # Em caso de empate, usa o total de confirmados como segundo critério
+    ranking_data.sort(key=lambda x: (x['total_em_loja'], x['total_confirmados']), reverse=True)
+    
+    # Atualiza as posições após a ordenação
+    for i, dados in enumerate(ranking_data, 1):
+        dados['posicao'] = i
     
     print(f"Dados do ranking calculados para {len(ranking_data)} atendentes")
     
-    # Log para debug dos percentuais
+    # Log para debug
     for dados in ranking_data:
         print(f"Atendente: {dados['nome']}")
-        print(f"Percentual de Confirmação: {dados['percentual_conf_str']} ({dados['percentual_conf']}%)")
-        print(f"Percentual de Efetividade: {dados['percentual_efetividade']}%")
+        print(f"Posição: {dados['posicao']}")
+        print(f"Total Em Loja: {dados['total_em_loja']}")
+        print(f"Total Confirmados: {dados['total_confirmados']}")
         print("---")
     
     print("\n----- Finalizando get_tabela_ranking -----\n")
@@ -1193,7 +1186,7 @@ def get_tabela_ranking(periodo='mes'):
             'inicio': primeiro_dia_semana,
             'fim': ultimo_dia_semana
         },
-        'total_agendamentos': agendamentos.count()
+        'total_agendamentos': agendamentos_data_range.count()
     }
 
 
@@ -1246,3 +1239,5 @@ def render_ranking(request):
     print("\n----- Finalizando render_ranking -----\n")
     return render(request, 'inss/ranking.html', context)
 
+
+''' FINAL BLOCO RANKING '''

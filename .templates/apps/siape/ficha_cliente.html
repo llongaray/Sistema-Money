@@ -59,6 +59,35 @@
             </div>
         </div>
 
+        <!-- Box de Cards para Saldos -->
+        <div class="cards-box">
+            <div class="card-container">
+                <!-- Card Saldo 5 -->
+                <div class="info-card">
+                    <div class="card-header">
+                        <h3>Saldo 5</h3>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-value">
+                            R$ {{ debito_recente.saldo_5|default:"0,00"|floatformat:2 }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Card Benefício 5 -->
+                <div class="info-card">
+                    <div class="card-header">
+                        <h3>Benefício 5</h3>
+                    </div>
+                    <div class="card-body">
+                        <span class="card-value">
+                            R$ {{ debito_recente.benef_saldo_5|default:"0,00"|floatformat:2 }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Tabela de Contratos -->
         <div id="contratos" class="box">
             <h3>Débitos e Margens</h3>
