@@ -637,3 +637,146 @@ main.darkmode .modal-body::-webkit-scrollbar-thumb {
 main.darkmode .modal-body::-webkit-scrollbar-thumb:hover {
     background: var(--dark-hover-background);
 }
+
+
+/* Estilos específicos para o formulário dentro do Modal Cliente Rua */
+#modalClienteRua .wp-style-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+#modalClienteRua .wp-style-form .section-title {
+    color: var(--azul-escuro-500);
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--azul-escuro-500);
+}
+
+#modalClienteRua .wp-style-form .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+#modalClienteRua .wp-style-form label {
+    font-weight: 500;
+    color: var(--cor-cinza-escuro);
+}
+
+#modalClienteRua .wp-style-form input,
+#modalClienteRua .wp-style-form select,
+#modalClienteRua .wp-style-form textarea {
+    padding: 0.75rem;
+    border: 1px solid var(--cor-cinza-claro);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+#modalClienteRua .wp-style-form input:focus,
+#modalClienteRua .wp-style-form select:focus,
+#modalClienteRua .wp-style-form textarea:focus {
+    border-color: var(--azul-escuro-500);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    outline: none;
+}
+
+#modalClienteRua .wp-style-form textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+#modalClienteRua .wp-style-form button[type="submit"] {
+    background: var(--azul-escuro-500);
+    color: white;
+    padding: 1rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#modalClienteRua .wp-style-form button[type="submit"]:hover {
+    background: var(--azul-escuro-600);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Modo escuro */
+.darkmode #modalClienteRua .wp-style-form .section-title {
+    color: var(--cor-branco);
+    border-bottom-color: var(--cor-branco);
+}
+
+.darkmode #modalClienteRua .wp-style-form label {
+    color: var(--cor-branco);
+}
+
+.darkmode #modalClienteRua .wp-style-form input,
+.darkmode #modalClienteRua .wp-style-form select,
+.darkmode #modalClienteRua .wp-style-form textarea {
+    background: var(--dark-background-fundo);
+    border-color: var(--dark-border-color);
+    color: var(--cor-branco);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    #modalClienteRua .wp-style-form {
+        gap: 1rem;
+    }
+    
+    #modalClienteRua .wp-style-form input,
+    #modalClienteRua .wp-style-form select,
+    #modalClienteRua .wp-style-form textarea {
+        padding: 0.6rem;
+    }
+}
+
+/* Estilos específicos para o container de Fechou Negócio */
+#fechouNegocioRuaContainer {
+    display: flex;
+    flex-direction: column;
+    margin: 15px 0;
+}
+
+#fechouNegocioRuaContainer .mb-3 {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0; /* Remove margem padrão do Bootstrap */
+}
+
+#fechouNegocioRuaContainer label {
+    font-weight: 500;
+    color: var(--cor-cinza-escuro);
+}
+
+#fechouNegocioRuaContainer input,
+#fechouNegocioRuaContainer select {
+    padding: 0.75rem;
+    border: 1px solid var(--cor-cinza-claro);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+#fechouNegocioRuaContainer input:focus,
+#fechouNegocioRuaContainer select:focus {
+    border-color: var(--azul-escuro-500);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    outline: none;
+}
+
+/* Modo escuro */
+.darkmode #fechouNegocioRuaContainer label {
+    color: var(--cor-branco);
+}
+
+.darkmode #fechouNegocioRuaContainer input,
+.darkmode #fechouNegocioRuaContainer select {
+    background: var(--dark-background-fundo);
+    border-color: var(--dark-border-color);
+    color: var(--cor-branco);
+}

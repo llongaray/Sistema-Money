@@ -59,6 +59,9 @@ class Agendamento(models.Model):
 
     # Registro de quando o TAC foi pago
     data_pagamento_tac = models.DateTimeField(null=True, blank=True)
+    # Campo para mensagem de atualização do TAC
+    mensagem_update_tac = models.TextField(blank=True, null=True)
+    cliente_rua = models.BooleanField(default=False)
 
     def __str__(self):
         return f'{self.nome_cliente} - {self.loja_agendada} ({self.dia_agendado})'

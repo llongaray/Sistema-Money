@@ -26,6 +26,22 @@ from apps.siape.models import *
 # Importações de formulários
 from .forms import *
 
+# Importações de pytz
+import pytz
+
+# Função auxiliar para obter a data/hora atual em SP
+def get_current_sp_time():
+    """Retorna a data/hora atual no fuso horário de São Paulo"""
+    sp_timezone = pytz.timezone('America/Sao_Paulo')
+    return timezone.localtime(timezone.now(), sp_timezone)
+
+def make_aware_sp(naive_datetime):
+    """Converte uma data/hora ingênua para o fuso horário de São Paulo"""
+    sp_timezone = pytz.timezone('America/Sao_Paulo')
+    if timezone.is_aware(naive_datetime):
+        return naive_datetime.astimezone(sp_timezone)
+    return timezone.make_aware(naive_datetime, sp_timezone)
+
 def calcular_status_dias(agendamento, hoje):
     """Calcula o status baseado nos dias entre hoje e o agendamento"""
     
@@ -71,6 +87,8 @@ def post_status_tac(status_data, funcionario_logado):
         agendamento = Agendamento.objects.get(id=status_data['agendamento_id'])
         status_anterior = agendamento.status_tac
         novo_status = status_data['status']
+        
+        data_atual = get_current_sp_time()
         
         # Se está mudando de PAGO para NÃO PAGO ou EM ESPERA
         if status_anterior == 'PAGO' and novo_status in ['NÃO PAGO', 'EM ESPERA']:
@@ -120,7 +138,7 @@ def post_status_tac(status_data, funcionario_logado):
         # Atualiza o status e data de pagamento
         agendamento.status_tac = novo_status
         if novo_status == 'PAGO':
-            agendamento.data_pagamento_tac = timezone.now()
+            agendamento.data_pagamento_tac = data_atual
         else:
             agendamento.data_pagamento_tac = None
         
@@ -255,12 +273,103 @@ def post_venda_tabulacao(form_data, funcionario):
 
     return mensagem
 
+def post_cliente_rua(request, funcionario_logado):
+    """
+    Processa o POST de um cliente rua, criando um novo agendamento.
+    """
+    print("\n----- Iniciando post_cliente_rua -----")
+    
+    try:
+        # Coleta e valida dados básicos obrigatórios
+        dados_basicos = {
+            'nome_cliente': request.POST.get('nome_cliente', '').strip(),
+            'cpf_cliente': request.POST.get('cpf_cliente', '').strip(),
+            'numero_cliente': request.POST.get('numero_cliente', '').strip(),
+            'data_comparecimento': request.POST.get('data_comparecimento')
+        }
+        
+        # Verifica campos obrigatórios
+        if not all(dados_basicos.values()):
+            return {
+                'texto': 'Nome, CPF, número de celular e data são campos obrigatórios.',
+                'classe': 'error'
+            }
+        
+        # Coleta dados do atendimento
+        dados_atendimento = {
+            'loja_id': request.POST.get('loja'),
+            'vendedor_id': request.POST.get('vendedor_id'),
+            'tabulacao_vendedor': request.POST.get('tabulacao_vendedor'),
+            'observacao_vendedor': request.POST.get('observacao_vendedor', '')
+        }
+        
+        # Cria o agendamento base
+        agendamento = Agendamento.objects.create(
+            nome_cliente=dados_basicos['nome_cliente'],
+            cpf_cliente=dados_basicos['cpf_cliente'],
+            numero_cliente=dados_basicos['numero_cliente'],
+            dia_agendado=dados_basicos['data_comparecimento'],
+            loja_agendada_id=dados_atendimento['loja_id'],
+            vendedor_loja_id=dados_atendimento['vendedor_id'],
+            tabulacao_vendedor=dados_atendimento['tabulacao_vendedor'],
+            observacao_vendedor=dados_atendimento['observacao_vendedor'],
+            cliente_rua=True
+        )
+        
+        # Se for FECHOU NEGOCIO, processa dados adicionais
+        if dados_atendimento['tabulacao_vendedor'] == 'FECHOU NEGOCIO':
+            dados_negocio = {
+                'tipo_negociacao': request.POST.get('tipo_negociacao', '').strip(),
+                'banco': request.POST.get('banco', '').strip(),
+                'subsidio': request.POST.get('subsidio'),
+                'valor_tac': request.POST.get('valor_tac', '').strip(),
+                'acao': request.POST.get('acao'),
+                'associacao': request.POST.get('associacao'),
+                'aumento': request.POST.get('aumento')
+            }
+            
+            # Atualiza o agendamento com os dados de negócio
+            agendamento.tipo_negociacao = dados_negocio['tipo_negociacao']
+            agendamento.banco = dados_negocio['banco']
+            agendamento.subsidio = dados_negocio['subsidio']
+            
+            # Processa o valor TAC se existir
+            if dados_negocio['valor_tac']:
+                valor_tac = dados_negocio['valor_tac'].replace('R$', '').replace('.', '').replace(',', '.').strip()
+                agendamento.tac = Decimal(valor_tac)
+            
+            agendamento.acao = dados_negocio['acao']
+            agendamento.associacao = dados_negocio['associacao']
+            agendamento.aumento = dados_negocio['aumento']
+            agendamento.save()
+        
+        # Registra o log
+        LogAlteracao.objects.create(
+            agendamento_id=str(agendamento.id),
+            mensagem=f"Cliente Rua registrado - Tabulação: {dados_atendimento['tabulacao_vendedor']}",
+            status=True,
+            funcionario=funcionario_logado
+        )
+        
+        print(f"Cliente Rua registrado com sucesso - ID: {agendamento.id}")
+        return {
+            'texto': 'Cliente Rua registrado com sucesso!',
+            'classe': 'success'
+        }
+        
+    except Exception as e:
+        print(f"Erro ao registrar Cliente Rua: {str(e)}")
+        return {
+            'texto': f'Erro ao registrar Cliente Rua: {str(e)}',
+            'classe': 'error'
+        }
+    finally:
+        print("----- Finalizando post_cliente_rua -----\n")
 
 def post_confirmacao_agem(form_data, funcionario):
     print("\n\n----- Iniciando post_confirmacao_agem -----\n")
     print(f"Dados do formulário recebidos: {form_data}")
     mensagem = {'texto': '', 'classe': ''}
-
     try:
         agendamento_id = form_data.get('agendamento_id')
         print(f"ID do agendamento recebido: {agendamento_id}")
@@ -268,27 +377,29 @@ def post_confirmacao_agem(form_data, funcionario):
         if not agendamento_id:
             print("ERRO: ID do agendamento não fornecido ou vazio")
             raise ValueError("ID do agendamento não fornecido")
-        
+            
         # Tenta converter para int para garantir que é um ID válido
         agendamento_id = int(agendamento_id)
         print(f"ID do agendamento convertido: {agendamento_id}")
         
         agendamento = Agendamento.objects.get(id=agendamento_id)
         print(f"Agendamento encontrado: {agendamento}")
-
+        
         # Criar um dicionário com os dados do formulário
         dados_atualizacao = {
             'nome_cliente': form_data['nome_cliente'],
             'numero_cliente': form_data['numero_cliente'],
             'tabulacao_atendente': form_data['tabulacao_atendente']
         }
-
+        
         # Converter e adicionar a data agendada
         if form_data['dia_agendado']:
             dia_agendado = datetime.strptime(form_data['dia_agendado'], '%Y-%m-%d').date()
-            hora_atual = timezone.now().time()
-            dados_atualizacao['dia_agendado'] = timezone.make_aware(datetime.combine(dia_agendado, hora_atual))
-
+            hora_atual = get_current_sp_time().time()
+            dados_atualizacao['dia_agendado'] = make_aware_sp(
+                datetime.combine(dia_agendado, hora_atual)
+            )
+        
         # Verifica o status do agendamento
         if form_data['tabulacao_atendente'] == 'CONFIRMADO':
             # Apenas atualiza a tabulação
@@ -299,35 +410,48 @@ def post_confirmacao_agem(form_data, funcionario):
             dados_atualizacao['tabulacao_atendente'] = 'REAGENDADO'
             if form_data.get('nova_dia_agendado'):
                 nova_dia_agendado = datetime.strptime(form_data['nova_dia_agendado'], '%Y-%m-%d').date()
-                dados_atualizacao['dia_agendado'] = timezone.make_aware(datetime.combine(nova_dia_agendado, hora_atual))
-
+                hora_atual = get_current_sp_time().time()
+                dados_atualizacao['dia_agendado'] = make_aware_sp(
+                    datetime.combine(nova_dia_agendado, hora_atual)
+                )
+        
         elif form_data['tabulacao_atendente'] == 'DESISTIU':
             # Atualiza a tabulação e a observação
             dados_atualizacao['tabulacao_atendente'] = 'DESISTIU'
             dados_atualizacao['observacao_atendente'] = form_data.get('observacao', '')
-
-        # Atualizar o agendamento com os novos dados
-        for campo, valor in dados_atualizacao.items():
-            setattr(agendamento, campo, valor)
-
+        
+        # Atualiza o agendamento com os novos dados
+        for key, value in dados_atualizacao.items():
+            setattr(agendamento, key, value)
         agendamento.save()
-
-        # Criar log de alteração
-        LogAlteracao.objects.create(
-            agendamento_id=str(agendamento.id),
-            mensagem=f"Confirmação de agendamento atualizada. Nova tabulação: {form_data['tabulacao_atendente']}",
-            status=True,
-            funcionario=funcionario
-        )
-
-        mensagem['texto'] = 'Confirmação de agendamento atualizada com sucesso!'
-        mensagem['classe'] = 'success'
-    
+        
+        mensagem = {
+            'texto': 'Agendamento atualizado com sucesso!',
+            'classe': 'success'
+        }
+        print("Agendamento atualizado com sucesso")
+        
+    except ValueError as e:
+        print(f"ERRO de validação: {str(e)}")
+        mensagem = {
+            'texto': f'Erro de validação: {str(e)}',
+            'classe': 'error'
+        }
+    except Agendamento.DoesNotExist:
+        print("ERRO: Agendamento não encontrado")
+        mensagem = {
+            'texto': 'Agendamento não encontrado',
+            'classe': 'error'
+        }
     except Exception as e:
-        print(f"Erro ao processar confirmação de agendamento: {e}")
-        mensagem['texto'] = 'Erro ao atualizar confirmação de agendamento.'
-        mensagem['classe'] = 'danger'
-
+        print(f"ERRO inesperado: {str(e)}")
+        mensagem = {
+            'texto': f'Erro ao processar agendamento: {str(e)}',
+            'classe': 'error'
+        }
+    
+    print(f"Mensagem retornada: {mensagem}")
+    print("\n----- Finalizando post_confirmacao_agem -----\n")
     return mensagem
 
 def post_agendamento(request, funcionario):
@@ -344,8 +468,8 @@ def post_agendamento(request, funcionario):
         if isinstance(dia_agendado, str):
             dia_agendado = datetime.strptime(dia_agendado, '%Y-%m-%d').date()
         
-        hora_atual = timezone.now().time()
-        dia_agendado_com_hora = timezone.make_aware(datetime.combine(dia_agendado, hora_atual))
+        hora_atual = get_current_sp_time().time()
+        dia_agendado_com_hora = make_aware_sp(datetime.combine(dia_agendado, hora_atual))
 
         agendamento_data = {
             'nome_cliente': request.POST.get('nome_cliente'),
@@ -471,29 +595,55 @@ def get_all_agendamentos(agendamentos_base_query, funcionario_logado, nivel_carg
         'aumento': a.aumento,
         'status_tac': a.status_tac,
         'data_pagamento_tac': a.data_pagamento_tac,
-        'status': calcular_status_dias(a, timezone.now().date())  # Chama a função para calcular o status
+        'status': calcular_status_dias(a, timezone.now().date())  # Chama a funço para calcular o status
     } for a in todos_agendamentos]
 
-    # 1.1 Lojas
+    # 1.1 Lojas - Ajustado para regras de acesso
+    if funcionario_logado:
+        if nivel_cargo == 'GERENTE':
+            # Gerente vê apenas sua loja
+            lojas = Loja.objects.filter(id=funcionario_logado.loja.id)
+        elif funcionario_logado.usuario.is_superuser or nivel_cargo not in ['ESTAGIO', 'PADRÃO']:
+            # Superuser e níveis superiores veem todas as lojas
+            lojas = Loja.objects.all()
+        else:
+            # Outros funcionários veem apenas sua loja
+            lojas = Loja.objects.filter(id=funcionario_logado.loja.id)
+    else:
+        lojas = Loja.objects.none()
+
     lojas_dict = {
         loja.id: {
             'id': loja.id,
             'nome': loja.nome
         }
-        for loja in Loja.objects.all()  # Mostra todas as lojas
+        for loja in lojas
     }
-    print(f"Lojas: {lojas_dict}")
+    print(f"Lojas disponíveis: {lojas_dict}")
 
-    # 1.2 Vendedores
-    funcionarios = Funcionario.objects.all() if nivel_cargo != 'TOTAL' else Funcionario.objects.none()
+    # 1.2 Vendedores - Ajustado para regras de acesso
+    if funcionario_logado:
+        if nivel_cargo == 'GERENTE':
+            # Gerente vê funcionários da sua loja
+            funcionarios = Funcionario.objects.filter(loja=funcionario_logado.loja)
+        elif funcionario_logado.usuario.is_superuser or nivel_cargo not in ['ESTAGIO', 'PADRÃO']:
+            # Superuser e níveis superiores veem todos
+            funcionarios = Funcionario.objects.all()
+        else:
+            # Outros funcionários veem apenas a si mesmos
+            funcionarios = Funcionario.objects.filter(id=funcionario_logado.id)
+    else:
+        funcionarios = Funcionario.objects.none()
+
     vendedores_lista_clientes = {
         funcionario.id: {
             'id': funcionario.id,
-            'nome': funcionario.nome.split()[0]  # Primeiro nome
+            'nome': funcionario.nome,
+            'loja': funcionario.loja.nome if funcionario.loja else 'Sem loja'
         }
         for funcionario in funcionarios
     }
-    print(f"Vendedores: {vendedores_lista_clientes}")
+    print(f"Vendedores disponíveis: {vendedores_lista_clientes}")
 
     return todos_agendamentos_dict, lojas_dict, vendedores_lista_clientes
 
@@ -624,7 +774,7 @@ def get_agendamentos_atrasados(agendamentos_base_query, funcionario_logado, nive
     else:
         agendamentos_atrasados = agendamentos_base_query.filter(
             dia_agendado__lt=hoje,  # Dia agendado menor que hoje
-            tabulacao_vendedor__isnull=True  # Sem tabulação do vendedor
+            tabulacao_vendedor__isnull=True  # Sem tabulaão do vendedor
         ).order_by('dia_agendado')
 
     return [{
@@ -640,7 +790,7 @@ def get_agendamentos_atrasados(agendamentos_base_query, funcionario_logado, nive
         'status': 'ATRASADO'  # Status fixo como ATRASADO
     } for a in agendamentos_atrasados]
 
-def get_all_forms_and_objects(request_post):
+def get_all_forms_and_objects(request):
     """Obtém todos os formulários e objetos necessários para a view"""
     print("\n\n----- Iniciando get_all_forms_and_objects -----\n")
     
@@ -651,11 +801,11 @@ def get_all_forms_and_objects(request_post):
 
     # Obtém informações do funcionário logado
     try:
-        funcionario_logado = Funcionario.objects.get(usuario_id=request_post.user.id)
+        funcionario_logado = Funcionario.objects.get(usuario_id=request.user.id)
         nivel_cargo = funcionario_logado.cargo.nivel if funcionario_logado.cargo else None
         loja_funcionario = funcionario_logado.loja
     except Funcionario.DoesNotExist:
-        if request_post.user.is_superuser:
+        if request.user.is_superuser:
             funcionario_logado = None
             nivel_cargo = 'TOTAL'
             loja_funcionario = None
@@ -675,20 +825,25 @@ def get_all_forms_and_objects(request_post):
             }
 
     # Obtém lista de funcionários baseada no nível de acesso
-    if request_post.user.is_superuser:
+    if request.user.is_superuser:
         # Se for superuser, pega todos os funcionários
         funcionarios = Funcionario.objects.all()
-        lojas = Loja.objects.all()  # Mostra todas as lojas para superuser
+        lojas = Loja.objects.all()
     else:
         # Se não for superuser, verifica o nível do funcionário logado
-        if nivel_cargo in ['ESTAGIO', 'PADRÃO']:
+        if nivel_cargo == 'GERENTE':
+            # Gerente vê apenas funcionários da sua loja
+            funcionarios = Funcionario.objects.filter(loja=funcionario_logado.loja)
+            lojas = Loja.objects.filter(id=funcionario_logado.loja.id)
+        elif nivel_cargo in ['ESTAGIO', 'PADRÃO']:
             funcionarios = [funcionario_logado]  # Apenas o próprio funcionário
-            lojas = Loja.objects.filter(id=funcionario_logado.loja.id)  # Apenas a loja do funcionário
+            lojas = Loja.objects.filter(id=funcionario_logado.loja.id)
         else:
-            funcionarios = Funcionario.objects.all()  # Todos os funcionários
-            lojas = Loja.objects.all()  # Mostra todas as lojas
+            # Outros níveis superiores veem todos
+            funcionarios = Funcionario.objects.all()
+            lojas = Loja.objects.all()
 
-    # Configuração de formulários
+    # Configuração de formulários com os funcionários filtrados
     form_agendamento = AgendamentoForm(funcionarios=funcionarios)
     form_confirmacao = ConfirmacaoAgendamentoForm()
 
@@ -759,10 +914,12 @@ def render_all_forms(request):
         if form_type == 'agendamento':
             print("\nProcessando formulário de agendamento...")
 
-            if all([request.POST.get('nome_cliente'), 
-                     request.POST.get('cpf_cliente'), 
-                     request.POST.get('numero_cliente')]):
-                mensagem = post_agendamento(request, funcionario_logado)  # Passando request diretamente
+            if all([
+                request.POST.get('nome_cliente'),
+                request.POST.get('cpf_cliente'),
+                request.POST.get('numero_cliente')
+            ]):
+                mensagem = post_agendamento(request, funcionario_logado)
                 print("Agendamento processado.")
             else:
                 mensagem = {
@@ -847,11 +1004,69 @@ def render_all_forms(request):
                     'classe': 'error'
                 }
             else:
-                print("ID do agendamento fornecido, chamando a função post_tac...")
-                # Chama a função post_tac passando o request e o funcionário logado
-                mensagem = post_tac(request, funcionario_logado)
-                print(f"Mensagem retornada da função post_tac: {mensagem}")
-        
+                try:
+                    # Obtém a data e hora atual em SP
+                    data_atual = get_current_sp_time()
+                    
+                    # Busca o agendamento
+                    agendamento = Agendamento.objects.get(id=agendamento_id)
+                    status_anterior = agendamento.status_tac or 'Não definido'
+                    
+                    # Verifica se o funcionário está logado
+                    nome_funcionario = (
+                        funcionario_logado.nome 
+                        if funcionario_logado 
+                        else request.user.username
+                    )
+                    
+                    # Cria a mensagem de atualização
+                    mensagem_update = (
+                        f"Atualização de Status TAC realizada em {data_atual.strftime('%d/%m/%Y às %H:%M:%S')} (Horário de Brasília)\n"
+                        f"Status anterior: {status_anterior}\n"
+                        f"Novo status: {status_tac}\n"
+                        f"Atualizado por: {nome_funcionario}"
+                    )
+                    
+                    # Atualiza o agendamento
+                    agendamento.status_tac = status_tac
+                    agendamento.mensagem_update_tac = mensagem_update
+                    if status_tac == 'PAGO':
+                        agendamento.data_pagamento_tac = data_atual
+                    agendamento.save()
+                    
+                    print(f"Agendamento {agendamento_id} atualizado com sucesso!")
+                    print(f"Mensagem de atualização: \n{mensagem_update}")
+                    
+                    # Registra o log de alteração
+                    LogAlteracao.objects.create(
+                        agendamento_id=str(agendamento.id),
+                        mensagem=mensagem_update,
+                        status=True,
+                        funcionario=funcionario_logado
+                    )
+                    print("Log de alteração registrado")
+                    
+                    mensagem = {
+                        'texto': 'Status TAC atualizado com sucesso!',
+                        'classe': 'success'
+                    }
+                    
+                except Agendamento.DoesNotExist as e:
+                    print(f"ERRO: Agendamento não encontrado - {str(e)}")
+                    mensagem = {
+                        'texto': f'Erro: Agendamento não encontrado',
+                        'classe': 'error'
+                    }
+                except Exception as e:
+                    print(f"ERRO: {str(e)}")
+                    mensagem = {
+                        'texto': f'Erro ao atualizar status TAC: {str(e)}',
+                        'classe': 'error'
+                    }
+                
+                print(f"Mensagem retornada: {mensagem}")
+            print("----- Finalizando atualização de status TAC -----\n")
+
         elif form_type == 'update_tac':
             print("\n----- Iniciando atualização de valor TAC -----")
             agendamento_id = request.POST.get('agendamento_id')
@@ -865,16 +1080,33 @@ def render_all_forms(request):
                 valor_tac = Decimal(valor_tac)
                 print(f"Valor TAC após formatação: R$ {valor_tac}")
                 
+                # Obtém a data e hora atual em SP
+                data_atual = get_current_sp_time()
+                
                 # Atualiza o agendamento
                 agendamento = Agendamento.objects.get(id=agendamento_id)
-                agendamento.tac = valor_tac
-                agendamento.save()
-                print(f"Agendamento {agendamento_id} atualizado com sucesso!")
+                valor_tac_anterior = agendamento.tac or Decimal('0.00')
                 
-                # Registra o log de alteraç��o
+                # Cria a mensagem de atualização
+                mensagem_update = (
+                    f"Atualização de TAC realizada em {data_atual.strftime('%d/%m/%Y às %H:%M:%S')} (Horário de Brasília)\n"
+                    f"Valor anterior: R$ {valor_tac_anterior:.2f}\n"
+                    f"Novo valor: R$ {valor_tac:.2f}\n"
+                    f"Atualizado por: {funcionario_logado.nome}"
+                )
+                
+                # Atualiza o agendamento com o novo valor e a mensagem
+                agendamento.tac = valor_tac
+                agendamento.mensagem_update_tac = mensagem_update
+                agendamento.save()
+                
+                print(f"Agendamento {agendamento_id} atualizado com sucesso!")
+                print(f"Mensagem de atualização: \n{mensagem_update}")
+                
+                # Registra o log de alteração
                 LogAlteracao.objects.create(
                     agendamento_id=str(agendamento.id),
-                    mensagem=f"Valor TAC atualizado para R$ {valor_tac}",
+                    mensagem=mensagem_update,
                     status=True,
                     funcionario=funcionario_logado
                 )
@@ -893,6 +1125,9 @@ def render_all_forms(request):
                 }
                 print("Mensagem de erro definida")
             print("----- Finalizando atualização de valor TAC -----\n")
+        elif form_type == 'cliente_rua':
+            print("\nProcessando formulário de Cliente Rua...")
+            mensagem = post_cliente_rua(request, funcionario_logado)
 
     else:
         print("\nRequest não é POST. Carregando formulários vazios...")

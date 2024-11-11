@@ -742,7 +742,8 @@ function handleSubModalFormSubmit(event) {
         'cadastrar_usuario', 
         'cadastro_funcionario',
         'importar_csv_money',
-        'importar_situacao'
+        'importar_situacao',
+        'cliente_rua'
     ];
 
     // Se o tipo de formulário estiver na lista permitida, permite o submit normal
