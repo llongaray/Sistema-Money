@@ -1,12 +1,12 @@
 from django.core.management.base import BaseCommand
 from django.db import connections, transaction
-from apps.siape.models import DebitoMargem, Cliente, Campanha
+from apps.siape.models import *
 import sqlite3
 from datetime import datetime
 import os
 
 class Command(BaseCommand):
-    help = 'Transfere registros de DebitoMargem de um banco SQLite para outro'
+    help = 'Transfere registros de DebitoMargem, Cliente e InformacoesPessoais entre bancos SQLite'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -36,7 +36,7 @@ class Command(BaseCommand):
         origem_path = options['origem']
         destino_path = options['destino']
         
-        # Verifica se os arquivos existem
+        # Verifica arquivos
         if not os.path.exists(origem_path):
             self.stdout.write(self.style.ERROR(f'Arquivo de origem não encontrado: {origem_path}'))
             return
@@ -44,11 +44,11 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f'Arquivo de destino não encontrado: {destino_path}'))
             return
 
-        # Prepara arquivo de log se necessário
+        # Prepara log
         log_file = None
         if options['log']:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            log_file = open(f'transferencia_debitos_{timestamp}.log', 'w')
+            log_file = open(f'transferencia_dados_{timestamp}.log', 'w')
             self.log(log_file, f'Iniciando transferência em {datetime.now()}')
 
         try:
@@ -56,93 +56,73 @@ class Command(BaseCommand):
             origem_conn = sqlite3.connect(origem_path)
             origem_cursor = origem_conn.cursor()
 
-            # Conta registros na origem
+            # Conta registros
+            origem_cursor.execute('SELECT COUNT(*) FROM siape_InformacoesPessoais')
+            total_info = origem_cursor.fetchone()[0]
+            origem_cursor.execute('SELECT COUNT(*) FROM siape_cliente')
+            total_clientes = origem_cursor.fetchone()[0]
             origem_cursor.execute('SELECT COUNT(*) FROM siape_debitomargem')
-            total_registros = origem_cursor.fetchone()[0]
+            total_debitos = origem_cursor.fetchone()[0]
 
             if not options['force']:
-                confirmacao = input(f'\nSerão transferidos {total_registros} registros.\nDeseja continuar? (sim/não): ')
+                self.stdout.write(f'\nSerão transferidos:')
+                self.stdout.write(f'- {total_info} registros de Informação Pessoal')
+                self.stdout.write(f'- {total_clientes} registros de Cliente')
+                self.stdout.write(f'- {total_debitos} registros de Débito Margem')
+                confirmacao = input('\nDeseja continuar? (sim/não): ')
                 if confirmacao.lower() not in ['sim', 's', 'yes', 'y']:
                     self.stdout.write(self.style.WARNING('Operação cancelada pelo usuário.'))
                     return
 
-            self.stdout.write(f'Iniciando transferência de {total_registros} registros...')
-
-            # Obtém todos os registros da origem
-            origem_cursor.execute('''
-                SELECT 
-                    dm.id, dm.banco, dm.orgao, dm.matricula, dm.upag, dm.pmt, 
-                    dm.prazo, dm.contrato, dm.saldo_5, dm.beneficio_5, 
-                    dm.benef_util_5, dm.benef_saldo_5, dm.bruta_35, dm.util_35,
-                    dm.saldo_35, dm.bruta_70, dm.saldo_70, dm.rend_bruto,
-                    dm.data_envio, c.cpf, camp.id
-                FROM siape_debitomargem dm
-                LEFT JOIN siape_cliente c ON dm.cliente_id = c.id
-                LEFT JOIN siape_campanha camp ON dm.campanha_id = camp.id
-            ''')
-
-            registros = origem_cursor.fetchall()
-            transferidos = 0
-            erros = 0
-
-            # Processa em lotes
-            BATCH_SIZE = 1000
+            # Limpa dados existentes
             with transaction.atomic():
-                for i in range(0, len(registros), BATCH_SIZE):
-                    batch = registros[i:i + BATCH_SIZE]
-                    for registro in batch:
-                        try:
-                            # Encontra ou cria o cliente no destino
-                            cpf = registro[19]  # índice do CPF na query
-                            cliente = Cliente.objects.get(cpf=cpf)
-                            
-                            # Encontra a campanha no destino
-                            campanha_id = registro[20]  # índice do campanha_id na query
-                            campanha = Campanha.objects.get(id=campanha_id)
+                self.stdout.write('Limpando dados existentes...')
+                DebitoMargem.objects.all().delete()
+                Cliente.objects.all().delete()
+                InformacoesPessoais.objects.all().delete()
 
-                            # Cria o novo registro de débito
-                            debito = DebitoMargem(
-                                cliente=cliente,
-                                campanha=campanha,
-                                banco=registro[1],
-                                orgao=registro[2],
-                                matricula=registro[3],
-                                upag=registro[4],
-                                pmt=registro[5],
-                                prazo=registro[6],
-                                contrato=registro[7],
-                                saldo_5=registro[8],
-                                beneficio_5=registro[9],
-                                benef_util_5=registro[10],
-                                benef_saldo_5=registro[11],
-                                bruta_35=registro[12],
-                                util_35=registro[13],
-                                saldo_35=registro[14],
-                                bruta_70=registro[15],
-                                saldo_70=registro[16],
-                                rend_bruto=registro[17],
-                                data_envio=registro[18]
-                            )
-                            debito.save()
-                            transferidos += 1
+            # Transfere InformacoesPessoais
+            self.stdout.write('Transferindo Informações Pessoais...')
+            origem_cursor.execute('SELECT * FROM siape_InformacoesPessoais')
+            for info in origem_cursor.fetchall():
+                InformacoesPessoais.objects.create(
+                    id=info[0],
+                    nome=info[1],
+                    cpf=info[2],
+                    # adicione outros campos conforme necessário
+                )
 
-                            if log_file:
-                                self.log(log_file, f'Registro transferido: Cliente {cpf}, Contrato {registro[7]}')
+            # Transfere Cliente
+            self.stdout.write('Transferindo Clientes...')
+            origem_cursor.execute('SELECT * FROM siape_cliente')
+            for cliente in origem_cursor.fetchall():
+                info_pessoal = InformacoesPessoais.objects.get(id=cliente[1])  # assumindo que cliente[1] é o info_pessoal_id
+                Cliente.objects.create(
+                    id=cliente[0],
+                    info_pessoal=info_pessoal,
+                    # adicione outros campos conforme necessário
+                )
 
-                        except Exception as e:
-                            erros += 1
-                            if log_file:
-                                self.log(log_file, f'ERRO: Cliente {cpf}, Contrato {registro[7]}: {str(e)}')
-                            continue
+            # Transfere DebitoMargem
+            self.stdout.write('Transferindo Débitos Margem...')
+            origem_cursor.execute('''
+                SELECT * FROM siape_debitomargem
+            ''')
+            for debito in origem_cursor.fetchall():
+                cliente = Cliente.objects.get(id=debito[1])  # assumindo que debito[1] é o cliente_id
+                campanha = Campanha.objects.get(id=debito[2])  # assumindo que debito[2] é o campanha_id
+                DebitoMargem.objects.create(
+                    id=debito[0],
+                    cliente=cliente,
+                    campanha=campanha,
+                    # adicione outros campos conforme necessário
+                )
 
-                    self.stdout.write(f'Processados {i + len(batch)} de {total_registros} registros...')
-
-            # Resultado final
             self.stdout.write(self.style.SUCCESS(
                 f'\nTransferência concluída!\n'
-                f'Total de registros: {total_registros}\n'
-                f'Transferidos com sucesso: {transferidos}\n'
-                f'Erros: {erros}'
+                f'Informações Pessoais: {total_info}\n'
+                f'Clientes: {total_clientes}\n'
+                f'Débitos: {total_debitos}'
             ))
 
         except Exception as e:
@@ -156,7 +136,6 @@ class Command(BaseCommand):
                 log_file.close()
 
     def log(self, file, message):
-        """Função auxiliar para escrever no arquivo de log"""
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         file.write(f'[{timestamp}] {message}\n')
         file.flush()

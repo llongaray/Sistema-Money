@@ -90,58 +90,46 @@ def post_status_tac(status_data, funcionario_logado):
         
         data_atual = get_current_sp_time()
         
-        # Se está mudando de PAGO para NÃO PAGO ou EM ESPERA
-        if status_anterior == 'PAGO' and novo_status in ['NÃO PAGO', 'EM ESPERA']:
-            # Busca e remove registro em RegisterMoney se existir
-            registro_money = RegisterMoney.objects.filter(
-                funcionario=agendamento.vendedor_loja,
-                cpf_cliente=agendamento.cpf_cliente,
-                valor_est=float(agendamento.tac),
-                status=True
-            ).first()
-            
-            if registro_money:
-                registro_money.delete()
-                print(f"Registro de TAC removido para CPF {agendamento.cpf_cliente}")
-                
-                # Registra o log de remoção
-                LogAlteracao.objects.create(
-                    agendamento_id=str(agendamento.id),
-                    mensagem=f"Registro de TAC removido devido à mudança de status para {novo_status}",
-                    status=True,
-                    funcionario=funcionario_logado
-                )
-        
         # Se está mudando para PAGO
-        elif novo_status == 'PAGO':
-            # Verifica se já existe registro com mesmo CPF e valor
+        if novo_status == 'PAGO':
+            # Busca registro existente com mesmo funcionário, CPF e valor
             registro_existente = RegisterMoney.objects.filter(
                 funcionario=agendamento.vendedor_loja,
                 cpf_cliente=agendamento.cpf_cliente,
-                valor_est=float(agendamento.tac),
+                valor_est=float(agendamento.tac) if agendamento.tac else None,
                 status=True
-            ).exists()
+            ).first()
             
-            # Só registra se não existir registro anterior
-            if not registro_existente and agendamento.tac and agendamento.vendedor_loja:
-                RegisterMoney.objects.create(
-                    funcionario=agendamento.vendedor_loja,
-                    cpf_cliente=agendamento.cpf_cliente,
-                    valor_est=float(agendamento.tac),
-                    status=True,
-                    data=timezone.now()
-                )
-                print(f"Valor TAC R$ {agendamento.tac} registrado para {agendamento.vendedor_loja.nome}")
+            if registro_existente:
+                # Atualiza o registro existente
+                registro_existente.loja = agendamento.loja_agendada
+                registro_existente.data = timezone.now()
+                registro_existente.save()
+                
+                print(f"Registro de TAC atualizado para funcionário {agendamento.vendedor_loja.nome if agendamento.vendedor_loja else 'N/A'}")
+                
             else:
-                print("Registro já existe ou agendamento sem TAC/vendedor definido")
-        
-        # Atualiza o status e data de pagamento
-        agendamento.status_tac = novo_status
-        if novo_status == 'PAGO':
+                # Cria novo registro
+                if agendamento.tac and agendamento.vendedor_loja:
+                    RegisterMoney.objects.create(
+                        funcionario=agendamento.vendedor_loja,
+                        loja=agendamento.loja_agendada,
+                        cpf_cliente=agendamento.cpf_cliente,
+                        valor_est=float(agendamento.tac),
+                        status=True,
+                        data=timezone.now()
+                    )
+                    print(f"Novo registro de TAC criado para {agendamento.vendedor_loja.nome if agendamento.vendedor_loja else 'N/A'}")
+                else:
+                    print("Agendamento sem TAC ou vendedor definido")
+
+            # Atualiza data de pagamento
             agendamento.data_pagamento_tac = data_atual
-        else:
+            
+        # Atualiza o status do TAC
+        agendamento.status_tac = novo_status
+        if novo_status != 'PAGO':
             agendamento.data_pagamento_tac = None
-        
         agendamento.save()
 
         # Registra o log de alteração de status
@@ -598,19 +586,50 @@ def get_all_agendamentos(agendamentos_base_query, funcionario_logado, nivel_carg
         'status': calcular_status_dias(a, timezone.now().date())  # Chama a funço para calcular o status
     } for a in todos_agendamentos]
 
-    # 1.1 Lojas - Ajustado para regras de acesso
-    if funcionario_logado:
-        if nivel_cargo == 'GERENTE':
-            # Gerente vê apenas sua loja
-            lojas = Loja.objects.filter(id=funcionario_logado.loja.id)
-        elif funcionario_logado.usuario.is_superuser or nivel_cargo not in ['ESTAGIO', 'PADRÃO']:
-            # Superuser e níveis superiores veem todas as lojas
-            lojas = Loja.objects.all()
-        else:
-            # Outros funcionários veem apenas sua loja
-            lojas = Loja.objects.filter(id=funcionario_logado.loja.id)
+    # 2. Novo dicionário específico para a tabela
+    # Primeiro, agrupa por CPF e pega apenas o mais recente
+    agendamentos_por_cpf = {}
+    for a in todos_agendamentos:
+        if a.cpf_cliente not in agendamentos_por_cpf or a.dia_agendado > agendamentos_por_cpf[a.cpf_cliente].dia_agendado:
+            agendamentos_por_cpf[a.cpf_cliente] = a
+
+    # Cria o dicionário para a tabela com apenas os agendamentos mais recentes
+    todos_agend_table_dict = []
+    for cpf, agendamento in agendamentos_por_cpf.items():
+        # Conta total de agendamentos para este CPF
+        total_agendamentos = sum(1 for a in todos_agendamentos if a.cpf_cliente == cpf)
+        
+        # Extrai o nome da loja após o ' - '
+        loja_nome = (agendamento.loja_agendada.nome.split(' - ')[-1] 
+                    if agendamento.loja_agendada and 
+                       agendamento.loja_agendada.nome and 
+                       ' - ' in agendamento.loja_agendada.nome 
+                    else (agendamento.loja_agendada.nome if agendamento.loja_agendada else ''))
+
+        # Pega apenas o primeiro nome do atendente
+        atendente_nome = (agendamento.atendente_agendou.nome.split()[0] 
+                         if agendamento.atendente_agendou else '')
+
+        todos_agend_table_dict.append({
+            'id': agendamento.id,
+            'nome_cliente': agendamento.nome_cliente,
+            'cpf_cliente': agendamento.cpf_cliente,
+            'numero_cliente': agendamento.numero_cliente,
+            'dia_agendado': agendamento.dia_agendado.strftime('%Y-%m-%d'),
+            'atendente_agendou': atendente_nome,
+            'loja_agendada': loja_nome,
+            'status': calcular_status_dias(agendamento, timezone.now().date()),
+            'total_agendamentos': total_agendamentos
+        })
+
+    # Ordena o dicionário final por data de agendamento (mais recente primeiro)
+    todos_agend_table_dict.sort(key=lambda x: x['dia_agendado'], reverse=True)
+
+    # Filtra lojas baseado no nível de acesso
+    if nivel_cargo in ['ESTAGIO', 'PADRÃO', 'GERENTE']:
+        lojas = Loja.objects.filter(id=funcionario_logado.loja.id)
     else:
-        lojas = Loja.objects.none()
+        lojas = Loja.objects.all()
 
     lojas_dict = {
         loja.id: {
@@ -621,21 +640,16 @@ def get_all_agendamentos(agendamentos_base_query, funcionario_logado, nivel_carg
     }
     print(f"Lojas disponíveis: {lojas_dict}")
 
-    # 1.2 Vendedores - Ajustado para regras de acesso
-    if funcionario_logado:
-        if nivel_cargo == 'GERENTE':
-            # Gerente vê funcionários da sua loja
-            funcionarios = Funcionario.objects.filter(loja=funcionario_logado.loja)
-        elif funcionario_logado.usuario.is_superuser or nivel_cargo not in ['ESTAGIO', 'PADRÃO']:
-            # Superuser e níveis superiores veem todos
-            funcionarios = Funcionario.objects.all()
-        else:
-            # Outros funcionários veem apenas a si mesmos
-            funcionarios = Funcionario.objects.filter(id=funcionario_logado.id)
+    # Filtra funcionários baseado no nível de acesso
+    if nivel_cargo in ['ESTAGIO', 'PADRÃO']:
+        funcionarios = Funcionario.objects.filter(id=funcionario_logado.id)
+    elif nivel_cargo == 'GERENTE':
+        funcionarios = Funcionario.objects.filter(loja=funcionario_logado.loja)
     else:
-        funcionarios = Funcionario.objects.none()
+        funcionarios = Funcionario.objects.all()
 
-    vendedores_lista_clientes = {
+    # Cria dicionário base de funcionários
+    funcionarios_dict = {
         funcionario.id: {
             'id': funcionario.id,
             'nome': funcionario.nome,
@@ -643,9 +657,15 @@ def get_all_agendamentos(agendamentos_base_query, funcionario_logado, nivel_carg
         }
         for funcionario in funcionarios
     }
-    print(f"Vendedores disponíveis: {vendedores_lista_clientes}")
 
-    return todos_agendamentos_dict, lojas_dict, vendedores_lista_clientes
+    # Usa o mesmo dicionário para vendedores e atendentes
+    vendedores_lista_clientes = funcionarios_dict.copy()
+    atendentes_dict = funcionarios_dict.copy()
+
+    print(f"Vendedores disponíveis: {vendedores_lista_clientes}")
+    print(f"Atendentes disponíveis: {atendentes_dict}")
+
+    return todos_agendamentos_dict, todos_agend_table_dict, lojas_dict, vendedores_lista_clientes, atendentes_dict
 
 def get_agendamentos_agendados(agendamentos_base_query, funcionario_logado, nivel_cargo):
     """Obtém todos os agendamentos com a tabulação 'AGENDADO'."""
@@ -811,8 +831,6 @@ def get_all_forms_and_objects(request):
             loja_funcionario = None
         else:
             return {
-                'form_agendamento': AgendamentoForm(funcionarios=Funcionario.objects.none()),
-                'form_confirmacao': ConfirmacaoAgendamentoForm(),
                 'funcionarios': [],
                 'lojas': [],
                 'clientes_loja': [],
@@ -824,32 +842,14 @@ def get_all_forms_and_objects(request):
                 'error_message': 'Usuário não tem um funcionário associado'
             }
 
-    # Obtém lista de funcionários baseada no nível de acesso
-    if request.user.is_superuser:
-        # Se for superuser, pega todos os funcionários
-        funcionarios = Funcionario.objects.all()
-        lojas = Loja.objects.all()
-    else:
-        # Se não for superuser, verifica o nível do funcionário logado
-        if nivel_cargo == 'GERENTE':
-            # Gerente vê apenas funcionários da sua loja
-            funcionarios = Funcionario.objects.filter(loja=funcionario_logado.loja)
-            lojas = Loja.objects.filter(id=funcionario_logado.loja.id)
-        elif nivel_cargo in ['ESTAGIO', 'PADRÃO']:
-            funcionarios = [funcionario_logado]  # Apenas o próprio funcionário
-            lojas = Loja.objects.filter(id=funcionario_logado.loja.id)
-        else:
-            # Outros níveis superiores veem todos
-            funcionarios = Funcionario.objects.all()
-            lojas = Loja.objects.all()
+    # Chama a função para obter todos os agendamentos, lojas e funcionários
+    todos_agendamentos_dict, todos_agend_table_dict, lojas_dict, vendedores_lista_clientes, atendentes_dict = get_all_agendamentos(
+        agendamentos_base_query, 
+        funcionario_logado, 
+        nivel_cargo
+    )
 
-    # Configuração de formulários com os funcionários filtrados
-    form_agendamento = AgendamentoForm(funcionarios=funcionarios)
-    form_confirmacao = ConfirmacaoAgendamentoForm()
-
-    # Chama a função para obter todos os agendamentos
-    todos_agendamentos_dict, lojas_dict, vendedores_lista_clientes = get_all_agendamentos(agendamentos_base_query, funcionario_logado, nivel_cargo)
-    # Chama a nova função para obter agendamentos 'AGENDADO'
+    # Chama a função para obter agendamentos 'AGENDADO'
     agendamentos_agendados_dict = get_agendamentos_agendados(agendamentos_base_query, funcionario_logado, nivel_cargo)
 
     # Chama a nova função para obter agendamentos 'REAGENDADO'
@@ -868,20 +868,19 @@ def get_all_forms_and_objects(request):
     print("\n----- Finalizando get_all_forms_and_objects -----\n")
     
     return {
-        'form_agendamento': form_agendamento,
-        'form_confirmacao': form_confirmacao,
-        'funcionarios': funcionarios,
-        'lojas': lojas_dict,  # Atualizado para retornar o dicionário de lojas
+        'funcionarios': atendentes_dict,  # Lista de atendentes
+        'lojas': lojas_dict,  # Dicionário de lojas
         'todos_agendamentos': todos_agendamentos_dict,
+        'todos_agend_table': todos_agend_table_dict,
         'agendamentos_agendados': agendamentos_agendados_dict,
         'agendamentos_reagendados': agendamentos_reagendados_dict,
         'agendamentos_confirmados': agendamentos_confirmados_dict,
-        'agendamentos_atrasados': agendamentos_atrasados_dict,  # Adiciona os agendamentos atrasados
+        'agendamentos_atrasados': agendamentos_atrasados_dict,
         'funcionario_logado': funcionario_logado,
         'nivel_cargo': nivel_cargo,
         'loja_funcionario': loja_funcionario,
-        'vendedores_lista_clientes': vendedores_lista_clientes,  # Adiciona o dicionário de vendedores ao retorno
-        'agendamentos_tac': agendamentos_tac,  # Adiciona o dicionário de agendamentos TAC ao retorno
+        'vendedores_lista_clientes': vendedores_lista_clientes,  # Lista de vendedores
+        'agendamentos_tac': agendamentos_tac,
     }
 
 ''' FIM DA ÁREA DE DADOS E DICIONARIOS DE FORM '''
@@ -1004,65 +1003,36 @@ def render_all_forms(request):
                     'classe': 'error'
                 }
             else:
-                try:
-                    # Obtém a data e hora atual em SP
-                    data_atual = get_current_sp_time()
-                    
-                    # Busca o agendamento
-                    agendamento = Agendamento.objects.get(id=agendamento_id)
-                    status_anterior = agendamento.status_tac or 'Não definido'
-                    
-                    # Verifica se o funcionário está logado
-                    nome_funcionario = (
-                        funcionario_logado.nome 
-                        if funcionario_logado 
-                        else request.user.username
-                    )
-                    
-                    # Cria a mensagem de atualização
-                    mensagem_update = (
-                        f"Atualização de Status TAC realizada em {data_atual.strftime('%d/%m/%Y às %H:%M:%S')} (Horário de Brasília)\n"
-                        f"Status anterior: {status_anterior}\n"
-                        f"Novo status: {status_tac}\n"
-                        f"Atualizado por: {nome_funcionario}"
-                    )
-                    
-                    # Atualiza o agendamento
-                    agendamento.status_tac = status_tac
-                    agendamento.mensagem_update_tac = mensagem_update
-                    if status_tac == 'PAGO':
-                        agendamento.data_pagamento_tac = data_atual
-                    agendamento.save()
-                    
-                    print(f"Agendamento {agendamento_id} atualizado com sucesso!")
-                    print(f"Mensagem de atualização: \n{mensagem_update}")
-                    
-                    # Registra o log de alteração
-                    LogAlteracao.objects.create(
-                        agendamento_id=str(agendamento.id),
-                        mensagem=mensagem_update,
-                        status=True,
-                        funcionario=funcionario_logado
-                    )
-                    print("Log de alteração registrado")
-                    
-                    mensagem = {
-                        'texto': 'Status TAC atualizado com sucesso!',
-                        'classe': 'success'
-                    }
-                    
-                except Agendamento.DoesNotExist as e:
-                    print(f"ERRO: Agendamento não encontrado - {str(e)}")
-                    mensagem = {
-                        'texto': f'Erro: Agendamento não encontrado',
-                        'classe': 'error'
-                    }
-                except Exception as e:
-                    print(f"ERRO: {str(e)}")
-                    mensagem = {
-                        'texto': f'Erro ao atualizar status TAC: {str(e)}',
-                        'classe': 'error'
-                    }
+                # Prepara os dados para post_status_tac
+                status_data = {
+                    'agendamento_id': agendamento_id,
+                    'status': status_tac
+                }
+                
+                # Chama post_status_tac com os dados preparados
+                mensagem = post_status_tac(status_data, funcionario_logado)
+                
+                # Se a atualização foi bem sucedida, registra a mensagem de atualização
+                if mensagem['classe'] == 'success':
+                    try:
+                        agendamento = Agendamento.objects.get(id=agendamento_id)
+                        data_atual = get_current_sp_time()
+                        
+                        # Cria a mensagem de atualização
+                        mensagem_update = (
+                            f"Atualização de Status TAC realizada em {data_atual.strftime('%d/%m/%Y às %H:%M:%S')} (Horário de Brasília)\n"
+                            f"Status anterior: {agendamento.status_tac or 'Não definido'}\n"
+                            f"Novo status: {status_tac}\n"
+                            f"Atualizado por: {funcionario_logado.nome if funcionario_logado else request.user.username}"
+                        )
+                        
+                        # Atualiza a mensagem no agendamento
+                        agendamento.mensagem_update_tac = mensagem_update
+                        agendamento.save()
+                        
+                        print(f"Mensagem de atualização registrada: \n{mensagem_update}")
+                    except Exception as e:
+                        print(f"Erro ao registrar mensagem de atualização: {str(e)}")
                 
                 print(f"Mensagem retornada: {mensagem}")
             print("----- Finalizando atualização de status TAC -----\n")
@@ -1145,7 +1115,7 @@ def render_all_forms(request):
     # Logs para debug
     print("\nContexto dos dados obtidos:")
     if 'funcionarios' in context_data:
-        print(f"\nFuncionários: {[f.nome for f in context_data['funcionarios']]}\n")
+        print(f"\nFuncionários: {[f['nome'] for f in context_data['funcionarios'].values()]}\n")
     else:
         print("\nNenhum funcionário encontrado no contexto\n")
     
@@ -1238,7 +1208,7 @@ def get_cards(periodo='mes'):
 def get_podium(periodo='mes'):
     """
     Calcula o pódio das lojas baseado nos valores registrados no RegisterMoney
-    considerando as metas ativas do RegisterMeta
+    usando o campo loja diretamente
     """
     print("\n----- Iniciando get_podium -----\n")
     
@@ -1256,13 +1226,12 @@ def get_podium(periodo='mes'):
     
     print(f"Metas ativas encontradas: {metas_ativas.count()}")
     
-    # Se não encontrar metas ativas, usa o mês atual
+    # Define o período
     if not metas_ativas.exists():
         print("Nenhuma meta ativa encontrada, usando mês atual")
         primeiro_dia = hoje.replace(day=1)
         ultimo_dia = (hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1))
     else:
-        # Prioriza meta EQUIPE INSS se existir
         meta_inss = metas_ativas.filter(tipo='EQUIPE', setor='INSS').first()
         meta_atual = meta_inss if meta_inss else metas_ativas.first()
         
@@ -1272,41 +1241,31 @@ def get_podium(periodo='mes'):
         primeiro_dia = meta_atual.range_data_inicio
         ultimo_dia = meta_atual.range_data_final
     
-    # Busca todos os registros de valores no período
+    # Busca registros com loja preenchida no período
     valores_range = RegisterMoney.objects.filter(
         data__date__range=[primeiro_dia, ultimo_dia],
-        status=True
-    )
+        status=True,
+        loja__isnull=False
+    ).select_related('loja')  # Otimiza a consulta incluindo os dados da loja
     
     print(f"Registros encontrados no período: {valores_range.count()}")
-    
-    # Obtém os IDs dos funcionários com registros
-    funcionarios_ids = valores_range.values_list('funcionario_id', flat=True).distinct()
-    
-    # Busca funcionários do departamento INSS
-    funcionarios = Funcionario.objects.filter(
-        id__in=funcionarios_ids,
-        departamento__grupo__name='INSS'
-    ).select_related('departamento', 'loja')
-    
-    print(f"Funcionários INSS encontrados: {funcionarios.count()}")
     
     # Dicionário para armazenar valores por loja
     valores_por_loja = {}
     
     # Processa os valores
     for venda in valores_range:
-        funcionario = next((f for f in funcionarios if f.id == venda.funcionario_id), None)
-        if not funcionario or not funcionario.loja:
+        loja = venda.loja
+        if not loja:
             continue
             
-        loja_id = funcionario.loja.id
+        loja_id = loja.id
         if loja_id not in valores_por_loja:
-            nome_loja = funcionario.loja.nome.split(' - ')[1] if ' - ' in funcionario.loja.nome else funcionario.loja.nome
+            nome_loja = loja.nome.split(' - ')[1] if ' - ' in loja.nome else loja.nome
             valores_por_loja[loja_id] = {
                 'id': loja_id,
                 'nome': nome_loja,
-                'logo': funcionario.loja.logo.url if funcionario.loja.logo else '/static/img/default-store.png',
+                'logo': loja.logo.url if loja.logo else '/static/img/default-store.png',
                 'total_fechamentos': Decimal('0'),
                 'meta_valor': next((m.valor for m in metas_ativas if m.loja == nome_loja), Decimal('0'))
             }

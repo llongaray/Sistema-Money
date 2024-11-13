@@ -167,5 +167,5 @@ function setupPageReload() {
     setInterval(() => {
         console.log('Página recarregada em:', new Date().toLocaleString());
         window.location.reload();
-    }, 10000000);
+    }, 10000);
 }

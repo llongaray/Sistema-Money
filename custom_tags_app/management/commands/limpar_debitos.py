@@ -1,20 +1,18 @@
 from django.core.management.base import BaseCommand
-from django.db import transaction
-from apps.siape.models import DebitoMargem
+from django.db import transaction, connection
+from apps.siape.models import DebitoMargem, Cliente, InformacoesPessoais
 from datetime import datetime
 
 class Command(BaseCommand):
-    help = 'Limpa todos os registros da tabela DebitoMargem'
+    help = 'Limpa todos os registros das tabelas e reinicia as sequências de IDs'
 
     def add_arguments(self, parser):
-        # Argumento opcional para backup antes de limpar
         parser.add_argument(
             '--backup',
             action='store_true',
             help='Criar backup dos dados antes de limpar',
         )
         
-        # Argumento opcional para confirmar a ação
         parser.add_argument(
             '--force',
             action='store_true',
@@ -24,11 +22,18 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         try:
             # Conta total de registros
-            total_registros = DebitoMargem.objects.count()
+            total_registros_debito = DebitoMargem.objects.count()
+            total_registros_cliente = Cliente.objects.count()
+            total_registros_info = InformacoesPessoais.objects.count()
             
             if not options['force']:
-                # Pede confirmação do usuário
-                confirmacao = input(f'\nATENÇÃO: Isso irá deletar {total_registros} registros da tabela DebitoMargem.\nTem certeza que deseja continuar? (sim/não): ')
+                confirmacao = input(
+                    f'\nATENÇÃO: Isso irá deletar todos os registros e reiniciar os IDs:\n'
+                    f'- {total_registros_debito} registros da tabela DebitoMargem\n'
+                    f'- {total_registros_cliente} registros da tabela Cliente\n'
+                    f'- {total_registros_info} registros da tabela InformacoesPessoais\n'
+                    'Tem certeza que deseja continuar? (sim/não): '
+                )
                 if confirmacao.lower() not in ['sim', 's', 'yes', 'y']:
                     self.stdout.write(self.style.WARNING('Operação cancelada pelo usuário.'))
                     return
@@ -57,12 +62,34 @@ class Command(BaseCommand):
                 
                 self.stdout.write(self.style.SUCCESS(f'Backup criado com sucesso em {filename}'))
 
-            # Deleta os registros usando transaction
+            # Deleta os registros e reinicia as sequências usando transaction
             with transaction.atomic():
-                self.stdout.write('Iniciando limpeza da tabela...')
-                DebitoMargem.objects.all().delete()
-                self.stdout.write(self.style.SUCCESS(f'Tabela limpa com sucesso! {total_registros} registros foram removidos.'))
+                with connection.cursor() as cursor:
+                    self.stdout.write('Iniciando limpeza das tabelas e reiniciando sequências...')
+                    
+                    # Desativa temporariamente as chaves estrangeiras para SQLite
+                    cursor.execute('PRAGMA foreign_keys=OFF;')
+                    
+                    # Limpa as tabelas e reinicia as sequências
+                    cursor.execute('DELETE FROM siape_debitomargem;')
+                    cursor.execute('DELETE FROM sqlite_sequence WHERE name="siape_debitomargem";')
+                    
+                    cursor.execute('DELETE FROM siape_cliente;')
+                    cursor.execute('DELETE FROM sqlite_sequence WHERE name="siape_cliente";')
+                    
+                    cursor.execute('DELETE FROM siape_informacoespessoais;')
+                    cursor.execute('DELETE FROM sqlite_sequence WHERE name="siape_informacoespessoais";')
+                    
+                    # Reativa as chaves estrangeiras
+                    cursor.execute('PRAGMA foreign_keys=ON;')
+                
+                self.stdout.write(self.style.SUCCESS(
+                    f'Tabelas limpas e sequências reiniciadas com sucesso!\n'
+                    f'- {total_registros_debito} registros removidos de DebitoMargem\n'
+                    f'- {total_registros_cliente} registros removidos de Cliente\n'
+                    f'- {total_registros_info} registros removidos de InformacoesPessoais'
+                ))
 
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f'Erro ao limpar tabela: {str(e)}'))
+            self.stdout.write(self.style.ERROR(f'Erro ao limpar tabelas: {str(e)}'))
             raise

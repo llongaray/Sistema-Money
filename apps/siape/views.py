@@ -16,6 +16,7 @@ import logging
 import os
 from datetime import datetime, time, timedelta
 from decimal import Decimal
+import time
 
 # Third party imports
 import pandas as pd
@@ -105,6 +106,43 @@ def parse_int(value):
     except (ValueError, TypeError) as e:
         print(f"Aviso: Valor inválido '{value}' convertido para 0: {str(e)}")
         return 0
+
+def parse_valor_br(value):
+    """
+    Converte string de valor monetário no formato brasileiro (1.234,56) para float
+    
+    Args:
+        value: String no formato brasileiro (ex: "1.234,56" ou "1234,56" ou "1.234")
+        
+    Returns:
+        float: Valor convertido ou 0.0 se inválido
+    """
+    try:
+        # Se for None, vazio ou só espaços
+        if not value or str(value).strip() in ['', '-']:
+            return 0.0
+            
+        # Converte para string caso seja número
+        value_str = str(value).strip()
+        
+        # Remove espaços e caracteres não numéricos (exceto , e .)
+        value_str = ''.join(c for c in value_str if c.isdigit() or c in ',.') 
+        
+        # Se ficou vazio após limpeza
+        if not value_str:
+            return 0.0
+            
+        # Trata valor no formato brasileiro
+        if ',' in value_str:
+            # Remove pontos de milhar e substitui vírgula por ponto
+            value_str = value_str.replace('.', '').replace(',', '.')
+        
+        result = float(value_str)
+        return result if result >= 0 else 0.0  # Retorna 0 se negativo
+        
+    except Exception as e:
+        print(f"Aviso: Valor monetário inválido '{value}' convertido para 0.0: {str(e)}")
+        return 0.0
 
 def parse_date(value):
     try:
@@ -354,7 +392,14 @@ def post_criar_campanha(form_data):
     return mensagem
 
 def importar_dados_csv(request):
-    print("Iniciando função importar_dados_csv")
+    print("\n----- Iniciando importação de dados CSV -----\n")
+    
+    clientes_criados = 0
+    clientes_atualizados = 0
+    erros_processamento = 0
+    linhas_com_erro = []
+    start_time = time.time()
+    linhas_processadas = 0
 
     if 'csv_file' not in request.FILES:
         message = 'Nenhum arquivo CSV foi enviado. Por favor, selecione um arquivo CSV para importar.'
@@ -396,7 +441,7 @@ def importar_dados_csv(request):
     COLUMN_MAPPING = {
         # Dados básicos
         'BANCO': 'BANCO',
-        'ORGAO': 'ORGAO',
+        'ORGAO': 'ORGAO', 
         'MATRICULA INSTITUIDOR': 'MATRICULA_INSTITUIDOR',
         'MATRICULA': 'MATRICULA',
         'UPAG': 'UPAG',
@@ -434,6 +479,8 @@ def importar_dados_csv(request):
         'Créditos': 'RendBruto',
         'Situacao Funcional': 'SITUACAO_FUNCIONAL',
         'Sit Func': 'SITUACAO_FUNCIONAL',
+        'sit_func': 'SITUACAO_FUNCIONAL',
+        'situacao_funcional': 'SITUACAO_FUNCIONAL',
     }
 
     # Normaliza os nomes das colunas do DataFrame
@@ -451,165 +498,190 @@ def importar_dados_csv(request):
     
     print("Colunas normalizadas:", df.columns.tolist())
 
-    # Obter os campos do modelo Cliente
-    cliente_fields = {field.name for field in Cliente._meta.get_fields()}
-    informacoes_fields = {field.name for field in InformacoesPessoais._meta.get_fields()}
+    total_linhas = len(df)
+    print(f"Total de linhas para processar: {total_linhas}")
 
-    # Processamento dos dados
-    erros_processamento = 0
-    linhas_com_erro = []
-    clientes_criados = 0
-    clientes_atualizados = 0
-
-    print("Iniciando processamento de dados")
     for index, row in df.iterrows():
-        print(f"\nProcessando linha {index + 1}")
-
-        # Normaliza o CPF
-        cpf_cliente = normalize_cpf(row['CPF'])
-        if not cpf_cliente:
-            print(f"CPF inválido na linha {index + 1}. Pulando linha.")
-            continue  # Pula para a próxima linha se o CPF for inválido
-
-        # 1. Verificar se o cliente já existe
+        linha_atual = index + 1
+        tempo_decorrido = time.time() - start_time
+        linhas_processadas = linha_atual
+        
+        # Calcula métricas de processamento
+        linhas_por_segundo = linhas_processadas / tempo_decorrido if tempo_decorrido > 0 else 0
+        tempo_estimado_restante = (total_linhas - linhas_processadas) / linhas_por_segundo if linhas_por_segundo > 0 else 0
+        
+        # Formata o tempo estimado
+        minutos_restantes = int(tempo_estimado_restante // 60)
+        segundos_restantes = int(tempo_estimado_restante % 60)
+        
         try:
-            print(f"Verificando cliente com CPF: {cpf_cliente}")
-            cliente, created = Cliente.objects.update_or_create(
-                cpf=cpf_cliente,
-                defaults={
-                    'nome': str(row.get('NOME', 'nao existe')).strip() or "nao existe",
-                    'uf': str(row.get('UF', 'nao existe')).strip() or "nao existe",
-                    'upag': str(row.get('UPAG', 'nao existe')).strip() or "nao existe",
-                    'situacao_funcional': str(row.get('Situacao Funcional', 'nao existe')).strip() or "nao existe",
-                    'data_nascimento': parse_date(row.get('data_nascimento', '2001-01-01')),
-                    'sexo': str(row.get('sexo', 'nao existe')).strip() or "nao existe",
-                    'rf_situacao': str(row.get('rf_situacao', 'nao existe')).strip() or "nao existe",
-                    'numero_beneficio_1': str(row.get('numero_beneficio_1', 'nao existe')).strip() or "nao existe",
-                    'especie_beneficio_1': str(row.get('especie_beneficio_1', 'nao existe')).strip() or "nao existe",
-                    'siape_tipo_siape': str(row.get('siape_TipoSIAPE', 'nao existe')).strip() or "nao existe",
-                    'siape_qtd_matriculas': parse_int(row.get('siape_Qtd_Matriculas', '0')),
-                    'siape_qtd_contratos': parse_int(row.get('siape_Qtd_Contratos', '0')),
-                    'flg_nao_perturbe': str(row.get('flg_NaoPerturbe_DoNotCall', '0')).lower() in ['1', 'true', 'sim', 'yes'],
-                }
-            )
+            with transaction.atomic():
+                try:
+                    cpf_cliente = normalize_cpf(row['CPF'])
+                    if not cpf_cliente:
+                        print("\n-------- ERRO ENCONTRADO ------------")
+                        erro_msg = f"Linha {linha_atual}: CPF inválido ou mal formatado: {row['CPF']}"
+                        linhas_com_erro.append(erro_msg)
+                        print(erro_msg + "\n")
+                        continue
 
-            cliente_id = cliente.id
-            print(f"ID do cliente: {cliente_id}")
+                    print(f"""
+Processando linha {linha_atual}/{total_linhas}
+CPF: {cpf_cliente}
+Velocidade: {linhas_por_segundo:.2f} linhas/segundo
+Tempo decorrido: {int(tempo_decorrido//60)}min {int(tempo_decorrido%60)}s
+Tempo estimado restante: {minutos_restantes}min {segundos_restantes}s
+""")
 
-            if created:
-                print(f"Cliente não encontrado. Criando cliente: {cliente.nome} (ID: {cliente_id})")
-                clientes_criados += 1
-            else:
-                print(f"Cliente encontrado: {cliente.nome} (ID: {cliente_id}). Atualizando cliente.")
-                # Atualiza os campos do cliente existente
-                for field in cliente_fields:
-                    if field in row:
-                        setattr(cliente, field, str(row[field]).strip() or "nao existe")
-                cliente.save()
-                clientes_atualizados += 1
+                    # 1. Verificar se o cliente existe
+                    print(f"Verificando se cliente com CPF {cpf_cliente} existe...")
+                    cliente = Cliente.objects.filter(cpf=cpf_cliente).first()
+                    
+                    if not cliente:
+                        print(f"Cliente com CPF {cpf_cliente} não encontrado. Criando novo cliente...")
+                        # Cliente não existe, criar novo
+                        cliente = Cliente.objects.create(
+                            cpf=cpf_cliente,
+                            nome=str(row.get('NOME', 'nao existe')).strip() or "nao existe",
+                            uf=str(row.get('UF', 'nao existe')).strip() or "nao existe",
+                            upag=str(row.get('UPAG', 'nao existe')).strip() or "nao existe",
+                            situacao_funcional=row.get('SITUACAO_FUNCIONAL', 'nao existe').strip() or "nao existe",
+                            data_nascimento=parse_date(row.get('data_nascimento', '2001-01-01')),
+                            sexo=str(row.get('sexo', 'nao existe')).strip() or "nao existe",
+                            rf_situacao=str(row.get('rf_situacao', 'nao existe')).strip() or "nao existe",
+                            numero_beneficio_1=str(row.get('numero_beneficio_1', 'nao existe')).strip() or "nao existe",
+                            especie_beneficio_1=str(row.get('especie_beneficio_1', 'nao existe')).strip() or "nao existe",
+                            siape_tipo_siape=str(row.get('siape_TipoSIAPE', 'nao existe')).strip() or "nao existe",
+                            siape_qtd_matriculas=parse_int(row.get('siape_Qtd_Matriculas', '0')),
+                            siape_qtd_contratos=parse_int(row.get('siape_Qtd_Contratos', '0')),
+                            flg_nao_perturbe=str(row.get('flg_NaoPerturbe_DoNotCall', '0')).lower() in ['1', 'true', 'sim', 'yes']
+                        )
+                        clientes_criados += 1
+                        
+                        # 2. Criar informações pessoais para novo cliente
+                        InformacoesPessoais.objects.create(
+                            cliente=cliente,
+                            uf=row.get('UF', "nao existe") or "nao existe",
+                            fne_celular_1=row.get('fne_celular_1', "nao existe") or "nao existe",
+                            fne_celular_1_flg_whats=str(row.get('fne_celular_1_flg_whats', '0')).lower() in ['1', 'true', 'sim', 'yes'],
+                            fne_celular_2=row.get('fne_celular_2', "nao existe") or "nao existe",
+                            fne_celular_2_flg_whats=str(row.get('fne_celular_2_flg_whats', '0')).lower() in ['1', 'true', 'sim', 'yes'],
+                            end_cidade_1=row.get('end_cidade_1', "nao existe") or "nao existe",
+                            email_1=row.get('email_1', "nao existe") or "nao existe",
+                            email_2=row.get('email_2', "nao existe") or "nao existe",
+                            email_3=row.get('email_3', "nao existe") or "nao existe"
+                        )
+                    else:
+                        print(f"Cliente encontrado: {cliente.nome} (CPF: {cpf_cliente})")
+                        # Cliente existe, verificar informações pessoais
+                        print(f"Buscando informações pessoais para cliente {cliente.nome}...")
+                        info_pessoais = InformacoesPessoais.objects.filter(cliente=cliente).first()
+                        if info_pessoais:
+                            print(f"Informações pessoais encontradas para {cliente.nome}. Atualizando...")
+                            # Atualizar informações pessoais existentes
+                            InformacoesPessoais.objects.filter(cliente=cliente).update(
+                                uf=row.get('UF', "nao existe") or "nao existe",
+                                fne_celular_1=row.get('fne_celular_1', "nao existe") or "nao existe",
+                                fne_celular_1_flg_whats=str(row.get('fne_celular_1_flg_whats', '0')).lower() in ['1', 'true', 'sim', 'yes'],
+                                fne_celular_2=row.get('fne_celular_2', "nao existe") or "nao existe",
+                                fne_celular_2_flg_whats=str(row.get('fne_celular_2_flg_whats', '0')).lower() in ['1', 'true', 'sim', 'yes'],
+                                end_cidade_1=row.get('end_cidade_1', "nao existe") or "nao existe",
+                                email_1=row.get('email_1', "nao existe") or "nao existe",
+                                email_2=row.get('email_2', "nao existe") or "nao existe",
+                                email_3=row.get('email_3', "nao existe") or "nao existe"
+                            )
+                        else:
+                            print(f"Informações pessoais não encontradas para {cliente.nome}. Criando novas...")
+                            # Criar informações pessoais se não existirem
+                            InformacoesPessoais.objects.create(
+                                cliente=cliente,
+                                uf=row.get('UF', "nao existe") or "nao existe",
+                                fne_celular_1=row.get('fne_celular_1', "nao existe") or "nao existe",
+                                fne_celular_1_flg_whats=str(row.get('fne_celular_1_flg_whats', '0')).lower() in ['1', 'true', 'sim', 'yes'],
+                                fne_celular_2=row.get('fne_celular_2', "nao existe") or "nao existe",
+                                fne_celular_2_flg_whats=str(row.get('fne_celular_2_flg_whats', '0')).lower() in ['1', 'true', 'sim', 'yes'],
+                                end_cidade_1=row.get('end_cidade_1', "nao existe") or "nao existe",
+                                email_1=row.get('email_1', "nao existe") or "nao existe",
+                                email_2=row.get('email_2', "nao existe") or "nao existe",
+                                email_3=row.get('email_3', "nao existe") or "nao existe"
+                            )
+                        clientes_atualizados += 1
+
+                    # 3. Verificar débito/margem
+                    pmt_valor = parse_valor_br(row.get('PMT', '0'))
+                    prazo_valor = parse_int(row.get('PRAZO', '0'))
+                    banco = str(row.get('BANCO', 'nao existe')).strip() or "nao existe"
+                    
+                    print(f"Verificando se débito já existe para cliente {cliente.nome}...")
+                    # Verifica se já existe um débito com os mesmos valores
+                    existing_debito = DebitoMargem.objects.filter(
+                        cliente=cliente,
+                        pmt=pmt_valor,
+                        prazo=prazo_valor,
+                        banco=banco,
+                        campanha=campanha
+                    ).first()
+
+                    if not existing_debito:
+                        debito = DebitoMargem.objects.create(
+                            cliente=cliente,
+                            campanha=campanha,
+                            banco=banco,
+                            orgao=str(row.get('ORGAO', 'nao existe')).strip() or "nao existe",
+                            matricula=str(row.get('MATRICULA', 'nao existe')).strip() or "nao existe",
+                            upag=parse_int(row.get('UPAG', '0')),
+                            pmt=pmt_valor,
+                            prazo=prazo_valor,
+                            contrato=str(row.get('CONTRATO', 'nao existe')).strip() or "nao existe",
+                            saldo_5=parse_valor_br(row.get('Saldo5', '0')),
+                            beneficio_5=parse_valor_br(row.get('Beneficio5', '0')),
+                            benef_util_5=parse_valor_br(row.get('BenefUtil5', '0')),
+                            benef_saldo_5=parse_valor_br(row.get('BenefSaldo5', '0')),
+                            bruta_35=parse_valor_br(row.get('Bruta35', '0')),
+                            util_35=parse_valor_br(row.get('Util35', '0')),
+                            saldo_35=parse_valor_br(row.get('Saldo35', '0')),
+                            bruta_70=parse_valor_br(row.get('Bruta70', '0')),
+                            saldo_70=parse_valor_br(row.get('Saldo70', '0')),
+                            rend_bruto=parse_valor_br(row.get('RendBruto', '0')),
+                            data_envio=data_hora
+                        )
+                        print(f"Débito criado para cliente {cliente.nome}")
+                    else:
+                        print(f"Débito já existe para o cliente {cliente.nome} (CPF: {cpf_cliente}) com PMT={pmt_valor}, Prazo={prazo_valor} e Banco={banco}")
+
+                except Exception as e:
+                    print("\n-------- ERRO ENCONTRADO ------------")
+                    erro_msg = f"Linha {linha_atual}: Erro ao processar dados do cliente {cpf_cliente}. Detalhes: {str(e)}"
+                    linhas_com_erro.append(erro_msg)
+                    print(erro_msg + "\n")
+                    raise
 
         except Exception as e:
+            if not any(str(e) in erro for erro in linhas_com_erro):
+                print("\n-------- ERRO ENCONTRADO ------------")
+                erro_msg = f"Linha {linha_atual}: Erro inesperado ao processar dados. Detalhes: {str(e)}"
+                linhas_com_erro.append(erro_msg)
+                print(erro_msg + "\n")
             erros_processamento += 1
-            erro_msg = f"Erro ao verificar cliente na linha {index + 1}, CPF: {cpf_cliente}: {str(e)}"
-            linhas_com_erro.append(erro_msg)
-            print(erro_msg)
-            continue  # Continua para a próxima linha
+            continue
 
-        # 2. Verificar informações pessoais
-        try:
-            print("Verificando informações pessoais")
-            informacoes_pessoais, created = InformacoesPessoais.objects.update_or_create(
-                cliente=cliente,
-                defaults={
-                    'uf': row.get('UF', "nao existe") or "nao existe",
-                    'fne_celular_1': row.get('fne_celular_1', "nao existe") or "nao existe",
-                    'fne_celular_1_flg_whats': str(row.get('fne_celular_1_flg_whats', '0')).lower() in ['1', 'true', 'sim', 'yes'],
-                    'fne_celular_2': row.get('fne_celular_2', "nao existe") or "nao existe",
-                    'fne_celular_2_flg_whats': str(row.get('fne_celular_2_flg_whats', '0')).lower() in ['1', 'true', 'sim', 'yes'],
-                    'end_cidade_1': row.get('end_cidade_1', "nao existe") or "nao existe",
-                    'email_1': row.get('email_1', "nao existe") or "nao existe",
-                    'email_2': row.get('email_2', "nao existe") or "nao existe",
-                    'email_3': row.get('email_3', "nao existe") or "nao existe",
-                }
-            )
-            print(f"Informações pessoais {'criadas' if created else 'atualizadas'} para o cliente: {cliente.nome}.")
-
-        except Exception as e:
-            erros_processamento += 1
-            erro_msg = f"Erro ao adicionar informações pessoais na linha {index + 1}, CPF: {cpf_cliente}: {str(e)}"
-            linhas_com_erro.append(erro_msg)
-            print(erro_msg)
-            continue  # Continua para a próxima linha
-
-        # 3. Verificar débito/margem
-        try:
-            print("Verificando débito/margem")
-            
-            # Preparar os valores numéricos
-            pmt_valor = parse_float(row.get('PMT', '0'))  # Se não existir, usa 0
-            prazo_valor = parse_int(row.get('PRAZO', '0'))  # Se não existir, usa 0
-            bruta_35_valor = parse_float(row.get('Bruta 35', '0'))  # Se não existir, usa 0
-            
-            print(f"Valores após parse: PMT={pmt_valor}, Prazo={prazo_valor}, Bruta 35={bruta_35_valor}")
-
-            # Verificar se já existe um débito/margem para o cliente com o mesmo PMT e prazo
-            existing_debito = DebitoMargem.objects.filter(cliente=cliente, pmt=pmt_valor, prazo=prazo_valor).first()
-
-            if existing_debito:
-                print(f"Débito/margem já existe para o cliente {cliente.nome} com PMT={pmt_valor} e prazo={prazo_valor}. Pulando criação.")
-            else:
-                # Criar um novo dicionário com os dados do débito/margem
-                debito_data = {
-                    'cliente': cliente,
-                    'campanha': campanha,
-                    'banco': str(row.get('BANCO', 'nao existe')).strip() or "nao existe",
-                    'orgao': str(row.get('ORGAO', 'nao existe')).strip() or "nao existe",
-                    'matricula': str(row.get('MATRICULA', 'nao existe')).strip() or "nao existe",
-                    'upag': parse_int(row.get('UPAG', '0')),  # Se não existir, usa 0
-                    'pmt': pmt_valor,
-                    'prazo': prazo_valor,
-                    'contrato': str(row.get('CONTRATO', 'nao existe')).strip() or "nao existe",
-                    'saldo_5': parse_float(row.get('Saldo5', '0')),  # Se não existir, usa 0
-                    'beneficio_5': parse_float(row.get('Beneficio5', '0')),  # Se não existir, usa 0
-                    'benef_util_5': parse_float(row.get('BenefUtil5', '0')),  # Se não existir, usa 0
-                    'benef_saldo_5': parse_float(row.get('BenefSaldo5', '0')),  # Se não existir, usa 0
-                    'bruta_35': bruta_35_valor,
-                    'util_35': parse_float(row.get('Util35', '0')),  # Se não existir, usa 0
-                    'saldo_35': parse_float(row.get('Saldo35', '0')),  # Se não existir, usa 0
-                    'bruta_70': parse_float(row.get('Bruta70', '0')),  # Se não existir, usa 0
-                    'saldo_70': parse_float(row.get('Saldo70', '0')),  # Se não existir, usa 0
-                    'rend_bruto': parse_float(row.get('RendBruto', '0')),  # Se não existir, usa 0
-                    'data_envio': data_hora  # Usa diretamente o data_hora do formulário
-                }
-
-                # Criar e salvar o novo registro de débito/margem
-                debito = DebitoMargem(**debito_data)
-                debito.save()
-                print(f"Débito/margem criado com sucesso: ID={debito.id}")
-
-                # Se debitos_margens é um ManyToManyField, adicione o débito ao cliente
-                if hasattr(cliente, 'debitos_margens'):
-                    cliente.debitos_margens.add(debito)
-
-        except Exception as e:
-            erros_processamento += 1
-            erro_msg = f"Erro ao adicionar débito/margem na linha {index + 1}, CPF: {cpf_cliente}: {str(e)}"
-            linhas_com_erro.append(erro_msg)
-            print(erro_msg)
-            continue  # Continua para a próxima linha
-
-        print(f"Linha {index + 1} processada com sucesso")
-
-    message = f'Dados importados com sucesso! Campanha: {campanha.nome}. {clientes_criados} novos clientes criados, {clientes_atualizados} clientes atualizados e {erros_processamento} erros de processamento.'
-    messages.success(request, message)
-    print(f"Sucesso: {message}")
-
+    # Mensagem final
     if linhas_com_erro:
-        error_message = "Erros encontrados nas seguintes linhas:\n" + "\n".join(linhas_com_erro)
+        error_message = "Erros encontrados durante a importação:\n" + "\n".join(linhas_com_erro)
         messages.warning(request, error_message)
-        print(error_message)
+        print("\nResumo dos erros encontrados:")
+        for erro in linhas_com_erro:
+            print(erro)
 
-    print("Finalizando função importar_dados_csv")
+    message = f"""
+    Importação finalizada:
+    - Clientes novos: {clientes_criados}
+    - Clientes atualizados: {clientes_atualizados}
+    - Erros encontrados: {len(linhas_com_erro)}
+    """
+    messages.success(request, message)
+    print(message)
+
     return redirect('siape:all_forms')
 
 # Antes de get_all_forms()

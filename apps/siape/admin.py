@@ -24,10 +24,20 @@ class DebitoMargemAdmin(admin.ModelAdmin):
 
 @admin.register(RegisterMoney)
 class RegisterMoneyAdmin(admin.ModelAdmin):
-    list_display = ('funcionario_id', 'cpf_cliente', 'valor_est', 'status', 'data')
-    search_fields = ('funcionario_id', 'cpf_cliente')
-    list_filter = ('status', 'data')
-    ordering = ('-data', 'funcionario_id')
+    list_display = ('get_funcionario_nome', 'get_loja_nome', 'cpf_cliente', 'valor_est', 'status', 'data')
+    search_fields = ('funcionario__nome', 'loja__nome', 'cpf_cliente')  # Busca pelo nome do funcionário e loja
+    list_filter = ('status', 'data', 'loja')
+    ordering = ('-data', 'funcionario__nome')
+
+    def get_funcionario_nome(self, obj):
+        return obj.funcionario.nome if obj.funcionario else '-'
+    get_funcionario_nome.short_description = 'Funcionário'  # Nome da coluna
+    get_funcionario_nome.admin_order_field = 'funcionario__nome'  # Permite ordenação
+
+    def get_loja_nome(self, obj):
+        return obj.loja.nome if obj.loja else '-'
+    get_loja_nome.short_description = 'Loja'  # Nome da coluna
+    get_loja_nome.admin_order_field = 'loja__nome'  # Permite ordenação
 
 @admin.register(RegisterMeta)
 class RegisterMetaAdmin(admin.ModelAdmin):

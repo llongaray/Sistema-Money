@@ -86,6 +86,7 @@ class DebitoMargem(models.Model):
 
 class RegisterMoney(models.Model):
     funcionario = models.ForeignKey('funcionarios.Funcionario', on_delete=models.CASCADE)  # Referência correta
+    loja = models.ForeignKey('funcionarios.Loja', on_delete=models.CASCADE, blank=True, null=True)
     cpf_cliente = models.CharField(max_length=11, blank=True, null=True)
     valor_est = models.FloatField(blank=True, null=True)
     status = models.BooleanField(default=True, blank=True, null=True)

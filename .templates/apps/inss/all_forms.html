@@ -32,6 +32,49 @@
         padding: 0;
     }
 </style>
+
+<style>
+    .filtros-wrapper {
+        padding: 15px;
+    }
+    
+    .filtros-container {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .filtro-input {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        flex: 1;
+        min-width: 120px;
+        height: 38px;
+        font-size: 14px;
+    }
+    
+    .text-filter {
+        background-color: #fff;
+    }
+    
+    .date-filter {
+        background-color: #fff;
+        cursor: pointer;
+    }
+    
+    .filtro-input:focus {
+        outline: none;
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    }
+    
+    .tabela-separator {
+        height: 1px;
+        background-color: #ddd;
+        margin: 0;
+    }
+</style>
 {% endblock %}
 
 {% block pre_content %}
@@ -165,15 +208,14 @@
                         
                         <div class="form-row">
                             <label>Funcionário:*</label>
-                                <select name="atendente_agendou" 
-                                        required
-                                        oninvalid="this.setCustomValidity('Por favor, selecione um funcionário')"
-                                        onchange="this.setCustomValidity('')">
-                                    <option value="">Selecione um funcionário</option>
-                                    {% for funcionario in funcionarios %}
-                                        <option value="{{ funcionario.id }}">{{ funcionario.nome }}</option>
-                                    {% endfor %}
-                                </select>
+                            <select name="atendente_agendou" required
+                            oninvalid="this.setCustomValidity('Por favor, selecione um funcionário')"
+                            onchange="this.setCustomValidity('')">
+                                <option value="">Selecione um funcionário</option>
+                                {% for funcionario_id, funcionario in funcionarios.items %}
+                                    <option value="{{ funcionario_id }}">{{ funcionario.nome }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                         
                         <button type="submit" class="btn-primary">Agendar</button>
@@ -370,6 +412,38 @@
                     <h5 class="modal-title">Confirmação Agendamento</h5>
                     <button type="button" class="btn-close" data-dismiss="modal"></button>
                 </div>
+                <!-- Adicionar filtros -->
+                <div class="filtros-wrapper">
+                    <div class="filtros-container">
+                        <input type="text" 
+                            id="filtroNome" 
+                            class="filtro-input text-filter" 
+                            placeholder="Nome...">
+                        
+                        <input type="date" 
+                            id="filtroDia" 
+                            class="filtro-input date-filter" 
+                            placeholder="Data...">
+                        
+                        <input type="text" 
+                            id="filtroAtendente" 
+                            class="filtro-input text-filter" 
+                            placeholder="Atendente...">
+                            
+                        <input type="text" 
+                            id="filtroLoja" 
+                            class="filtro-input text-filter" 
+                            placeholder="Loja...">
+                        
+                        <input type="text" 
+                            id="filtroStatus" 
+                            class="filtro-input text-filter" 
+                            placeholder="Status...">
+                    </div>
+                </div>
+                
+                <div class="tabela-separator"></div>
+                
                 <div class="modal-body">
                     <table class="wp-style-table">
                         <thead>
@@ -382,23 +456,23 @@
                                 <th>Status</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="tabelaAgendamentos">
                             {% for agendamento in agendamentos_agendados %}
-                            <tr>
+                            <tr class="linha-agendamento">
                                 <td>
                                     <button type="button" class="btn-link abrir-sub-modal" data-agendamento-id="{{ agendamento.id }}" onclick="abrirSubModal('#modalConfirmacaoAgendamento', 'confirmacao', {{ agendamento.id }})">
                                         {{ agendamento.nome_cliente }}
                                     </button>
                                 </td>
                                 <td>{{ agendamento.numero_cliente }}</td>
-                                <td>{{ agendamento.dia_agendado }}</td>
+                                <td data-dia="{{ agendamento.dia_agendado|date:'Y-m-d' }}">{{ agendamento.dia_agendado }}</td>
                                 <td>{{ agendamento.atendente_agendou }}</td>
                                 <td>{{ agendamento.loja_agendada }}</td>
                                 <td>{{ agendamento.status }}</td>
                             </tr>
                             {% empty %}
-                            <tr>
-                                <td colspan="5" class="text-center">Nenhum agendamento para confirmação</td>
+                            <tr id="nenhumResultado">
+                                <td colspan="6" class="text-center">Nenhum agendamento para confirmação</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -521,29 +595,11 @@
                 <div class="modal-body">
                     <!-- Filtros atualizados -->
                     <div class="filtros-container">
-                        <input type="text" 
-                            id="filtroNome" 
-                            class="filtro-input" 
-                            placeholder="Nome...">
-                        
-                        <input type="text" 
-                            id="filtroCPF" 
-                            class="filtro-input" 
-                            placeholder="CPF...">
-                        
-                        <input type="date" 
-                            id="filtroData" 
-                            class="filtro-input">
-                        
-                        <input type="text" 
-                            id="filtroAtendente" 
-                            class="filtro-input" 
-                            placeholder="Atendente...">
-                        
-                        <input type="text" 
-                            id="filtroLoja" 
-                            class="filtro-input" 
-                            placeholder="Loja...">
+                        <input type="text" id="filtroNome" class="filtro-input" placeholder="Nome...">
+                        <input type="text" id="filtroCPF" class="filtro-input" placeholder="CPF...">
+                        <input type="date" id="filtroData" class="filtro-input">
+                        <input type="text" id="filtroAtendente" class="filtro-input" placeholder="Atendente...">
+                        <input type="text" id="filtroLoja" class="filtro-input" placeholder="Loja...">
                     </div>
 
                     <div class="tabela-separator"></div>
@@ -561,11 +617,33 @@
                                 <th>Atendente</th>
                                 <th>Loja</th>
                                 <th>Status</th>
-                                <th>Total Agend.</th>  <!-- Nova coluna -->
+                                <th>Total Agend.</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- Será preenchido via jQuery -->
+                            {% for agendamento in todos_agend_table %}
+                                <tr>
+                                    <td>
+                                        <button type="button" 
+                                                class="btn-link abrir-sub-modal" 
+                                                data-agendamento-id="{{ agendamento.id }}"
+                                                onclick="abrirSubModal('#modalConfirmacaoAgendamento', 'confirmacao', {{ agendamento.id }})">
+                                            {{ agendamento.nome_cliente }}
+                                        </button>
+                                    </td>
+                                    <td>{{ agendamento.cpf_cliente }}</td>
+                                    <td>{{ agendamento.numero_cliente }}</td>
+                                    <td data-date="{{ agendamento.dia_agendado }}">{{ agendamento.dia_agendado }}</td>
+                                    <td>{{ agendamento.atendente_agendou }}</td>
+                                    <td>{{ agendamento.loja_agendada }}</td>
+                                    <td>{{ agendamento.status }}</td>
+                                    <td>{{ agendamento.total_agendamentos }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center">Nenhum agendamento encontrado</td>
+                                </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -581,6 +659,30 @@
                     <h5 class="modal-title">Agendamentos com TAC</h5>
                     <button type="button" class="btn-close" data-dismiss="modal"></button>
                 </div>
+                <!-- Adicionar filtros -->
+                <div class="filtros-wrapper">
+                    <div class="filtros-container">
+                        <input type="text" 
+                            id="filtroNomeTAC" 
+                            class="filtro-input" 
+                            placeholder="Nome...">
+                        
+                        <input type="text" 
+                            id="filtroCPFTAC" 
+                            class="filtro-input" 
+                            placeholder="CPF...">
+                        
+                        <select id="filtroStatusTAC" class="filtro-input">
+                            <option value="">Status...</option>
+                            <option value="PAGO">PAGO</option>
+                            <option value="NAO_PAGO">NÃO PAGO</option>
+                            <option value="EM_ESPERA">EM ESPERA</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="tabela-separator"></div>
+                
                 <div class="modal-body tac-table-container">
                     <table class="tac-table">
                         <thead>
@@ -911,8 +1013,89 @@
 
 <!-- ========================= DADOS INICIAIS ========================= -->
 
-
 <!-- ========================= FUNÇÕES DE FILTRO ========================= -->
+<script>
+    $(document).ready(function() {
+        // Função para filtrar a tabela de agendamentos
+        function filtrarTabelaAgendamentos() {
+            var nome = $("#filtroNome").val().toLowerCase();
+            var dia = $("#filtroDia").val(); // Formato: YYYY-MM-DD
+            var atendente = $("#filtroAtendente").val().toLowerCase();
+            var loja = $("#filtroLoja").val().toLowerCase();
+            var status = $("#filtroStatus").val().toLowerCase();
+    
+            $("#tabelaAgendamentos tr.linha-agendamento").each(function() {
+                var row = $(this);
+                var nomeCliente = row.find("button").text().toLowerCase();
+                var diaAgendado = row.find("td[data-dia]").text().trim(); // Pegamos o texto da célula
+                var atendenteTexto = row.find("td:nth-child(4)").text().toLowerCase();
+                var lojaTexto = row.find("td:nth-child(5)").text().toLowerCase();
+                var statusTexto = row.find("td:nth-child(6)").text().toLowerCase();
+    
+                var matchNome = nomeCliente.includes(nome);
+                var matchDia = !dia || (diaAgendado && diaAgendado.includes(dia));
+                var matchAtendente = atendenteTexto.includes(atendente);
+                var matchLoja = lojaTexto.includes(loja);
+                var matchStatus = statusTexto.includes(status);
+    
+                if (matchNome && matchDia && matchAtendente && matchLoja && matchStatus) {
+                    row.show();
+                } else {
+                    row.hide();
+                }
+            });
+    
+            // Verifica se há resultados visíveis
+            var temResultados = $("#tabelaAgendamentos tr.linha-agendamento:visible").length > 0;
+            $("#nenhumResultado").toggle(!temResultados);
+        }
+
+        // Função para filtrar a tabela TAC
+        function filtrarTabelaTAC() {
+            var nome = $("#filtroNomeTAC").val().toLowerCase();
+            var cpf = $("#filtroCPFTAC").val().toLowerCase();
+            var status = $("#filtroStatusTAC").val().toLowerCase();
+    
+            $("#modalAgendamentosTAC .tac-row").each(function() {
+                var row = $(this);
+                var nomeCliente = row.find(".td-nome").text().toLowerCase();
+                var cpfCliente = row.find(".td-cpf").text().toLowerCase();
+                var statusCliente = row.find(".td-status .status-badge").text().toLowerCase();
+    
+                var matchNome = nomeCliente.includes(nome);
+                var matchCPF = cpfCliente.includes(cpf);
+                var matchStatus = status === "" || statusCliente === status;
+    
+                if (matchNome && matchCPF && matchStatus) {
+                    row.show();
+                } else {
+                    row.hide();
+                }
+            });
+        }
+    
+        // Event listeners para os filtros de agendamentos
+        $("#filtroNome, #filtroAtendente, #filtroLoja, #filtroStatus").on("keyup change", function() {
+            filtrarTabelaAgendamentos();
+        });
+    
+        // Listener específico para o filtro de data
+        $("#filtroDia").on("change", function() {
+            filtrarTabelaAgendamentos();
+        });
+    
+        // Limpar filtros quando o modal for fechado
+        $("#modalConfiAgendamentoTabela").on("hidden.bs.modal", function() {
+            $("#filtroNome, #filtroDia, #filtroAtendente, #filtroLoja, #filtroStatus").val("");
+            filtrarTabelaAgendamentos();
+        });
+
+        // Event listeners para os filtros TAC
+        $("#filtroNomeTAC, #filtroCPFTAC, #filtroStatusTAC").on("keyup change", function() {
+            filtrarTabelaTAC();
+        });
+    });
+</script>
 <script>
     function handleTabulacaoVendedorRua() {
         const tabulacao = document.getElementById('tabulacao_vendedor').value;
@@ -927,15 +1110,6 @@
             observacaoContainer.style.display = 'block';
         }
     }
-    $(document).ready(function() {
-        // Função para filtrar a tabela
-        $("#filtroCPF").on("keyup", function() {
-            var value = $(this).val().toLowerCase();
-            $("#tabelaTodosAgendamentos tbody tr").filter(function() {
-                $(this).toggle($(this).children("td:eq(1)").text().toLowerCase().indexOf(value) > -1)
-            });
-        });
-    });
 </script>
 
 <!-- ========================= FUNÇÕES LOCAIS E DICIONÁRIOS ========================= -->

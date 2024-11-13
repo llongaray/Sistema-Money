@@ -39,10 +39,6 @@ function openModal(modalId) {
             console.log('Chamando preencherTabelaClientes');
             preencherTabelaClientes();
         }
-        else if (cleanedModalId === 'modalTodosAgendamentos') {
-            console.log('Chamando preencherTabelaTodosAgendamentos');
-            preencherTabelaTodosAgendamentos();
-        }
         else if (cleanedModalId === 'modalAgendamentosAtrasados') {
             console.log('Chamando preencherTabelaAtrasados');
             preencherTabelaAtrasados();
@@ -304,59 +300,7 @@ function converterParaFormatoClienteLoja(agendamento) {
     };
 }
 
-function preencherTabelaTodosAgendamentos() {
-    console.log('Iniciando preenchimento da tabela de todos os agendamentos');
-    
-    const $tabela = $('#modalTodosAgendamentos #tabelaTodosAgendamentos tbody');
-    
-    if (!$tabela.length) {
-        console.error('Tabela de todos os agendamentos não encontrada!');
-        return;
-    }
-    
-    $tabela.empty();
-    console.log('Tabela limpa');
 
-    const agendamentosPorCPF = {};
-    todosAgendamentos.forEach(agendamento => {
-        if (!agendamentosPorCPF[agendamento.cpf_cliente]) {
-            agendamentosPorCPF[agendamento.cpf_cliente] = [];
-        }
-        agendamentosPorCPF[agendamento.cpf_cliente].push(agendamento);
-    });
-
-    Object.values(agendamentosPorCPF).forEach(agendamentos => {
-        agendamentos.sort((a, b) => new Date(b.dia_agendado) - new Date(a.dia_agendado));
-        
-        const agendamentoRecente = agendamentos[0];
-        const totalAgendamentos = agendamentos.length;
-
-        const nomeElement = `<button type="button" class="btn-link abrir-sub-modal" 
-            onclick="abrirSubModal('#modalEdicaoCliente', 'listaClientes', '${agendamentoRecente.id}')">
-            ${agendamentoRecente.nome_cliente}
-        </button>`;
-
-        const dataCompleta = new Date(agendamentoRecente.dia_agendado);
-        const dataFormatada = dataCompleta.toISOString().split('T')[0];
-
-        const row = `
-            <tr>
-                <td>${nomeElement}</td>
-                <td>${agendamentoRecente.cpf_cliente}</td>
-                <td>${agendamentoRecente.numero_cliente}</td>
-                <td data-date="${agendamentoRecente.dia_agendado}">${dataFormatada}</td>
-                <td>${agendamentoRecente.atendente_nome}</td>
-                <td>${agendamentoRecente.loja_nome}</td>
-                <td>${agendamentoRecente.status_dias}</td>
-                <td>${totalAgendamentos}</td>
-            </tr>
-        `;
-        
-        $tabela.append(row);
-    });
-
-    console.log('Preenchimento da tabela de todos os agendamentos concluído');
-}
 
 function handleTabulacaoChange() {
     const modal = document.getElementById('modalConfirmacaoAgendamento');
@@ -543,153 +487,6 @@ document.querySelectorAll('.modal').forEach(modal => {
 document.getElementById('modalConfirmacaoAgendamento')
     .querySelector('#tabulacaoAtendente')
     .addEventListener('change', handleTabulacaoChange);
-
-$(document).ready(function() {
-    $('[data-target="#modalListaClientes"]').on('click', function() {
-        console.log('Botão de lista de clientes clicado');
-        openModal('modalListaClientes');
-        return false;
-    });
-
-    $("#filtroCPF").on("keyup", function() {
-        const value = $(this).val().toLowerCase();
-        $("#tabelaTodosAgendamentos tbody tr").filter(function() {
-            $(this).toggle($(this).children("td:eq(1)").text().toLowerCase().indexOf(value) > -1);
-        });
-    });
-
-    $('.sortable[data-sort="data"]').on('click', function() {
-        sortDirection = sortDirection === 'desc' ? 'asc' : 'desc';
-        const icon = $(this).find('i');
-        icon.removeClass('fa-sort-down fa-sort-up')
-            .addClass(sortDirection === 'desc' ? 'fa-sort-down' : 'fa-sort-up');
-        preencherTabelaTodosAgendamentos();
-    });
-
-    $('.sortable').css('cursor', 'pointer');
-
-    $('.text-uppercase').on('input', function() {
-        this.value = this.value.toUpperCase();
-    });
-
-    // Função para aplicar todos os filtros
-    function aplicarFiltros() {
-        const filtroNome = $("#filtroNome").val().toLowerCase();
-        const filtroCPF = $("#filtroCPF").val().toLowerCase();
-        const filtroData = $("#filtroData").val();
-        const filtroAtendente = $("#filtroAtendente").val().toLowerCase();
-        const filtroLoja = $("#filtroLoja").val().toLowerCase();
-
-        $("#tabelaTodosAgendamentos tbody tr").each(function() {
-            const $row = $(this);
-            const nome = $row.find("td:eq(0)").text().toLowerCase();
-            const cpf = $row.find("td:eq(1)").text().toLowerCase();
-            const data = $row.find("td:eq(3)").attr("data-date");
-            const atendente = $row.find("td:eq(4)").text().toLowerCase();
-            const loja = $row.find("td:eq(5)").text().toLowerCase();
-
-            const matchNome = !filtroNome || nome.includes(filtroNome);
-            const matchCPF = !filtroCPF || cpf.includes(filtroCPF);
-            const matchData = !filtroData || data.includes(filtroData);
-            const matchAtendente = !filtroAtendente || atendente.includes(filtroAtendente);
-            const matchLoja = !filtroLoja || loja.includes(filtroLoja);
-
-            const shouldShow = matchNome && matchCPF && matchData && 
-                             matchAtendente && matchLoja;
-            
-            $row.toggle(shouldShow);
-        });
-    }
-
-    // Adicionar eventos para todos os campos de filtro
-    $("#filtroNome, #filtroCPF, #filtroData, #filtroAtendente, #filtroLoja")
-        .on("keyup change", aplicarFiltros);
-
-    // Evento para limpar todos os filtros
-    $("#limparFiltros").on("click", function() {
-        $("#filtroNome, #filtroCPF, #filtroData, #filtroAtendente, #filtroLoja")
-            .val('');
-        $("#tabelaTodosAgendamentos tbody tr").show();
-    });
-
-    // Adicionar debounce para melhor performance
-    let timeoutId;
-    $(".form-control").on("keyup change", function() {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(aplicarFiltros, 300);
-    });
-
-    // Função para aplicar filtros na tabela de clientes loja
-    function aplicarFiltrosClientesLoja() {
-        const filtroNome = $("#filtroNomeClientes").val().toLowerCase();
-        const filtroCPF = $("#filtroCPFClientes").val().toLowerCase();
-        const filtroAtendente = $("#filtroAtendenteClientes").val().toLowerCase();
-        const filtroLoja = $("#filtroLojaClientes").val().toLowerCase();
-
-        $("#tabelaClientesLoja tbody tr").each(function() {
-            const $row = $(this);
-            const nome = $row.find("td:eq(0)").text().toLowerCase();
-            const cpf = $row.find("td:eq(1)").text().toLowerCase();
-            const atendente = $row.find("td:eq(4)").text().toLowerCase();
-            const loja = $row.find("td:eq(5)").text().toLowerCase();
-
-            const matchNome = !filtroNome || nome.includes(filtroNome);
-            const matchCPF = !filtroCPF || cpf.includes(filtroCPF);
-            const matchAtendente = !filtroAtendente || atendente.includes(filtroAtendente);
-            const matchLoja = !filtroLoja || loja.includes(filtroLoja);
-
-            const shouldShow = matchNome && matchCPF && matchAtendente && matchLoja;
-            
-            $row.toggle(shouldShow);
-        });
-    }
-
-    // Eventos para os filtros da tabela de clientes loja
-    let timeoutIdClientesLoja;
-    $("#filtroNomeClientes, #filtroCPFClientes, #filtroAtendenteClientes, #filtroLojaClientes")
-        .on("keyup change", function() {
-            clearTimeout(timeoutIdClientesLoja);
-            timeoutIdClientesLoja = setTimeout(aplicarFiltrosClientesLoja, 300);
-        });
-
-    // Função para aplicar filtros na tabela de agendamentos atrasados
-    function aplicarFiltrosAtrasados() {
-        const filtroNome = $("#filtroNomeAtrasados").val().toLowerCase();
-        const filtroCPF = $("#filtroCPFAtrasados").val().toLowerCase();
-        const filtroAtendente = $("#filtroAtendenteAtrasados").val().toLowerCase();
-        const filtroLoja = $("#filtroLojaAtrasados").val().toLowerCase();
-
-        $("#modalAgendamentosAtrasados .wp-style-table tbody tr").each(function() {
-            const $row = $(this);
-            
-            // Ignora a linha de "nenhum cliente encontrado"
-            if ($row.find('td[colspan]').length) return;
-
-            // Garantir que os índices correspondam à ordem das colunas na tabela
-            const nome = $row.find("td:eq(0)").text().toLowerCase();
-            const cpf = $row.find("td:eq(1)").text().toLowerCase();
-            const atendente = $row.find("td:eq(4)").text().toLowerCase();
-            const loja = $row.find("td:eq(5)").text().toLowerCase();
-
-            const matchNome = !filtroNome || nome.includes(filtroNome);
-            const matchCPF = !filtroCPF || cpf.includes(filtroCPF);
-            const matchAtendente = !filtroAtendente || atendente.includes(filtroAtendente);
-            const matchLoja = !filtroLoja || loja.includes(filtroLoja);
-
-            const shouldShow = matchNome && matchCPF && matchAtendente && matchLoja;
-            
-            $row.toggle(shouldShow);
-        });
-    }
-
-    // Eventos para os filtros da tabela de agendamentos atrasados
-    let timeoutIdAtrasados;
-    $("#filtroNomeAtrasados, #filtroCPFAtrasados, #filtroAtendenteAtrasados, #filtroLojaAtrasados")
-        .on("keyup change", function() {
-            clearTimeout(timeoutIdAtrasados);
-            timeoutIdAtrasados = setTimeout(aplicarFiltrosAtrasados, 300);
-        });
-});
 
 function closeSubModal(modalId) {
     const cleanedModalId = modalId.replace('#', '');
@@ -888,33 +685,125 @@ function preencherTabelaAtrasados() {
     console.log('Preenchimento da tabela de atrasados concluído');
 }
 
-// Função para aplicar filtros na tabela de atrasados
-function aplicarFiltrosAtrasados() {
-    const filtroNome = $("#filtroNomeAtrasados").val().toLowerCase();
-    const filtroCPF = $("#filtroCPFAtrasados").val().toLowerCase();
-    const filtroAtendente = $("#filtroAtendenteAtrasados").val().toLowerCase();
-    const filtroLoja = $("#filtroLojaAtrasados").val().toLowerCase();
+$(document).ready(function() {
+    // Função para filtrar a tabela de todos os agendamentos
+    function filtrarTabelaTodosAgendamentos() {
+        var nome = $("#modalTodosAgendamentos #filtroNome").val().toLowerCase();
+        var cpf = $("#modalTodosAgendamentos #filtroCPF").val().toLowerCase();
+        var dia = $("#modalTodosAgendamentos #filtroData").val();
+        var atendente = $("#modalTodosAgendamentos #filtroAtendente").val().toLowerCase();
+        var loja = $("#modalTodosAgendamentos #filtroLoja").val().toLowerCase();
 
-    $("#modalAgendamentosAtrasados .wp-style-table tbody tr").each(function() {
-        const $row = $(this);
-        
-        // Ignora a linha de "nenhum cliente encontrado"
-        if ($row.find('td[colspan]').length) return;
+        $("#tabelaTodosAgendamentos tbody tr").each(function() {
+            var row = $(this);
+            var nomeCliente = row.find("button").text().toLowerCase();
+            var cpfCliente = row.find("td:nth-child(2)").text().toLowerCase();
+            var diaAgendado = row.find("td[data-date]").attr("data-date");
+            var atendenteTexto = row.find("td:nth-child(5)").text().toLowerCase();
+            var lojaTexto = row.find("td:nth-child(6)").text().toLowerCase();
 
-        // Garantir que os índices correspondam à ordem das colunas na tabela
-        const nome = $row.find("td:eq(0)").text().toLowerCase();
-        const cpf = $row.find("td:eq(1)").text().toLowerCase();
-        const atendente = $row.find("td:eq(4)").text().toLowerCase();
-        const loja = $row.find("td:eq(5)").text().toLowerCase();
+            var matchNome = nomeCliente.includes(nome);
+            var matchCPF = cpfCliente.includes(cpf);
+            var matchDia = !dia || diaAgendado === dia;
+            var matchAtendente = atendenteTexto.includes(atendente);
+            var matchLoja = lojaTexto.includes(loja);
 
-        const matchNome = !filtroNome || nome.includes(filtroNome);
-        const matchCPF = !filtroCPF || cpf.includes(filtroCPF);
-        const matchAtendente = !filtroAtendente || atendente.includes(filtroAtendente);
-        const matchLoja = !filtroLoja || loja.includes(filtroLoja);
+            if (matchNome && matchCPF && matchDia && matchAtendente && matchLoja) {
+                row.show();
+            } else {
+                row.hide();
+            }
+        });
 
-        const shouldShow = matchNome && matchCPF && matchAtendente && matchLoja;
-        
-        $row.toggle(shouldShow);
+        var temResultados = $("#tabelaTodosAgendamentos tbody tr:visible").length > 0;
+        if (!temResultados) {
+            if (!$("#tabelaTodosAgendamentos tbody tr.sem-resultados").length) {
+                $("#tabelaTodosAgendamentos tbody").append(
+                    '<tr class="sem-resultados"><td colspan="8" class="text-center">Nenhum agendamento encontrado</td></tr>'
+                );
+            }
+            $("#tabelaTodosAgendamentos tbody tr.sem-resultados").show();
+        } else {
+            $("#tabelaTodosAgendamentos tbody tr.sem-resultados").remove();
+        }
+    }
+
+    // Função para filtrar a tabela de agendamentos
+    function filtrarTabelaAgendamentos() {
+        var nome = $("#filtroNome").val().toLowerCase();
+        var dia = $("#filtroDia").val();
+        var atendente = $("#filtroAtendente").val().toLowerCase();
+        var loja = $("#filtroLoja").val().toLowerCase();
+        var status = $("#filtroStatus").val().toLowerCase();
+
+        $("#tabelaAgendamentos tr.linha-agendamento").each(function() {
+            var row = $(this);
+            var nomeCliente = row.find("button").text().toLowerCase();
+            var diaAgendado = row.find("td[data-dia]").text().trim();
+            var atendenteTexto = row.find("td:nth-child(4)").text().toLowerCase();
+            var lojaTexto = row.find("td:nth-child(5)").text().toLowerCase();
+            var statusTexto = row.find("td:nth-child(6)").text().toLowerCase();
+
+            var matchNome = nomeCliente.includes(nome);
+            var matchDia = !dia || (diaAgendado && diaAgendado.includes(dia));
+            var matchAtendente = atendenteTexto.includes(atendente);
+            var matchLoja = lojaTexto.includes(loja);
+            var matchStatus = statusTexto.includes(status);
+
+            if (matchNome && matchDia && matchAtendente && matchLoja && matchStatus) {
+                row.show();
+            } else {
+                row.hide();
+            }
+        });
+
+        var temResultados = $("#tabelaAgendamentos tr.linha-agendamento:visible").length > 0;
+        $("#nenhumResultado").toggle(!temResultados);
+    }
+
+    // Função para filtrar a tabela TAC
+    function filtrarTabelaTAC() {
+        var nome = $("#filtroNomeTAC").val().toLowerCase();
+        var cpf = $("#filtroCPFTAC").val().toLowerCase();
+        var status = $("#filtroStatusTAC").val().toLowerCase();
+
+        $("#modalAgendamentosTAC .tac-row").each(function() {
+            var row = $(this);
+            var nomeCliente = row.find(".td-nome").text().toLowerCase();
+            var cpfCliente = row.find(".td-cpf").text().toLowerCase();
+            var statusCliente = row.find(".td-status .status-badge").text().toLowerCase();
+
+            var matchNome = nomeCliente.includes(nome);
+            var matchCPF = cpfCliente.includes(cpf);
+            var matchStatus = status === "" || statusCliente === status;
+
+            if (matchNome && matchCPF && matchStatus) {
+                row.show();
+            } else {
+                row.hide();
+            }
+        });
+    }
+
+    // Event listeners para todos os agendamentos
+    $("#modalTodosAgendamentos #filtroNome, #modalTodosAgendamentos #filtroCPF, #modalTodosAgendamentos #filtroAtendente, #modalTodosAgendamentos #filtroLoja").on("keyup change", filtrarTabelaTodosAgendamentos);
+    $("#modalTodosAgendamentos #filtroData").on("change", filtrarTabelaTodosAgendamentos);
+
+    // Event listeners para agendamentos
+    $("#filtroNome, #filtroAtendente, #filtroLoja, #filtroStatus").on("keyup change", filtrarTabelaAgendamentos);
+    $("#filtroDia").on("change", filtrarTabelaAgendamentos);
+
+    // Event listeners para TAC
+    $("#filtroNomeTAC, #filtroCPFTAC, #filtroStatusTAC").on("keyup change", filtrarTabelaTAC);
+
+    // Limpar filtros ao fechar modais
+    $("#modalTodosAgendamentos").on("hidden.bs.modal", function() {
+        $("#modalTodosAgendamentos #filtroNome, #modalTodosAgendamentos #filtroCPF, #modalTodosAgendamentos #filtroData, #modalTodosAgendamentos #filtroAtendente, #modalTodosAgendamentos #filtroLoja").val("");
+        filtrarTabelaTodosAgendamentos();
     });
-}
 
+    $("#modalConfiAgendamentoTabela").on("hidden.bs.modal", function() {
+        $("#filtroNome, #filtroDia, #filtroAtendente, #filtroLoja, #filtroStatus").val("");
+        filtrarTabelaAgendamentos();
+    });
+});

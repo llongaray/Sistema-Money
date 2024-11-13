@@ -359,7 +359,7 @@ main.darkmode tbody tr:hover {
     }
 }
 
-/* Ajuste para campos específicos que precisam de mais espaço */
+/* Ajuste para campos especficos que precisam de mais espaço */
 .modal-sec input[name="nome_cliente"],
 .modal-sec input[name="nomeClienteConfirmacao"] {
     width: 100%;
@@ -779,4 +779,86 @@ main.darkmode .modal-body::-webkit-scrollbar-thumb:hover {
     background: var(--dark-background-fundo);
     border-color: var(--dark-border-color);
     color: var(--cor-branco);
+}
+
+/* Estilos específicos para o modal de TAC */
+#modalAgendamentosTAC .modal-body {
+    padding: 0; /* Remove padding para a tabela ocupar todo espaço */
+    max-height: 70vh; /* Altura máxima de 70% da altura da viewport */
+    overflow-y: auto; /* Adiciona scroll vertical */
+}
+
+#modalAgendamentosTAC .tac-table-container {
+    margin: 10px 8px 3px; /* Remove margens */
+    border-radius: 0; /* Remove border radius */
+    box-shadow: none; /* Remove sombra */
+}
+
+#modalAgendamentosTAC .tac-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: var(--azul-escuro-500); /* Mantém a cor do cabeçalho */
+}
+
+/* Ajuste responsivo */
+@media (max-width: 768px) {
+    #modalAgendamentosTAC .modal-body {
+        max-height: 60vh; /* Altura menor em telas pequenas */
+    }
+}
+
+/* Ajustes para modo escuro */
+.darkmode #modalAgendamentosTAC .tac-table thead {
+    background-color: var(--dark-background-fundo);
+}
+
+/* Estilos específicos para os filtros do modal TAC */
+#modalAgendamentosTAC .filtros-wrapper {
+    padding: 15px;
+    border-bottom: 1px solid var(--cor-cinza-claro);
+}
+
+#modalAgendamentosTAC .filtros-container {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: nowrap; /* Impede a quebra de linha */
+}
+
+#modalAgendamentosTAC .filtro-input {
+    flex: 1;
+    min-width: 0; /* Permite que os inputs se ajustem ao espaço disponível */
+    padding: 8px 12px;
+    border: 1px solid #495057;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+#modalAgendamentosTAC .tabela-separator {
+    height: 15px; /* Espaço entre os filtros e a tabela */
+}
+
+/* Ajustes para modo escuro */
+.darkmode #modalAgendamentosTAC .filtros-wrapper {
+    border-color: var(--dark-border-color);
+}
+
+.darkmode #modalAgendamentosTAC .filtro-input {
+    background-color: var(--dark-background-fundo);
+    border-color: var(--dark-border-color);
+    color: var(--cor-branco);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    #modalAgendamentosTAC .filtros-container {
+        flex-wrap: wrap; /* Permite quebra em telas menores */
+    }
+    
+    #modalAgendamentosTAC .filtro-input {
+        flex: 1 1 auto;
+        min-width: 120px; /* Largura mínima em telas pequenas */
+    }
 }
