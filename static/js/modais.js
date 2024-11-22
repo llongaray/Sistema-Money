@@ -1,3 +1,4 @@
+// USO UNIVERSAL: Salva o estado do modal ativo na sessão
 function saveActiveModalState(modalId) {
     if (modalId) {
         sessionStorage.setItem('activeModal', modalId.replace('#', ''));
@@ -8,6 +9,7 @@ function saveActiveModalState(modalId) {
     }
 }
 
+// USO UNIVERSAL: Restaura o estado do último modal ativo
 function restoreActiveModalState() {
     const activeModalId = sessionStorage.getItem('activeModal');
     if (activeModalId) {
@@ -19,6 +21,7 @@ function restoreActiveModalState() {
     }
 }
 
+// USO UNIVERSAL: Abre um modal e gerencia o estado
 function openModal(modalId) {
     const cleanedModalId = modalId.replace('#', '');
     console.log(`Tentando abrir o modal com ID: ${cleanedModalId}`);
@@ -50,6 +53,7 @@ function openModal(modalId) {
     }
 }
 
+// USO UNIVERSAL: Abre um sub-modal
 function openSubModal(modalId) {
     const cleanedModalId = modalId.replace('#', '');
     console.log(`Tentando abrir o sub-modal com ID: ${cleanedModalId}`);
@@ -70,6 +74,7 @@ function openSubModal(modalId) {
     }
 }
 
+// USO UNIVERSAL: Fecha todos os modais ativos
 function closeAllModals(forceClose = false) {
     if (!forceClose) {
         return;
@@ -82,6 +87,7 @@ function closeAllModals(forceClose = false) {
     saveActiveModalState(null);
 }
 
+// USO UNIVERSAL: Fecha um modal específico
 function fecharModal(modalId) {
     const cleanedModalId = modalId.replace('#', '');
     const modal = document.getElementById(cleanedModalId);
@@ -95,6 +101,7 @@ function fecharModal(modalId) {
     }
 }
 
+// USO UNIVERSAL: Abre modal com opções
 function abrirModalOptions(modalId) {
     console.log(`Tentando abrir modal via options: ${modalId}`);
     
@@ -108,6 +115,7 @@ function abrirModalOptions(modalId) {
     openModal(modalId);
 }
 
+// USO UNIVERSAL: Abre sub-modal com dados específicos
 function abrirSubModal(modalId, tipoModal, id) {
     console.log(`Abrindo sub-modal com ID: ${modalId}, tipo: ${tipoModal}, ID do agendamento: ${id}`);
 
@@ -122,7 +130,7 @@ function abrirSubModal(modalId, tipoModal, id) {
         console.error(`Sub-modal com ID: ${modalId} não encontrado`);
     }
 }
-
+// USO SIAPE: Preenche dados para importação de CSV
 function preencherDadosImportCSV(subModal, idCampanha) {
     console.log("Preenchendo dados para importação de CSV. ID da Campanha:", idCampanha);
 
@@ -136,6 +144,7 @@ function preencherDadosImportCSV(subModal, idCampanha) {
     }
 }
 
+// USO UNIVERSAL: Preenche dados em sub-modais
 function preencherDadosSubModal(subModal, tipoModal, id) {
     console.log("Iniciando preenchimento do sub-modal para ID:", id);
 
@@ -163,7 +172,7 @@ function preencherDadosSubModal(subModal, tipoModal, id) {
                 '#nomeCliente': dados.nome_cliente,
                 '#cpfCliente': dados.cpf_cliente,
                 '#numeroCliente': dados.numero_cliente,
-                '#diaAgendado': dados.dia_agendado, // Ajustado para usar a propriedade correta
+                '#diaAgendado': dados.dia_agendado,
                 '#tabulacaoAtendente': dados.tabulacao_atendente,
                 '#atendenteAgendou': dados.atendente_nome,
                 '#lojaAgendada': dados.loja_nome
@@ -246,7 +255,8 @@ function preencherDadosSubModal(subModal, tipoModal, id) {
     
 }
 
-
+------------
+// USO INSS: Preenche tabela de clientes
 function preencherTabelaClientes() {
     console.log('Iniciando preenchimento da tabela de clientes');
     
@@ -286,6 +296,7 @@ function preencherTabelaClientes() {
 
 let sortDirection = 'desc';
 
+// USO UNIVERSAL: Converte dados para formato cliente loja
 function converterParaFormatoClienteLoja(agendamento) {
     return {
         id: agendamento.id,
@@ -299,9 +310,8 @@ function converterParaFormatoClienteLoja(agendamento) {
         lojaAgendada: agendamento.loja_nome
     };
 }
-
-
-
+-------------
+// USO INSS: Gerencia mudança de tabulação
 function handleTabulacaoChange() {
     const modal = document.getElementById('modalConfirmacaoAgendamento');
     const tabulacaoSelect = modal.querySelector('#tabulacaoAtendente');
@@ -327,6 +337,7 @@ function handleTabulacaoChange() {
     }
 }
 
+// USO INSS: Gerencia mudança de tabulação do vendedor
 function handleTabulacaoVendedorChange() {
     const modal = document.getElementById('modalEdicaoCliente');
     const tabulacaoSelect = modal.querySelector('#tabulacaoVendedor');
@@ -346,6 +357,7 @@ function handleTabulacaoVendedorChange() {
     }
 }
 
+// USO UNIVERSAL: Preenche select de vendedores
 function preencherSelectVendedores(selectElement) {
     Object.values(vendedoresListaClientes).forEach(vendedor => {
         const option = document.createElement('option');
@@ -355,18 +367,11 @@ function preencherSelectVendedores(selectElement) {
     });
 }
 
+// USO UNIVERSAL: Event Listeners após carregamento do DOM
 document.addEventListener('DOMContentLoaded', function() {
     const mensagensContainer = document.getElementById('mensagens');
     const temMensagemSucesso = mensagensContainer && 
                               mensagensContainer.querySelector('.success');
-    
-    // Remover esta parte que restaura o modal antigo
-    // if (temMensagemSucesso) {
-    //     saveActiveModalState(null);
-    //     console.log('Estado do modal removido - mensagem de sucesso');
-    // } else {
-    //     restoreActiveModalState();
-    // }
 
     document.querySelectorAll('.btn-close').forEach(button => {
         button.addEventListener('click', function() {
@@ -410,7 +415,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', function(event) {
         // Verifica se o clique foi fora de um modal-sec
         if (event.target.classList.contains('modal-sec')) {
-            // Não faz nada se o clique foi dentro do modal-sec
             return;
         }
 
@@ -488,6 +492,7 @@ document.getElementById('modalConfirmacaoAgendamento')
     .querySelector('#tabulacaoAtendente')
     .addEventListener('change', handleTabulacaoChange);
 
+// USO UNIVERSAL: Fecha um sub-modal específico
 function closeSubModal(modalId) {
     const cleanedModalId = modalId.replace('#', '');
     const modal = document.getElementById(cleanedModalId);
@@ -500,6 +505,7 @@ function closeSubModal(modalId) {
     }
 }
 
+// USO UNIVERSAL: Gerencia cliques em modais
 function handleModalClick(event) {
     if (event.target.classList.contains('modal-sec')) {
         closeSubModal(event.target.id);
@@ -507,6 +513,7 @@ function handleModalClick(event) {
     }
 }
 
+// USO UNIVERSAL: Gerencia submissão de formulários em sub-modais
 function handleSubModalFormSubmit(event) {
     event.preventDefault();
     const form = event.target;
@@ -586,7 +593,8 @@ function handleSubModalFormSubmit(event) {
         }
     });
 }
-
+---------
+// USO INSS: Atualiza status do TAC
 function atualizarStatusTAC(selectElement, agendamentoId) {
     const novoStatus = selectElement.value;
     if (!novoStatus) return;
@@ -625,12 +633,14 @@ function atualizarStatusTAC(selectElement, agendamentoId) {
     });
 }
 
+// USO UNIVERSAL: Exibe mensagens temporárias
 function mostrarMensagem(texto, tipo) {
     const mensagem = $(`<div class="alert alert-${tipo}">${texto}</div>`);
     $('#mensagens').append(mensagem);
     setTimeout(() => mensagem.fadeOut('slow', function() { $(this).remove(); }), 3000);
 }
 
+// USO UNIVERSAL: Fecha um sub-modal
 function fecharSubModal(modalId) {
     const cleanedModalId = modalId.replace('#', '');
     const subModal = document.getElementById(cleanedModalId);
@@ -642,7 +652,8 @@ function fecharSubModal(modalId) {
         console.error(`Sub-modal com ID: ${cleanedModalId} não encontrado`);
     }
 }
-
+---------------
+// USO INSS: Preenche tabela de agendamentos atrasados
 function preencherTabelaAtrasados() {
     console.log('Iniciando preenchimento da tabela de agendamentos atrasados');
     
@@ -685,6 +696,7 @@ function preencherTabelaAtrasados() {
     console.log('Preenchimento da tabela de atrasados concluído');
 }
 
+// USO UNIVERSAL: Event Listeners jQuery
 $(document).ready(function() {
     // Função para filtrar a tabela de todos os agendamentos
     function filtrarTabelaTodosAgendamentos() {

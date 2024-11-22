@@ -236,56 +236,104 @@ tr:nth-child(even) {
 
 
 .cards-box {
-    padding: 20px;
-    margin: 20px 0;
-    background-color: #f8f9fa;
-    border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 2rem;
+    margin: 2rem 0;
+    background-color: transparent;
 }
 
 .card-container {
     display: flex;
-    justify-content: space-around;
-    gap: 20px;
+    justify-content: center;
+    gap: 2rem;
     flex-wrap: wrap;
+    max-width: 800px;
+    margin: 0 auto;
 }
 
 .info-card {
-    flex: 1;
-    min-width: 200px;
-    max-width: 300px;
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    flex: 0 1 300px;
+    background-color: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
     overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.info-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 .card-header {
-    background-color: #007bff;
+    background: linear-gradient(135deg, var(--color-600) 0%, var(--color-700) 100%);
     color: white;
-    padding: 10px 15px;
+    padding: 1.2rem;
     text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .card-header h3 {
     margin: 0;
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     font-weight: 600;
+    letter-spacing: 0.5px;
 }
 
 .card-body {
-    padding: 20px;
+    padding: 1.5rem;
     text-align: center;
+    background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
 }
 
 .card-value {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #28a745;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-700);
+    display: block;
+    margin: 0.5rem 0;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.05);
 }
 
-@media (max-width: 576px) {
-    .info-card {
-        min-width: 100%;
+/* Adicione estilos para o modo escuro */
+[data-theme="dark"] .info-card {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .card-header {
+    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+}
+
+[data-theme="dark"] .card-body {
+    background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+}
+
+[data-theme="dark"] .card-value {
+    color: var(--text-primary);
+}
+
+/* Responsividade atualizada */
+@media (max-width: 768px) {
+    .cards-box {
+        padding: 1rem;
     }
+
+    .card-container {
+        gap: 1rem;
+    }
+
+    .info-card {
+        flex: 0 1 100%;
+        max-width: 350px;
+    }
+}
+
+/* Adicione um ícone antes do valor */
+.card-value::before {
+    font-family: 'Font Awesome 5 Free';
+    content: '\f0d6';
+    margin-right: 0.5rem;
+    font-weight: 900;
+    opacity: 0.8;
 }

@@ -1,47 +1,120 @@
-/* Estilos para o botão de modo escuro */
-.toggleWrapper {
-    margin: 20px;
+/* Estilos para o switch de tema */
+.theme-switch-wrapper {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    padding: 10px;
 }
 
-.toggle-button {
-    padding: 10px 20px;
-    background-color: var(--azul-escuro-500);
-    color: var(--cor-branco);
-    border: none;
-    border-radius: 5px;
+.theme-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.theme-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
     cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.3s ease;
-    font-size: 16px;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #f4f4f4;
+    transition: .4s;
+    border-radius: 34px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px;
 }
 
-/* Efeito de hover */
-.toggle-button:hover {
-    background-color: var(--azul-escuro-400);
-    transform: scale(1.05);
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+    z-index: 2;
 }
 
-/* Modo escuro */
-.dark-mode {
-    --background-fundo: var(--dark-background-fundo);
-    --background-container: var(--dark-background-container);
-    --title-color: var(--dark-title-color);
-    --text-color: var(--dark-text-color);
-    --border-color: var(--dark-border-color);
-    --primary-color: var(--dark-primary-color);
-    --primary-color-dark: var(--dark-primary-color-dark);
-    --secondary-color: var(--dark-secondary-color);
-    --hover-color: var(--dark-hover-color);
-    --links-color: var(--dark-links-color);
-    --input-background: var(--dark-input-background);
-    --table-odd-row: var(--dark-table-odd-row);
-    --table-hover: var(--dark-table-hover);
+/* Ícones */
+.slider i {
+    font-size: 14px;
+    transition: .4s;
+    z-index: 1;
 }
-/* Adicione ao seu CSS */
+
+.fa-sun {
+    color: #ffd43b;
+    margin-left: auto;
+}
+
+.fa-moon {
+    color: #5c7cfa;
+    margin-right: auto;
+}
+
+/* Estado ativo (modo escuro) */
+input:checked + .slider {
+    background-color: #2f3640;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+input:checked + .slider .fa-sun {
+    opacity: 0.5;
+}
+
+input:checked + .slider .fa-moon {
+    opacity: 1;
+    color: #fff;
+}
+
+/* Animação de hover */
+.theme-switch:hover .slider {
+    box-shadow: 0 0 15px rgba(33,150,243,0.6);
+}
+
+/* Efeito de transição suave */
+body.transition,
 .transition {
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: all 0.3s ease;
 }
 
-/* Adicione transições para o corpo */
-body.transition {
-    transition: background-color 0.3s ease, color 0.3s ease;
+/* Cores do modo escuro */
+[data-theme="dark"] {
+    --bg-primary: #1a1625;
+    --bg-secondary: #2d2438;
+    --text-primary: #ffffff;
+    --text-secondary: #b8b5c0;
+    --accent-primary: #6e42c1;
+    --accent-secondary: #8659d4;
+    --card-bg: #2d2438;
+    --border-color: #3d3450;
+    --shadow-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Responsividade */
+@media screen and (max-width: 768px) {
+    .theme-switch-wrapper {
+        top: 70px;
+        right: 10px;
+    }
 }

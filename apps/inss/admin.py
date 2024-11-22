@@ -53,6 +53,17 @@ class AgendamentoAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return True  # Permite a exclusão de agendamentos
 
+    def save_model(self, request, obj, form, change):
+        # Limpa caracteres especiais do CPF
+        if obj.cpf_cliente:
+            obj.cpf_cliente = ''.join(filter(str.isdigit, obj.cpf_cliente))
+        
+        # Limpa caracteres especiais do número de telefone e limita a 15 dígitos
+        if obj.numero_cliente:
+            obj.numero_cliente = ''.join(filter(str.isdigit, obj.numero_cliente))[:15]
+        
+        super().save_model(request, obj, form, change)
+
 @admin.register(LogAlteracao)
 class LogAlteracaoAdmin(admin.ModelAdmin):
     list_display = ('agendamento_id', 'status', 'data_hora', 'funcionario')

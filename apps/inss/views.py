@@ -1,7 +1,7 @@
 # Importações da biblioteca padrão Python
-import os
 import json
-from datetime import datetime, date, time
+import os
+from datetime import date, datetime, time, timedelta
 
 # Importações padrão do Django
 from django.conf import settings
@@ -12,22 +12,19 @@ from django.db.models import Count, F, Max, Q, Sum
 from django.db.models.functions import Coalesce, TruncDate
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from datetime import timedelta
 
-# Local imports
+# Importações de terceiros
+import pytz
+
+# Importações locais
 from custom_tags_app.permissions import check_access
 from setup.utils import verificar_autenticacao
 
-# Importações de modelos
+# Importações de apps
+from .forms import *
 from .models import *
 from apps.funcionarios.models import *
 from apps.siape.models import *
-
-# Importações de formulários
-from .forms import *
-
-# Importações de pytz
-import pytz
 
 # Função auxiliar para obter a data/hora atual em SP
 def get_current_sp_time():
@@ -101,15 +98,11 @@ def post_status_tac(status_data, funcionario_logado):
             ).first()
             
             if registro_existente:
-                # Atualiza o registro existente
                 registro_existente.loja = agendamento.loja_agendada
                 registro_existente.data = timezone.now()
                 registro_existente.save()
-                
                 print(f"Registro de TAC atualizado para funcionário {agendamento.vendedor_loja.nome if agendamento.vendedor_loja else 'N/A'}")
-                
             else:
-                # Cria novo registro
                 if agendamento.tac and agendamento.vendedor_loja:
                     RegisterMoney.objects.create(
                         funcionario=agendamento.vendedor_loja,
@@ -123,13 +116,36 @@ def post_status_tac(status_data, funcionario_logado):
                 else:
                     print("Agendamento sem TAC ou vendedor definido")
 
-            # Atualiza data de pagamento
             agendamento.data_pagamento_tac = data_atual
             
+        # Se está mudando para NÃO PAGO
+        elif novo_status in ['NAO_PAGO', 'NÃO PAGO']:
+            # Busca e remove registros correspondentes no RegisterMoney
+            registros_para_remover = RegisterMoney.objects.filter(
+                cpf_cliente=agendamento.cpf_cliente,
+                valor_est=float(agendamento.tac) if agendamento.tac else None,
+                status=True
+            )
+            
+            if registros_para_remover.exists():
+                quantidade_removida = registros_para_remover.count()
+                registros_para_remover.delete()
+                print(f"Removidos {quantidade_removida} registros de TAC para o CPF {agendamento.cpf_cliente}")
+                
+                # Registra log específico para remoção
+                LogAlteracao.objects.create(
+                    agendamento_id=str(agendamento.id),
+                    mensagem=f"Removidos {quantidade_removida} registros de TAC devido à mudança para NÃO PAGO",
+                    status=True,
+                    funcionario=funcionario_logado
+                )
+            else:
+                print(f"Nenhum registro de TAC encontrado para remover (CPF: {agendamento.cpf_cliente})")
+            
+            agendamento.data_pagamento_tac = None
+        
         # Atualiza o status do TAC
         agendamento.status_tac = novo_status
-        if novo_status != 'PAGO':
-            agendamento.data_pagamento_tac = None
         agendamento.save()
 
         # Registra o log de alteração de status
@@ -301,7 +317,8 @@ def post_cliente_rua(request, funcionario_logado):
             vendedor_loja_id=dados_atendimento['vendedor_id'],
             tabulacao_vendedor=dados_atendimento['tabulacao_vendedor'],
             observacao_vendedor=dados_atendimento['observacao_vendedor'],
-            cliente_rua=True
+            cliente_rua=True,
+            tabulacao_atendente='CONFIRMADO'
         )
         
         # Se for FECHOU NEGOCIO, processa dados adicionais
@@ -670,24 +687,59 @@ def get_all_agendamentos(agendamentos_base_query, funcionario_logado, nivel_carg
 def get_agendamentos_agendados(agendamentos_base_query, funcionario_logado, nivel_cargo):
     """Obtém todos os agendamentos com a tabulação 'AGENDADO'."""
     if nivel_cargo == 'TOTAL':
-        agendamentos_agendados = agendamentos_base_query.filter(tabulacao_atendente='AGENDADO').order_by('dia_agendado')
+        # Adicionado filtro vendedor_loja__isnull=True
+        agendamentos_agendados = agendamentos_base_query.filter(
+            tabulacao_atendente='AGENDADO',
+            vendedor_loja__isnull=True
+        ).order_by('dia_agendado')
     elif nivel_cargo in ['ESTAGIO', 'PADRÃO']:
-        agendamentos_agendados = agendamentos_base_query.filter(tabulacao_atendente='AGENDADO', atendente_agendou=funcionario_logado).order_by('dia_agendado')
+        # Adicionado filtro vendedor_loja__isnull=True
+        agendamentos_agendados = agendamentos_base_query.filter(
+            tabulacao_atendente='AGENDADO',
+            atendente_agendou=funcionario_logado,
+            vendedor_loja__isnull=True
+        ).order_by('dia_agendado')
     else:
-        agendamentos_agendados = agendamentos_base_query.filter(tabulacao_atendente='AGENDADO').order_by('dia_agendado')
+        # Adicionado filtro vendedor_loja__isnull=True
+        agendamentos_agendados = agendamentos_base_query.filter(
+            tabulacao_atendente='AGENDADO',
+            vendedor_loja__isnull=True
+        ).order_by('dia_agendado')
 
-    return [{
+    # Criar lista de dicionários
+    agendamentos_list = [{
         'id': a.id,
         'nome_cliente': a.nome_cliente,
         'cpf_cliente': a.cpf_cliente,
         'numero_cliente': a.numero_cliente,
-        'dia_agendado': a.dia_agendado.strftime('%Y-%m-%d'),  # Formato para input date
-        'atendente_agendou': a.atendente_agendou.nome.split()[0] if a.atendente_agendou else '',  # Primeiro nome do atendente
-        'loja_agendada': a.loja_agendada.nome.split(' - ')[-1] if a.loja_agendada and ' - ' in a.loja_agendada.nome else a.loja_agendada.nome,  # Nome da loja após ' - '
+        'dia_agendado': a.dia_agendado.strftime('%Y-%m-%d'),
+        'atendente_agendou': a.atendente_agendou.nome.split()[0] if a.atendente_agendou else '',
+        'loja_agendada': a.loja_agendada.nome.split(' - ')[-1] if a.loja_agendada and ' - ' in a.loja_agendada.nome else a.loja_agendada.nome,
         'tabulacao_atendente': a.tabulacao_atendente,
         'tabulacao_vendedor': a.tabulacao_vendedor,
-        'status': calcular_status_dias(a, timezone.now().date())  # Chama a função para calcular o status
+        'status': calcular_status_dias(a, timezone.now().date())
     } for a in agendamentos_agendados]
+
+    # Filtrar para remover status 'ATRASADO'
+    agendamentos_list = [a for a in agendamentos_list if a['status'] != 'ATRASADO']
+
+    # Ordenar por data mais recente e status
+    hoje = timezone.now().date().strftime('%Y-%m-%d')
+    
+    def chave_ordenacao(agendamento):
+        data = agendamento['dia_agendado']
+        # Primeiro critério: data mais recente (invertido para ordenar decrescente)
+        chave_data = -datetime.strptime(data, '%Y-%m-%d').timestamp()
+        
+        # Segundo critério: prioridade de status
+        if data == hoje:
+            prioridade = 0  # HOJE tem prioridade máxima
+        else:
+            prioridade = 1  # FUTURO tem prioridade menor
+            
+        return (data, prioridade)
+
+    return sorted(agendamentos_list, key=chave_ordenacao)
 
 def obter_agendamentos_reagendados(agendamentos_base_query, funcionario_logado, nivel_cargo):
     """Obtém todos os agendamentos com a tabulação 'REAGENDADO'."""
@@ -773,31 +825,40 @@ def get_agendamentos_tac(todos_agendamentos_dict):
             'tac': a['tac'],
             'acao': a['acao'],
             'status': a['status_tac'],
-            'agendamento_id': a['id']  # Adiciona o ID do agendamento
+            'agendamento_id': a['id'],
+            'loja_agendada': a['loja_agendada'],
+            'dia_agendado': a['dia_agendado']  # Certifique-se de que este campo está sendo passado
         }
-        for a in todos_agendamentos_dict if a['tac']  # Verifica se existe valor no campo tac
+        for a in todos_agendamentos_dict if a['tac']
     ]
 
 
 def get_agendamentos_atrasados(agendamentos_base_query, funcionario_logado, nivel_cargo, loja_funcionario):
-    """Busca os agendamentos que estão atrasados, ou seja, que passaram do dia_agendado
-    sem receber uma tabulação do vendedor."""
+    """Busca os agendamentos atrasados, mostrando apenas o mais recente para cada CPF."""
+    print("\n----- Iniciando get_agendamentos_atrasados -----")
     hoje = timezone.now().date()
     
     # Filtra agendamentos atrasados baseado no nível de acesso
     if funcionario_logado and not funcionario_logado.usuario.is_superuser and nivel_cargo in ['ESTAGIO', 'PADRÃO']:
-        agendamentos_atrasados = agendamentos_base_query.filter(
+        base_query = agendamentos_base_query.filter(
             dia_agendado__lt=hoje,  # Dia agendado menor que hoje
             tabulacao_vendedor__isnull=True,  # Sem tabulação do vendedor
             loja_agendada=loja_funcionario
-        ).order_by('dia_agendado')
+        )
     else:
-        agendamentos_atrasados = agendamentos_base_query.filter(
+        base_query = agendamentos_base_query.filter(
             dia_agendado__lt=hoje,  # Dia agendado menor que hoje
-            tabulacao_vendedor__isnull=True  # Sem tabulaão do vendedor
-        ).order_by('dia_agendado')
+            tabulacao_vendedor__isnull=True  # Sem tabulação do vendedor
+        )
 
-    return [{
+    # Obtém o agendamento mais recente para cada CPF
+    agendamentos_por_cpf = {}
+    for agendamento in base_query.order_by('cpf_cliente', '-dia_agendado'):
+        if agendamento.cpf_cliente not in agendamentos_por_cpf:
+            agendamentos_por_cpf[agendamento.cpf_cliente] = agendamento
+
+    # Converte para lista de dicionários
+    agendamentos_atrasados = [{
         'id': a.id,
         'nome_cliente': a.nome_cliente,
         'cpf_cliente': a.cpf_cliente,
@@ -808,7 +869,185 @@ def get_agendamentos_atrasados(agendamentos_base_query, funcionario_logado, nive
         'tabulacao_atendente': a.tabulacao_atendente,
         'tabulacao_vendedor': a.tabulacao_vendedor,
         'status': 'ATRASADO'  # Status fixo como ATRASADO
-    } for a in agendamentos_atrasados]
+    } for a in agendamentos_por_cpf.values()]
+
+    # Ordena por data de agendamento (mais recente primeiro)
+    agendamentos_atrasados.sort(key=lambda x: x['dia_agendado'], reverse=True)
+
+    print(f"Total de agendamentos atrasados (únicos por CPF): {len(agendamentos_atrasados)}")
+    print("----- Finalizando get_agendamentos_atrasados -----\n")
+    
+    return agendamentos_atrasados
+
+def gerar_analise_ia(metricas):
+    """
+    Gera uma análise detalhada dos dados usando regras predefinidas e métricas avançadas.
+    Retorna insights sobre performance, tendências e recomendações em um dicionário organizado.
+    """
+    analises = {
+        'agendamentos': [],
+        'vendas': [],
+        'tac': [],
+        'tendencias': [],
+        'recomendacoes': []
+    }
+    
+    # 1. Análise de Agendamentos e Finalização
+    taxa_finalizacao = (metricas['finalizados'] / metricas['total_agendamentos'] * 100) if metricas['total_agendamentos'] > 0 else 0
+    
+    if taxa_finalizacao > 80:
+        analises['agendamentos'].append(f"✨ Excelente performance! {taxa_finalizacao:.1f}% dos agendamentos foram finalizados, demonstrando alta eficiência no processo.")
+    elif taxa_finalizacao > 60:
+        analises['agendamentos'].append(f"📈 Boa taxa de finalização ({taxa_finalizacao:.1f}%). Para melhorar, foque no acompanhamento dos agendamentos pendentes.")
+    else:
+        analises['agendamentos'].append(f"⚠️ Atenção: apenas {taxa_finalizacao:.1f}% dos agendamentos foram finalizados. Recomenda-se revisar o processo de follow-up.")
+
+    # 2. Análise de Efetividade de Vendas
+    if metricas['media_efetividade_fechamento'] > 70:
+        analises['vendas'].append(f"🌟 Taxa de conversão excepcional de {metricas['media_efetividade_fechamento']:.1f}%! Continue com as práticas atuais de vendas.")
+    elif metricas['media_efetividade_fechamento'] > 50:
+        analises['vendas'].append(f"👍 Boa taxa de conversão ({metricas['media_efetividade_fechamento']:.1f}%). Potencial para melhorias através de treinamento da equipe.")
+    elif metricas['media_efetividade_fechamento'] > 30:
+        analises['vendas'].append(f"📊 Taxa de conversão moderada ({metricas['media_efetividade_fechamento']:.1f}%). Sugestão: realizar análise detalhada das objeções dos clientes.")
+    else:
+        analises['vendas'].append(f"🔔 Taxa de conversão baixa ({metricas['media_efetividade_fechamento']:.1f}%). Necessário revisar urgentemente a abordagem de vendas.")
+
+    # 3. Análise de Gestão TAC
+    if metricas['total_tac'] > 0:
+        taxa_tac_pagos = (metricas['tac_pagos'] / metricas['total_tac'] * 100)
+        valor_medio_tac = metricas.get('valor_medio_tac', 0)
+        
+        if taxa_tac_pagos > 80:
+            analises['tac'].append(f"💎 Gestão de TAC exemplar! {taxa_tac_pagos:.1f}% dos TACs foram pagos.")
+        elif taxa_tac_pagos > 60:
+            analises['tac'].append(f"💫 Boa gestão de TAC ({taxa_tac_pagos:.1f}% pagos). Mantenha o acompanhamento próximo dos pendentes.")
+        elif taxa_tac_pagos > 40:
+            analises['tac'].append(f"⚡ Atenção na gestão de TAC: {taxa_tac_pagos:.1f}% pagos. Implemente um sistema de follow-up mais rigoroso.")
+        else:
+            analises['tac'].append(f"🚨 Crítico: apenas {taxa_tac_pagos:.1f}% dos TACs pagos. Necessária ação imediata na cobrança.")
+
+    # 4. Análise de Tendências
+    if 'tendencia_agendamentos' in metricas:
+        if metricas['tendencia_agendamentos'] > 10:
+            analises['tendencias'].append("📈 Tendência positiva: crescimento significativo nos agendamentos!")
+        elif metricas['tendencia_agendamentos'] < -10:
+            analises['tendencias'].append("📉 Alerta: queda significativa nos agendamentos. Verificar causas.")
+
+    # 5. Recomendações Específicas
+    if taxa_finalizacao < 60 or metricas['media_efetividade_fechamento'] < 40:
+        if taxa_finalizacao < 60:
+            analises['recomendacoes'].extend([
+                "💡 Para melhorar os agendamentos:",
+                "• Implementar sistema de lembretes para agendamentos",
+                "• Reforçar confirmação prévia com clientes"
+            ])
+        if metricas['media_efetividade_fechamento'] < 40:
+            analises['recomendacoes'].extend([
+                "💡 Para melhorar as vendas:",
+                "• Revisar script de atendimento",
+                "• Realizar treinamento de técnicas de vendas"
+            ])
+
+    # Remove seções vazias
+    return {k: '\n'.join(v) for k, v in analises.items() if v}
+
+def get_finalizados(request):
+    """Obtém estatísticas dos agendamentos finalizados"""
+    
+    # Definir período (mês vigente)
+    data_atual = timezone.now().date()
+    data_inicio = data_atual.replace(day=1)  # Primeiro dia do mês atual
+    
+    # Último dia do mês atual
+    if data_atual.month == 12:
+        data_fim = data_atual.replace(year=data_atual.year + 1, month=1, day=1) - timedelta(days=1)
+    else:
+        data_fim = data_atual.replace(month=data_atual.month + 1, day=1) - timedelta(days=1)
+    
+    # Adicionar horário aos filtros
+    data_inicio_dt = timezone.make_aware(datetime.combine(data_inicio, time.min))  # 00:00:00
+    data_fim_dt = timezone.make_aware(datetime.combine(data_fim, time.max))  # 23:59:59
+    
+    periodo = f"de: {data_inicio.strftime('%d/%m/%Y')} até: {data_fim.strftime('%d/%m/%Y')}"
+
+    # Query base com o novo filtro de data/hora
+    agendamentos = Agendamento.objects.filter(
+        dia_agendado__range=[data_inicio_dt, data_fim_dt],
+        atendente_agendou__isnull=False
+    ).select_related('loja_agendada')
+
+    # 1. Contagens e Percentuais
+    count_agem = agendamentos.count()
+    count_agem_finalizados = agendamentos.filter(
+        tabulacao_vendedor__isnull=False
+    ).count()
+    count_agem_confirmados = agendamentos.filter(
+        tabulacao_atendente='CONFIRMADO'
+    ).count()
+
+    # Efetividade por loja
+    efetividade_lojas = []
+    for loja in Loja.objects.all():
+        agend_loja = agendamentos.filter(loja_agendada=loja)
+        confirmados_loja = agend_loja.filter(tabulacao_atendente='CONFIRMADO').count()
+        fechou_negocio = agend_loja.filter(tabulacao_vendedor='FECHOU NEGOCIO').count()
+        
+        if agend_loja.count() > 0:
+            efetividade_comparecimento = (confirmados_loja / agend_loja.count()) * 100
+            efetividade_fechamento = (fechou_negocio / confirmados_loja * 100) if confirmados_loja > 0 else 0
+            
+            efetividade_lojas.append({
+                'loja': loja.nome,
+                'efetividade_comparecimento': round(efetividade_comparecimento, 2),
+                'efetividade_fechamento': round(efetividade_fechamento, 2)
+            })
+
+    # 2. Situação TAC
+    situacao_tac = []
+    agendamentos_tac = agendamentos.filter(
+        Q(tac__isnull=False) & ~Q(tac=0)
+    ).order_by('-dia_agendado')  # Ordenação decrescente por dia_agendado
+    
+    print("\n\n----- Situação TAC -----")
+    for agend in agendamentos_tac:
+        # Mapeia o status do TAC para os valores padronizados
+        if agend.status_tac == 'PAGO':
+            status = 'PAGO'
+        elif agend.status_tac == 'EM_ESPERA':
+            status = 'EM_ESPERA'  # Corrigido para usar underscore
+        else:
+            status = 'NAO_PAGO'   # Corrigido para usar underscore
+            
+        situacao_tac.append({
+            'nome_cliente': agend.nome_cliente,
+            'loja_agendada': agend.loja_agendada.nome,
+            'valor_tac': round(agend.tac),  # Arredondando para inteiro
+            'status': status
+        })
+        print(f"Cliente: {agend.nome_cliente}, Status: {status}, Valor: {agend.tac}")
+
+    # 3. Análise IA
+    metricas = {
+        'total_agendamentos': count_agem,
+        'finalizados': count_agem_finalizados,
+        'confirmados': count_agem_confirmados,
+        'media_efetividade_comparecimento': sum(l['efetividade_comparecimento'] for l in efetividade_lojas) / len(efetividade_lojas) if efetividade_lojas else 0,
+        'media_efetividade_fechamento': sum(l['efetividade_fechamento'] for l in efetividade_lojas) / len(efetividade_lojas) if efetividade_lojas else 0,
+        'total_tac': len(situacao_tac),
+        'tac_pagos': len([t for t in situacao_tac if t['status'] == 'PAGO'])
+    }
+
+    analise_ia = gerar_analise_ia(metricas)
+
+    return {
+        'periodo': periodo,
+        'count_agem': count_agem,
+        'count_agem_finalizados': count_agem_finalizados,
+        'count_agem_confirmados': count_agem_confirmados,
+        'efetividade_lojas': efetividade_lojas,
+        'situacao_tac': situacao_tac,
+        'analise_ia': analise_ia
+    }
 
 def get_all_forms_and_objects(request):
     """Obtém todos os formulários e objetos necessários para a view"""
@@ -865,6 +1104,9 @@ def get_all_forms_and_objects(request):
     # Chama a nova função para obter agendamentos atrasados
     agendamentos_atrasados_dict = get_agendamentos_atrasados(agendamentos_base_query, funcionario_logado, nivel_cargo, loja_funcionario)
 
+    # Chama a função para obter estatísticas dos agendamentos finalizados
+    agendamentos_finalizados = get_finalizados(request)
+
     print("\n----- Finalizando get_all_forms_and_objects -----\n")
     
     return {
@@ -881,9 +1123,11 @@ def get_all_forms_and_objects(request):
         'loja_funcionario': loja_funcionario,
         'vendedores_lista_clientes': vendedores_lista_clientes,  # Lista de vendedores
         'agendamentos_tac': agendamentos_tac,
+        'agendamentos_finalizados': agendamentos_finalizados,  # Adiciona estatísticas dos finalizados
     }
 
 ''' FIM DA ÁREA DE DADOS E DICIONARIOS DE FORM '''
+
 
 
 @verificar_autenticacao
@@ -1062,7 +1306,7 @@ def render_all_forms(request):
                     f"Atualização de TAC realizada em {data_atual.strftime('%d/%m/%Y às %H:%M:%S')} (Horário de Brasília)\n"
                     f"Valor anterior: R$ {valor_tac_anterior:.2f}\n"
                     f"Novo valor: R$ {valor_tac:.2f}\n"
-                    f"Atualizado por: {funcionario_logado.nome}"
+                    f"Atualizado por: {funcionario_logado.nome if funcionario_logado else 'Usuário do sistema'}"
                 )
                 
                 # Atualiza o agendamento com o novo valor e a mensagem
@@ -1235,7 +1479,7 @@ def get_podium(periodo='mes'):
         meta_inss = metas_ativas.filter(tipo='EQUIPE', setor='INSS').first()
         meta_atual = meta_inss if meta_inss else metas_ativas.first()
         
-        print(f"Usando meta: {meta_atual.titulo} ({meta_atual.tipo})")
+        print(f"Usando meta: {meta_atual.titulo} ({meta_atual.tipo}")
         print(f"Período: {meta_atual.range_data_inicio} até {meta_atual.range_data_final}")
         
         primeiro_dia = meta_atual.range_data_inicio
@@ -1268,7 +1512,7 @@ def get_podium(periodo='mes'):
                 'logo': loja.logo.url if loja.logo else '/static/img/default-store.png',
                 'total_fechamentos': Decimal('0'),
                 'meta_valor': next((m.valor for m in metas_ativas if m.loja == nome_loja), Decimal('0'))
-            }
+            }  # Fechando a chave do dicionário
         
         valores_por_loja[loja_id]['total_fechamentos'] += Decimal(str(venda.valor_est))
 

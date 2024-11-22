@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block addtitle %}<title>Ranking Gincana</title>{% endblock %}
+
+{% block addcss_extra %}
+<link rel="stylesheet" href="{% static '/geral/ranking.css' %}">
+<link rel="stylesheet" href="{% static 'ranking_data.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link rel="stylesheet" href="{% static 'darkmode.css' %}">
+{% endblock %}
+{% block pre_content %}
+{% include 'partials/_dark_mode_toggle.html' %}
+{% endblock %}
+{% block content %}
+<header>
+    <h2 class="ranking-title">
+        RANKING GINCANA
+    </h2>
+    <div class="container__cards">
+        <div class="card pontos-totais">
+            <div class="icon">
+                <i class="fas fa-star"></i>
+            </div>
+            <div class="info__valores">
+                <h3 class="title">Pontos Totais</h3>
+                <h5 class="valor animate-value">{{ pontos_totais.valor }}</h5>
+                <span class="percentual">
+                    <p class="porcentagem">{{ pontos_totais.percentual }}%</p>
+                    <p class="txt">Concluído</p>
+                </span>
+            </div>
+        </div>
+        <div class="card equipes-ativas">
+            <div class="icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="info__valores">
+                <h3 class="title">Equipes Ativas</h3>
+                <h5 class="valor">{{ equipes_ativas.total }}</h5>
+                <span class="percentual">
+                    <p class="porcentagem">{{ equipes_ativas.participacao }}%</p>
+                    <p class="txt">Participação</p>
+                </span>
+            </div>
+        </div>
+    </div>
+    
+</header>
+<div class="content-wrapper">
+    <section class="ranking-section">
+        <div class="container__ranking">
+            <div class="container__top3">
+                <!-- 2º Lugar -->
+                <div class="box__ranking top2">
+                    <div class="circle__position">2</div>
+                    <div class="foto__pos">
+                        <img src="{{ podium.1.logo|default:'/static/img/default-team.png' }}" 
+                             alt="{{ podium.1.nome|default:'Posição Disponível' }}">
+                    </div>
+                    <div class="nome">{{ podium.1.nome|default:"Posição Disponível" }}</div>
+                    <div class="valor animate-value">{{ podium.1.total_pontos|default:"0" }}</div>
+                    <div class="icon"><i class="fas fa-trophy"></i></div>
+                </div>
+
+                <!-- 1º Lugar -->
+                <div class="box__ranking top1">
+                    <div class="circle__position">1</div>
+                    <div class="foto__pos">
+                        <img src="{{ podium.0.logo|default:'/static/img/default-team.png' }}" 
+                             alt="{{ podium.0.nome|default:'Posição Disponível' }}">
+                    </div>
+                    <div class="nome">{{ podium.0.nome|default:"Posição Disponível" }}</div>
+                    <div class="valor animate-value">{{ podium.0.total_pontos|default:"0" }}</div>
+                    <div class="icon"><i class="fas fa-crown"></i></div>
+                </div>
+
+                <!-- 3º Lugar -->
+                <div class="box__ranking top3">
+                    <div class="circle__position">3</div>
+                    <div class="foto__pos">
+                        <img src="{{ podium.2.logo|default:'/static/img/default-team.png' }}" 
+                             alt="{{ podium.2.nome|default:'Posição Disponível' }}">
+                    </div>
+                    <div class="nome">{{ podium.2.nome|default:"Posição Disponível" }}</div>
+                    <div class="valor animate-value">{{ podium.2.total_pontos|default:"0" }}</div>
+                    <div class="icon"><i class="fas fa-medal"></i></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="destaques-section">
+        <div class="container">
+            <div class="destaques-grid">
+                <!-- Equipe Destaque -->
+                <div class="destaque-card">
+                    <div class="destaque-header">
+                        <i class="fas fa-trophy"></i>
+                        <h4>EQUIPE DESTAQUE</h4>
+                    </div>
+                    <div class="destaque-content">
+                        <img src="{{ destaques.melhor_equipe.logo|default:'/static/img/default-team.png' }}" 
+                             alt="{{ destaques.melhor_equipe.nome }}" 
+                             class="destaque-img">
+                        <h5>{{ destaques.melhor_equipe.nome }}</h5>
+                        <p class="animate-value">{{ destaques.melhor_equipe.pontos }} pontos</p>
+                    </div>
+                </div>
+
+                <!-- Jogador Destaque -->
+                <div class="destaque-card">
+                    <div class="destaque-header">
+                        <i class="fas fa-medal"></i>
+                        <h4>JOGADOR DESTAQUE</h4>
+                    </div>
+                    <div class="destaque-content">
+                        <img src="{{ destaques.melhor_jogador.foto|default:'/static/img/default-user.png' }}" 
+                             alt="{{ destaques.melhor_jogador.nome }}" 
+                             class="destaque-img">
+                        <h5>{{ destaques.melhor_jogador.nome }}</h5>
+                        <p class="animate-value">{{ destaques.melhor_jogador.pontos }} pontos</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block addjs_extra %}
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+<script>
+    // Dados do pódium atual
+    const podiumData = {
+        top1: {
+            nome: "{{ podium.0.nome|default:'Posição Disponível' }}",
+            valor: "{{ podium.0.total_pontos|default:'0' }}"
+        }
+    };
+</script>
+<script src="{% static 'conjunto/ranking_data.js' %}"></script>
+<script src="{% static '/geral/ranking.js' %}"></script>
+<script src="{% static 'darkmode.js' %}"></script>
+{% endblock %}

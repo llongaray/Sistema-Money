@@ -46,14 +46,14 @@
 }
 
 #menu ul li {
-    font-size: 16px; /* Diminua o tamanho da fonte aqui */
+    font-size: 14px; /* Diminuído de 16px para 14px */
     font-weight: 500; /* Usando peso médio da fonte para os itens do menu */
 }
 
 #menu ul li a {
     text-decoration: none;
     color: var(--cor-branco); /* Links em branco */
-    padding: 10px 15px;
+    padding: 8px 12px; /* Diminuído de 10px 15px para 8px 12px */
     border-radius: var(--border-radius-pequeno); /* Border-radius pequeno */
     font-weight: 600; /* Fonte mais grossa para destaque */
     transition: background-color 0.3s, color 0.3s;

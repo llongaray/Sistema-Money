@@ -16,7 +16,7 @@ SECRET_KEY = str(os.getenv('SECRET_KEY'))
 DEBUG = True
 
 # Hosts permitidos durante o desenvolvimento
-ALLOWED_HOSTS = ['127.0.0.1', '192.168.18.236', '192.168.18.223', '192.168.18.171', '192.168.18.246', 'borealpoa.dyndns.org', '186.214.123.244']
+ALLOWED_HOSTS = ['127.0.0.1', '192.168.18.236', '192.168.18.223', '192.168.18.171', '192.168.18.246', 'borealpoa.dyndns.org', '186.214.123.244', 'money.local']
 
 # Application definition
 INSTALLED_APPS = [

@@ -1,0 +1,495 @@
+/* Estilos gerais do modal */
+#modalDashboard .modal-content {
+    background: #f8f9fa;
+    border: none;
+    border-radius: 15px;
+}
+
+
+#modalDashboard .modal-body {
+    padding: 2rem;
+}
+
+/* Alerta de período */
+#modalDashboard .alert-info {
+    background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+    border: none;
+    border-radius: 10px;
+    color: #006064;
+    font-weight: 500;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Cards principais */
+#modalDashboard .row.mb-4 {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    margin: 10px 0;
+}
+
+#modalDashboard .mb-4 {
+    margin: 35px 0;
+}
+
+#modalDashboard .col-md-4 {
+    margin: 0 15px;
+    width: 250px;
+}
+
+#modalDashboard .card {
+    border: none;
+    border-radius: 12px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+#modalDashboard .card:hover {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+#modalDashboard .card.bg-primary {
+    background: linear-gradient(135deg, #4e54c8 0%, #8f94fb 100%) !important;
+}
+
+#modalDashboard .card.bg-success {
+    background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%) !important;
+}
+
+#modalDashboard .card.bg-info {
+    background: linear-gradient(135deg, #26c6da 0%, #4dd0e1 100%) !important;
+}
+
+#modalDashboard .card-body {
+    padding: 0;
+}
+
+#modalDashboard .card-title {
+    font-size: 1rem;
+    font-weight: 500;
+    opacity: 0.9;
+}
+
+#modalDashboard .card-text {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0.5rem 0 0;
+}
+
+/* Tabelas e Progress Bars */
+#modalDashboard .table {
+    margin: 0;
+}
+
+#modalDashboard .table thead th {
+    background: #f1f4f6;
+    border: none;
+    color: #2c3e50;
+    font-weight: 600;
+    padding: 1rem;
+}
+
+#modalDashboard .table td {
+    padding: 1rem;
+    vertical-align: middle;
+}
+
+#modalDashboard .progress {
+    height: 20px;
+    background-color: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+#modalDashboard .progress-bar {
+    transition: width 1s ease;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 20px;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+#modalDashboard .progress-bar.bg-primary {
+    background: linear-gradient(135deg, #4e54c8 0%, #8f94fb 100%);
+}
+
+#modalDashboard .progress-bar.bg-success {
+    background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%);
+}
+
+/* Cards de análise e TAC */
+#modalDashboard .card-header {
+    background: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+    padding: 1rem 1.5rem;
+}
+
+#modalDashboard .card-header h6 {
+    color: #2c3e50;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* Badges */
+#modalDashboard .badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+}
+
+#modalDashboard .bg-success {
+    background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%) !important;
+}
+
+#modalDashboard .bg-warning {
+    background: linear-gradient(135deg, #ffa726 0%, #ffb74d 100%) !important;
+}
+
+#modalDashboard .bg-danger {
+    background: linear-gradient(135deg, #e53935 0%, #ef5350 100%) !important;
+}
+
+/* Scrollbar personalizada */
+#modalDashboard .table-responsive::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+#modalDashboard .table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#modalDashboard .table-responsive::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+#modalDashboard .table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    #modalDashboard .modal-body {
+        padding: 1rem;
+    }
+
+    #modalDashboard .card-text {
+        font-size: 1.5rem;
+    }
+
+    #modalDashboard .progress {
+        height: 15px;
+    }
+
+    #modalDashboard .badge {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+}
+
+
+/* Modo Escuro */
+.darkmode #modalDashboard .modal-content {
+    background: var(--dark-container-background);
+    color: var(--cor-branco);
+}
+
+
+.darkmode #modalDashboard .alert-info {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: var(--cor-branco);
+    border: 1px solid #2c3e50;
+}
+
+/* Cards no modo escuro */
+.darkmode #modalDashboard .card {
+    background: var(--dark-background-fundo);
+    border: 1px solid var(--dark-border-color);
+}
+
+.darkmode #modalDashboard .card-header {
+    background: var(--dark-background-fundo);
+    border-bottom: 1px solid var(--dark-border-color);
+}
+
+.darkmode #modalDashboard .card-header h6 {
+    color: var(--cor-branco);
+}
+
+/* Tabelas no modo escuro */
+.darkmode #modalDashboard .table {
+    color: var(--cor-branco);
+}
+
+.darkmode #modalDashboard .table thead th {
+    background: var(--dark-background-fundo);
+    color: var(--cor-branco);
+    border-bottom: 1px solid var(--dark-border-color);
+}
+
+.darkmode #modalDashboard .table td {
+    border-color: var(--dark-border-color);
+}
+
+.darkmode #modalDashboard .table tbody tr:hover {
+    background: var(--dark-hover-background);
+}
+
+/* Progress bars no modo escuro */
+.darkmode #modalDashboard .progress {
+    background-color: var(--dark-background-fundo);
+}
+
+/* Scrollbar no modo escuro */
+.darkmode #modalDashboard .table-responsive::-webkit-scrollbar-track {
+    background: var(--dark-background-fundo);
+}
+
+.darkmode #modalDashboard .table-responsive::-webkit-scrollbar-thumb {
+    background: var(--dark-border-color);
+}
+
+.darkmode #modalDashboard .table-responsive::-webkit-scrollbar-thumb:hover {
+    background: var(--dark-hover-background);
+}
+
+/* Cards gradientes mantidos com cores mais escuras */
+.darkmode #modalDashboard .card.bg-primary {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
+}
+
+.darkmode #modalDashboard .card.bg-success {
+    background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%) !important;
+}
+
+.darkmode #modalDashboard .card.bg-info {
+    background: linear-gradient(135deg, #006064 0%, #0097a7 100%) !important;
+}
+
+/* Badges no modo escuro */
+.darkmode #modalDashboard .badge.bg-success {
+    background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%) !important;
+}
+
+.darkmode #modalDashboard .badge.bg-warning {
+    background: linear-gradient(135deg, #e65100 0%, #f57c00 100%) !important;
+}
+
+.darkmode #modalDashboard .badge.bg-danger {
+    background: linear-gradient(135deg, #b71c1c 0%, #c62828 100%) !important;
+}
+
+/* Ajustes de texto no modo escuro */
+.darkmode #modalDashboard .card-title,
+.darkmode #modalDashboard .card-text {
+    color: var(--cor-branco);
+}
+
+/* Hover states no modo escuro */
+.darkmode #modalDashboard .card:hover {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+/* Ajustes para a tabela de TAC */
+#modalDashboard .table td:last-child {
+    min-width: 120px;
+    white-space: nowrap;
+}
+
+#modalDashboard .table td {
+    padding: 1rem;
+    vertical-align: middle;
+}
+
+/* Ajustes específicos para o card de Situação TAC */
+#modalDashboard .card:last-child .card-body {
+    padding: 0;
+}
+
+/* Ajustes para a tabela de TAC */
+#modalDashboard .table td:last-child {
+    min-width: 120px; /* Largura mínima para a coluna de status */
+    white-space: nowrap; /* Evita quebra de linha */
+}
+
+#modalDashboard .table td {
+    padding: 1rem;
+    vertical-align: middle;
+}
+
+/* Ajuste para o badge dentro da coluna de status */
+#modalDashboard .badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    display: inline-block; /* Garante que o badge não quebre */
+    width: 100%; /* Ocupa toda a largura disponível */
+    text-align: center; /* Centraliza o texto */
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    #modalDashboard .table td:last-child {
+        min-width: 100px; /* Largura mínima menor em telas pequenas */
+    }
+    
+    #modalDashboard .badge {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* Ajustes específicos para as colunas da tabela */
+#modalDashboard .table td:first-child {  /* Coluna nome_cliente */
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#modalDashboard .table td:nth-child(3) {  /* Coluna valor */
+    min-width: 100px;
+    white-space: nowrap;
+    text-align: center;
+}
+
+#modalDashboard .table td:last-child {  /* Coluna status */
+    min-width: 120px;
+    white-space: nowrap;
+}
+
+/* Responsividade para as colunas */
+@media (max-width: 768px) {
+    #modalDashboard .table td:first-child {
+        max-width: 150px;  /* Reduz largura máxima em telas menores */
+    }
+    
+    #modalDashboard .table td:nth-child(3) {
+        min-width: 80px;
+    }
+    
+    #modalDashboard .table td:last-child {
+        min-width: 100px;
+    }
+}
+
+#dashboardAnalise .card-body {
+    padding: 8px 20px;
+    text-align: center;
+}
+
+/* Estilos específicos para os cards de métricas */
+#dashboardMetricas {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    padding: 10px 15px;
+}
+
+#dashboardMetricas .col-md-4 {
+    flex: 0 0 250px;
+    max-width: 250px;
+    height: 130px;
+}
+
+#dashboardMetricas .col-md-4 .card {
+    padding: 0 15px;
+}
+
+#dashboardMetricas .card {
+    height: 100%;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    align-items: center;
+}
+
+#dashboardMetricas .card-body {
+    padding: 1.5rem;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#dashboardMetricas .card-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    width: 100%;
+    justify-content: center;
+}
+
+#dashboardMetricas .card-icon {
+    font-size: 2.5rem;
+    opacity: 0.8;
+    flex-shrink: 0;
+}
+
+#dashboardMetricas .card-info {
+    flex-grow: 1;
+    text-align: center;
+}
+
+#dashboardMetricas .card-title {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+#dashboardMetricas .card-text {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+    color: #ffffff;
+}
+
+/* Cores específicas para cada card */
+#dashboardMetricas .card.bg-primary {
+    background: linear-gradient(135deg, #2962ff 0%, #448aff 100%) !important;
+}
+
+#dashboardMetricas .card.bg-success {
+    background: linear-gradient(135deg, #2e7d32 0%, #43a047 100%) !important;
+}
+
+#dashboardMetricas .card.bg-info {
+    background: linear-gradient(135deg, #0277bd 0%, #039be5 100%) !important;
+}
+
+/* Hover effects */
+#dashboardMetricas .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    #dashboardMetricas {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+
+    #dashboardMetricas .col-md-4 {
+        flex: 1;
+        max-width: 100%;
+    }
+
+    #dashboardMetricas .card-icon {
+        font-size: 2rem;
+    }
+
+    #dashboardMetricas .card-text {
+        font-size: 1.5rem;
+    }
+}

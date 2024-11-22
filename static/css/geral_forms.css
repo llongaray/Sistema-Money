@@ -290,11 +290,6 @@ main.darkmode .modal-body {
     background-color: var(--dark-modal-background); /* Fundo do modal em cinza escuro */
 }
 
-main.darkmode .modal-header {
-    background-color: var(--azul-escuro-500); /* Fundo do cabeçalho do modal */
-    color: var(--cor-branco); /* Cor do texto do cabeçalho */
-    padding: 10px; /* Padding do cabeçalho */
-}
 
 main.darkmode .modal-body .table {
     background-color: var(--dark-background-fundo); /* Cor de fundo da tabela no modo escuro */

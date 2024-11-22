@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_tags %}
+{% get_user_cargo user as user_cargo %}
+
+{% block addtitle %}<title>Sistema Geral</title>{% endblock %}
+
+{% block addcss_extra %}
+<link rel="stylesheet" href="{% static 'divider.css' %}">
+<link rel="stylesheet" href="{% static 'geral_forms.css' %}">
+<link rel="stylesheet" href="{% static 'mensagens.css' %}">
+<link rel="stylesheet" href="{% static 'filtros.css' %}">
+<link rel="stylesheet" href="{% static 'modais.css' %}">
+<link rel="stylesheet" href="{% static 'geral/all_forms.css' %}">
+<link rel="stylesheet" href="{% static 'darkmode.css' %}">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+{% endblock %}
+
+{% block pre_content %}
+{% include 'partials/_dark_mode_toggle.html' %}
+{% include 'partials/_messages.html' %}
+{% endblock %}
+
+{% block content %}
+
+<!--***************************SELETOR DE MODAIS***************************-->
+
+<!-- FORMULÁRIOS -->
+<div class="container">
+    <!-- Botões para abrir os modais -->
+    <div class="options_modais">
+        {% if user.is_superuser or user_cargo == 'ADMINISTRADOR' %}
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalRegistroEquipe')">
+                Registro Equipe
+            </button>
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalAdicionarMembro')">
+                Adicionar Membro Equipe
+            </button>
+        {% endif %}
+        
+        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalRegistrarPontos')">
+            Registrar Pontos
+        </button>
+        <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalDashboard')">
+            Dashboard
+        </button>
+    </div>
+
+    <div class="divider"></div>
+
+<!--***************************MODAIS***************************-->
+
+    <!-- Modal para Registro de Equipe -->
+    <div class="modal active" id="modalRegistroEquipe">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Registro de Equipe</h5>
+                    <button type="button" class="btn-close" onclick="fecharModal('modalRegistroEquipe')"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="{% url 'geral:all_forms' %}" class="wp-style-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="registro_equipe">
+                        
+                        <div class="form-row">
+                            <label for="nome_equipe">Nome da Equipe:*</label>
+                            <input type="text" 
+                                   id="nome_equipe" 
+                                   name="nome_equipe" 
+                                   required 
+                                   maxlength="255">
+                        </div>
+                        
+                        <div class="form-row">
+                            <label for="descricao_equipe">Descrição:*</label>
+                            <textarea id="descricao_equipe" 
+                                    name="descricao_equipe" 
+                                    required></textarea>
+                        </div>
+                        
+                        <div class="form-row">
+                            <label for="lider_equipe">Líder da Equipe:*</label>
+                            <select id="lider_equipe" 
+                                    name="lider_equipe" 
+                                    required>
+                                <option value="">Selecione um líder</option>
+                                {% for funcionario in funcionarios %}
+                                    <option value="{{ funcionario.id }}">{{ funcionario.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn-primary">Registrar Equipe</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Adicionar Membro -->
+    <div class="modal" id="modalAdicionarMembro">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Adicionar Membro à Equipe</h3>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-container">
+                        <div class="selector">
+                            <div class="selector-available">
+                                <h2>Grupos Disponíveis</h2>
+                                <select id="groups-available" multiple size="10">
+                                    <option value="1">SIAPE</option>
+                                    <option value="2">INSS</option>
+                                    <option value="3">RH</option>
+                                    <option value="4">ADM</option>
+                                    <option value="5">TI</option>
+                                </select>
+                                <button id="add-group" class="btn">Adicionar &gt;&gt;</button>
+                            </div>
+                            <div class="selector-chosen">
+                                <h2>Grupos Escolhidos</h2>
+                                <button id="remove-group" class="btn">&lt;&lt; Remover</button>
+                                <select id="groups-chosen" multiple size="10"></select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Registrar Pontos -->
+    <div class="modal" id="modalRegistrarPontos">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Registrar Pontos</h5>
+                    <button type="button" class="btn-close" onclick="fecharModal('modalRegistrarPontos')"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="{% url 'geral:all_forms' %}" class="wp-style-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="registrar_pontos">
+                        
+                        <div class="form-row">
+                            <label for="funcionario">Funcionário:*</label>
+                            <select id="funcionario" 
+                                    name="funcionario" 
+                                    required>
+                                <option value="">Selecione um funcionário</option>
+                                {% for funcionario in funcionarios %}
+                                    <option value="{{ funcionario.id }}">{{ funcionario.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-row">
+                            <label for="pontos">Pontos:*</label>
+                            <input type="number" 
+                                   id="pontos" 
+                                   name="pontos" 
+                                   required 
+                                   min="0">
+                        </div>
+                        
+                        <div class="form-row">
+                            <label for="motivo">Motivo:*</label>
+                            <textarea id="motivo" 
+                                    name="motivo" 
+                                    required></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn-primary">Registrar Pontos</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Dashboard -->
+    <div class="modal" id="modalDashboard">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Dashboard de Métricas</h5>
+                    <button type="button" class="btn-close" onclick="fecharModal('modalDashboard')"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Período -->
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        Período de análise: {{ periodo_analise }}
+                    </div>
+
+                    <!-- Cards principais -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <h6 class="card-title">Total de Equipes</h6>
+                                    <h2 class="card-text">{{ total_equipes }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h6 class="card-title">Total de Membros</h6>
+                                    <h2 class="card-text">{{ total_membros }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <h6 class="card-title">Pontos Totais</h6>
+                                    <h2 class="card-text">{{ total_pontos }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ranking de Pontos -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Ranking de Pontos</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Funcionário</th>
+                                        <th>Equipe</th>
+                                        <th>Pontos</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for ranking in ranking_pontos %}
+                                    <tr>
+                                        <td>{{ ranking.funcionario }}</td>
+                                        <td>{{ ranking.equipe }}</td>
+                                        <td>{{ ranking.pontos }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block addjs_extra %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{% static 'darkmode.js' %}"></script>
+<script src="{% static 'modal-core.js' %}"></script>
+
+<script>
+    $(document).ready(function () {
+        // Move selected groups to "chosen"
+        $("#add-group").click(function () {
+            $("#groups-available option:selected").each(function () {
+                $("#groups-chosen").append($(this));
+            });
+        });
+    
+        // Move selected groups back to "available"
+        $("#remove-group").click(function () {
+            $("#groups-chosen option:selected").each(function () {
+                $("#groups-available").append($(this));
+            });
+        });
+    
+        // Move with double-click from available to chosen
+        $("#groups-available").on("dblclick", "option", function () {
+            $("#groups-chosen").append($(this));
+        });
+    
+        // Move with double-click from chosen back to available
+        $("#groups-chosen").on("dblclick", "option", function () {
+            $("#groups-available").append($(this));
+        });
+    });
+    
+</script>
+{% endblock %}

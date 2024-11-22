@@ -17,15 +17,15 @@
                 
                 {% if user_access.is_admin %}
                     <!-- Menu para Administração -->
-                    <li><a href="{% url 'siape:all_forms' %}">Forms SIAPE</a></li>
+                    <li><a href="{% url 'siape:all_forms' %}">Consulta SIAPE</a></li>
                     <li><a href="{% url 'siape:ranking' %}">Ranking SIAPE</a></li>
                     <li><a href="{% url 'funcionarios:all_forms' %}">Recursos Humanos</a></li>
-                    <li><a href="{% url 'inss:all_forms' %}">Forms INSS</a></li>
+                    <li><a href="{% url 'inss:all_forms' %}">Consulta INSS</a></li>
                     <li><a href="{% url 'inss:ranking' %}">Ranking LOJAS</a></li>
                 {% else %}
                     <!-- Menu SIAPE -->
                     {% if 'SIAPE' in user_access.groups %}
-                        <li><a href="{% url 'siape:all_forms' %}">Forms SIAPE</a></li>
+                        <li><a href="{% url 'siape:all_forms' %}">Consulta SIAPE</a></li>
                         <li><a href="{% url 'siape:ranking' %}">Ranking SIAPE</a></li>
                     {% endif %}
                     
@@ -36,7 +36,7 @@
                     
                     <!-- Menu INSS -->
                     {% if 'INSS' in user_access.groups %}
-                        <li><a href="{% url 'inss:all_forms' %}">Forms INSS</a></li>
+                        <li><a href="{% url 'inss:all_forms' %}">Consulta INSS</a></li>
                         <li><a href="{% url 'inss:ranking' %}">Ranking LOJAS</a></li>
                     {% endif %}
                     

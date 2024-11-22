@@ -1,3 +1,125 @@
+/* Variáveis de cores para o modo escuro */
+:root {
+    --dark-bg-primary: #1e1e2d;
+    --dark-bg-secondary: #2b2b3d;
+    --dark-text-primary: #e1e1e6;
+    --dark-text-secondary: #a8a8b3;
+    --dark-header-bg: #191970 !important;
+    --dark-divider: #191970 !important;
+    
+    /* Variáveis para botões no modo escuro */
+    --dark-button-primary: #191970;
+    --dark-button-primary-hover: #1e1e8f;
+    --dark-button-primary-active: #141457;
+    --dark-button-text: #ffffff;
+    --dark-button-secondary: #2d2d3d;
+    --dark-button-secondary-hover: #363648;
+    --dark-button-secondary-active: #1f1f2b;
+    --dark-button-disabled: #3d3d4f;
+    --dark-button-disabled-text: #8f8fa3;
+    
+    --dark-hover: #32324d;
+    
+    /* Variáveis específicas para options_modais */
+    --dark-options-button-bg: transparent;
+    --dark-options-button-text: var(--dark-text-primary);
+    --dark-options-button-hover: rgba(25, 25, 112, 0.1); /* Azul escuro com transparência */
+    
+    /* Cores para status no modo escuro */
+    --dark-status-pago: #1b5e1fbe;     /* Verde escuro */
+    --dark-status-espera: #b77a1fab;   /* Amarelo escuro */
+    --dark-status-nao-pago: #c62828ac; /* Vermelho escuro */
+    
+    /* Cores para status no modo normal */
+    --status-pago-bg: #e8f5e9;      /* Verde claro */
+    --status-espera-bg: #fff3e0;    /* Amarelo claro */
+    --status-nao-pago-bg: #ffebee;  /* Vermelho claro */
+    
+    /* Cores para status no modo escuro */
+    --dark-status-pago-bg: #1b5e1f99;     /* Verde escuro */
+    --dark-status-espera-bg: #b77a1fb2;   /* Amarelo escuro */
+    --dark-status-nao-pago-bg: #c62828ac; /* Vermelho escuro */
+}
+
+/* Ajustes para botões no modo escuro */
+.darkmode .btn-primary,
+.darkmode button[type="submit"],
+.darkmode .modal-sec .btn-submit {
+    background-color: var(--dark-button-primary) !important;
+    border-color: var(--dark-button-primary) !important;
+    color: var(--dark-button-text) !important;
+}
+
+.darkmode .btn-primary:hover,
+.darkmode button[type="submit"]:hover,
+.darkmode .modal-sec .btn-submit:hover {
+    background-color: var(--dark-button-primary-hover) !important;
+    border-color: var(--dark-button-primary-hover) !important;
+}
+
+.darkmode .btn-primary:active,
+.darkmode button[type="submit"]:active,
+.darkmode .modal-sec .btn-submit:active {
+    background-color: var(--dark-button-primary-active) !important;
+    border-color: var(--dark-button-primary-active) !important;
+}
+
+.darkmode .btn-secondary {
+    background-color: var(--dark-button-secondary) !important;
+    border-color: var(--dark-button-secondary) !important;
+    color: var(--dark-button-text) !important;
+}
+
+.darkmode .btn-secondary:hover {
+    background-color: var(--dark-button-secondary-hover) !important;
+    border-color: var(--dark-button-secondary-hover) !important;
+}
+
+.darkmode .btn-secondary:active {
+    background-color: var(--dark-button-secondary-active) !important;
+    border-color: var(--dark-button-secondary-active) !important;
+}
+
+/* Botões desabilitados */
+.darkmode .btn:disabled,
+.darkmode .btn.disabled {
+    background-color: var(--dark-button-disabled) !important;
+    border-color: var(--dark-button-disabled) !important;
+    color: var(--dark-button-disabled-text) !important;
+    cursor: not-allowed;
+}
+
+/* Ajustes para o modo escuro com alta especificidade */
+body.darkmode .modal-header,
+body.darkmode .modal-sec .modal-header,
+html body.darkmode .modal-header,
+html body.darkmode .modal-sec .modal-header {
+    background-color: var(--dark-header-bg) !important;
+    border-bottom-color: var(--dark-divider) !important;
+    color: var(--dark-text-primary) !important;
+}
+
+body.darkmode .divider,
+html body.darkmode .divider {
+    background-color: var(--dark-divider) !important;
+    border-color: var(--dark-divider) !important;
+}
+
+/* Outros ajustes do modo escuro com alta especificidade */
+body.darkmode .modal,
+body.darkmode .modal-sec .modal-content {
+    background-color: var(--dark-bg-secondary) !important;
+    color: var(--dark-text-primary) !important;
+}
+
+body.darkmode .modal-title {
+    color: var(--dark-text-primary) !important;
+}
+
+body.darkmode .modal-body {
+    color: var(--dark-text-primary) !important;
+}
+
 /* ========================= */
 /* ESTILOS DOS MODAIS */
 /* ========================= */
@@ -10,6 +132,8 @@
     padding: 0 0 15px;
     opacity: 0;
     transition: opacity 0.3s ease;
+    min-width: 300px;
+    max-width: 900px;
 }
 
 .modal.active {
@@ -454,10 +578,60 @@ main.darkmode tbody tr:hover {
 
 /* Estilos para a tabela TAC */
 .tac-table-container {
-    margin: 20px 0;
+    margin: 0;
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    max-height: 300px; /* Altura máxima aumentada */
+    overflow-y: auto; /* Scroll vertical */
+}
+
+.tac-table-container table {
+    margin-bottom: 0;
+}
+
+/* Cabeçalho fixo durante o scroll */
+.tac-table-container thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: white;
+}
+
+/* Ajuste para modo escuro */
+.darkmode .tac-table-container thead {
+    background-color: var(--dark-bg-secondary);
+}
+
+/* Estilização da barra de rolagem */
+.tac-table-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.tac-table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.tac-table-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.tac-table-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Ajuste para modo escuro da barra de rolagem */
+.darkmode .tac-table-container::-webkit-scrollbar-track {
+    background: var(--dark-bg-primary);
+}
+
+.darkmode .tac-table-container::-webkit-scrollbar-thumb {
+    background: var(--dark-border-color);
+}
+
+.darkmode .tac-table-container::-webkit-scrollbar-thumb:hover {
+    background: var(--dark-hover);
 }
 
 .tac-table {
@@ -519,23 +693,56 @@ main.darkmode tbody tr:hover {
 /* Estilo para o select de status */
 .status-select {
     width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
+    padding: 6px 12px;
     border-radius: 4px;
-    background-color: white;
-    font-size: 14px;
+    border: 1px solid transparent;
+    color: #ffffff !important;
     cursor: pointer;
-    transition: all 0.3s ease;
+    font-weight: 500;
+    transition: all 0.2s ease;
 }
 
+/* Cores de fundo para o select baseadas no status selecionado */
+.status-select.dark-status-pago-bg {
+    background-color: var(--dark-status-pago-bg) !important;
+}
+
+.status-select.dark-status-em_espera-bg {
+    background-color: var(--dark-status-espera-bg) !important;
+}
+
+.status-select.dark-status-nao_pago-bg {
+    background-color: var(--dark-status-nao-pago-bg) !important;
+    box-shadow: 0 0 10px rgba(198, 40, 40, 0.5) !important; /* Sombra vermelha para NAO_PAGO */
+}
+
+/* Estilo para as opções do select */
+.status-select option {
+    background-color: var(--dark-bg-secondary);
+    color: var(--dark-text-primary);
+    padding: 8px;
+}
+
+/* Ajuste para o modo escuro */
+.darkmode .status-select option {
+    background-color: var(--dark-bg-primary);
+    color: var(--dark-text-primary);
+}
+
+/* Hover effect para o select */
 .status-select:hover {
-    border-color: var(--azul-escuro-500);
+    opacity: 0.9;
 }
 
+/* Efeito hover específico para NAO_PAGO */
+.status-select.dark-status-nao_pago-bg:hover {
+    box-shadow: 0 0 15px rgba(198, 40, 40, 0.6) !important; /* Sombra mais intensa no hover */
+}
+
+/* Estilo quando o select está focado */
 .status-select:focus {
     outline: none;
-    border-color: var(--azul-escuro-500);
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
 }
 
 /* Estilo para linhas vazias */
@@ -837,7 +1044,8 @@ main.darkmode .modal-body::-webkit-scrollbar-thumb:hover {
 }
 
 #modalAgendamentosTAC .tabela-separator {
-    height: 15px; /* Espaço entre os filtros e a tabela */
+    height: 5px; /* Espaço entre os filtros e a tabela */
+    background-color: rgb(48, 48, 168); /* Azul escuro mais claro e opaco */
 }
 
 /* Ajustes para modo escuro */
@@ -862,3 +1070,313 @@ main.darkmode .modal-body::-webkit-scrollbar-thumb:hover {
         min-width: 120px; /* Largura mínima em telas pequenas */
     }
 }
+
+.nome-cliente-link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #0d6efd; /* cor do Bootstrap para links */
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.nome-cliente-link:hover {
+    color: #0a58ca; /* cor mais escura ao passar o mouse */
+    text-decoration: underline;
+}
+
+.btn-link.abrir-sub-modal {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #0d6efd;
+    text-decoration: underline;
+    cursor: pointer;
+    font-weight: normal;
+}
+
+.btn-link.abrir-sub-modal:hover {
+    color: #0a58ca;
+    text-decoration: underline;
+}
+
+.options_modais {
+    min-width: 270px;
+    max-width: 350px;
+}
+
+.divider {
+    min-width: 2px;
+    max-width: 2px;
+}
+
+/* Ajustes para o modo escuro nos modais */
+.darkmode .modal,
+.darkmode .modal-sec .modal-content {
+    background-color: var(--dark-bg-secondary);
+    color: var(--dark-text-primary);
+}
+
+.darkmode .modal-header,
+.darkmode .modal-sec .modal-header {
+    background-color: var(--dark-header-bg);
+    border-bottom-color: var(--dark-divider);
+}
+
+.darkmode .modal-title {
+    color: var(--dark-text-primary);
+}
+
+.darkmode .modal-body {
+    color: var(--dark-text-primary);
+}
+
+/* Ajustes para inputs e selects no modo escuro */
+.darkmode .modal input,
+.darkmode .modal select,
+.darkmode .modal textarea {
+    background-color: var(--dark-bg-primary);
+    border-color: var(--dark-divider);
+    color: var(--dark-text-primary);
+}
+
+/* Ajustes para labels no modo escuro */
+.darkmode .modal label,
+.darkmode .modal .form-label {
+    color: var(--dark-text-secondary);
+}
+
+/* Ajustes para tabelas no modo escuro */
+.darkmode .modal table {
+    background-color: var(--dark-bg-secondary);
+}
+
+.darkmode .modal th {
+    background-color: var(--dark-header-bg);
+    color: var(--dark-text-primary);
+}
+
+.darkmode .modal td {
+    color: var(--dark-text-primary);
+    border-color: var(--dark-divider);
+}
+
+.darkmode .modal tr:hover {
+    background-color: var(--dark-hover);
+}
+
+/* Ajustes para divisores no modo escuro */
+.darkmode .divider {
+    background-color: var(--dark-divider);
+}
+
+/* Ajustes para scrollbar no modo escuro */
+.darkmode .modal-body::-webkit-scrollbar-track {
+    background: var(--dark-bg-primary);
+}
+
+.darkmode .modal-body::-webkit-scrollbar-thumb {
+    background: var(--dark-divider);
+}
+
+.darkmode .modal-body::-webkit-scrollbar-thumb:hover {
+    background: var(--dark-hover);
+}
+
+/* Ajustes para links no modo escuro */
+.darkmode .nome-cliente-link,
+.darkmode .btn-link {
+    color: #7986cb;
+}
+
+.darkmode .nome-cliente-link:hover,
+.darkmode .btn-link:hover {
+    color: #9fa8da;
+}
+
+/* Ajustes para status badges no modo escuro */
+.darkmode .status-badge {
+    background-color: var(--dark-bg-primary);
+    color: var(--dark-text-primary) !important;
+}
+
+.darkmode .status-badge.status-pago {
+    background-color: var(--dark-status-pago) !important;
+    color: #ffffff !important;
+}
+
+.darkmode .status-badge.status-em_espera {
+    background-color: var(--dark-status-espera) !important;
+    color: #ffffff !important;
+}
+
+.darkmode .status-badge.status-nao_pago {
+    background-color: var(--dark-status-nao_pago) !important;
+    color: #ffffff !important;
+}
+
+/* Ajustes para formulários específicos no modo escuro */
+.darkmode #modalClienteRua .wp-style-form input,
+.darkmode #modalClienteRua .wp-style-form select,
+.darkmode #modalClienteRua .wp-style-form textarea {
+    background-color: var(--dark-bg-primary);
+    color: var(--dark-text-primary);
+    border-color: var(--dark-divider);
+}
+
+/* Ajustes específicos para botões em options_modais no modo escuro */
+.darkmode .options_modais .btn,
+.darkmode .options_modais button {
+    background-color: var(--dark-options-button-bg) !important;
+    color: var(--dark-text-primary) !important;
+}
+
+.darkmode .options_modais .btn:hover,
+.darkmode .options_modais button:hover {
+    background-color: var(--dark-options-button-hover) !important;
+}
+
+.darkmode .options_modais .btn:active,
+.darkmode .options_modais button:active {
+    background-color: var(--dark-options-button-hover) !important;
+    opacity: 0.8;
+}
+
+/* Cores de fundo para cada status (modo normal) */
+tr.tac-row.status-pago {
+    background-color: var(--status-pago-bg) !important;
+}
+
+tr.tac-row.status-em_espera {
+    background-color: var(--status-espera-bg) !important;
+}
+
+tr.tac-row.status-nao_pago {
+    background-color: var(--status-nao-pago-bg) !important;
+}
+
+/* Cores de fundo para cada status (modo escuro) */
+.darkmode tr.tac-row.status-pago {
+    background-color: var(--dark-status-pago-bg) !important;
+    color: #ffffff !important;
+}
+
+.darkmode tr.tac-row.status-em_espera {
+    background-color: var(--dark-status-espera-bg) !important;
+    color: #ffffff !important;
+}
+
+.darkmode tr.tac-row.status-nao_pago {
+    background-color: var(--dark-status-nao-pago-bg) !important;
+    color: #ffffff !important;
+}
+
+/* Ajuste do hover para manter a cor mas com efeito de hover */
+.tac-row:hover {
+    filter: brightness(95%);
+}
+
+.darkmode .tac-row:hover {
+    filter: brightness(110%);
+}
+
+/* Cabeçalho fixo durante o scroll */
+.tac-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+/* Estilo para o scroll da análise IA */
+.analise-scroll {
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* Estilização da barra de rolagem */
+.analise-scroll::-webkit-scrollbar {
+    width: 8px;
+}
+
+.analise-scroll::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.analise-scroll::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.analise-scroll::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Ajuste para modo escuro */
+.darkmode .analise-scroll::-webkit-scrollbar-track {
+    background: var(--dark-bg-primary);
+}
+
+.darkmode .analise-scroll::-webkit-scrollbar-thumb {
+    background: var(--dark-border-color);
+}
+
+.darkmode .analise-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--dark-hover);
+}
+
+/* Padding dinâmico para o modal-body do dashboard */
+.pb-dashboard {
+    padding-bottom: calc(20px + 1rem) !important;
+}
+
+/* Ajuste para telas menores */
+@media (max-width: 768px) {
+    .pb-dashboard {
+        padding-bottom: calc(40px + 1rem) !important;
+    }
+}
+
+/* Ajuste para telas muito pequenas */
+@media (max-width: 480px) {
+    .pb-dashboard {
+        padding-bottom: calc(60px + 1rem) !important;
+    }
+}
+
+/* Ajuste para quando há muitos itens na tabela TAC */
+.modal-body.pb-dashboard:has(#dashboardTac .table tr:nth-child(n+5)) {
+    padding-bottom: calc(80px + 1rem) !important;
+}
+
+/* Cores para badges de status */
+.dark-status-pago-bg {
+    background-color: var(--dark-status-pago-bg) !important;
+    color: #ffffff !important;
+}
+
+.dark-status-em_espera-bg {
+    background-color: var(--dark-status-espera-bg) !important;
+    color: #ffffff !important;
+}
+
+.dark-status-nao_pago-bg {
+    background-color: var(--dark-status-nao-pago-bg) !important;
+    color: #ffffff !important;
+}
+
+/* Ajuste para modo escuro */
+.darkmode .dark-status-pago-bg {
+    background-color: var(--dark-status-pago-bg) !important;
+}
+
+.darkmode .dark-status-em_espera-bg {
+    background-color: var(--dark-status-espera-bg) !important;
+}
+
+.darkmode .dark-status-nao_pago-bg {
+    background-color: var(--dark-status-nao-pago-bg) !important;
+}
+
+

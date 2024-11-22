@@ -8,10 +8,11 @@
 {% endblock %}
 
 {% block addcss_extra %}
-<link rel="stylesheet" href="{% static 'modais.css' %}">
 <link rel="stylesheet" href="{% static 'divider.css' %}">
 <link rel="stylesheet" href="{% static 'geral_forms.css' %}">
 <link rel="stylesheet" href="{% static 'mensagens.css' %}">
+<link rel="stylesheet" href="{% static 'modais.css' %}">
+<link rel="stylesheet" href="{% static 'darkmode.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 {% endblock %}
 
@@ -594,7 +595,7 @@ document.getElementById('formCargo').addEventListener('submit', function(event) 
 
 <script src="{% static 'conjunto/groups.js' %}"></script> <!-- Carregue o groups.js aqui -->
 <script src="{% static 'darkmode.js' %}"></script>
-<script src="{% static 'modais.js' %}"></script>
+<script src="{% static 'modal-core.js' %}"></script>
 {% endblock %}
 
 

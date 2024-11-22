@@ -6,13 +6,54 @@
 {% endblock %}
 
 {% block addcss_extra %}
+<!-- Importante: Carregue o CSS do darkmode antes dos outros -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <link rel="stylesheet" href="{% static 'funcionarios/all_forms.css' %}">
 <link rel="stylesheet" href="{% static 'modais.css' %}">
 <link rel="stylesheet" href="{% static 'divider.css' %}">
 <link rel="stylesheet" href="{% static 'geral_forms.css' %}">
 <link rel="stylesheet" href="{% static 'mensagens.css' %}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<link rel="stylesheet" href="{% static 'darkmode.css' %}">
+
 <style>
+    /* Ajuste para garantir que o botão de darkmode apareça corretamente */
+    .theme-switch-wrapper {
+        position: fixed !important;
+        top: 80px !important;
+        right: 20px !important;
+        z-index: 9999 !important;
+        display: flex !important;
+        align-items: center !important;
+        background: transparent !important;
+    }
+
+    /* Ajuste para o modo escuro */
+    [data-theme="dark"] .container,
+    [data-theme="dark"] .modal-content,
+    [data-theme="dark"] .modal-body {
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+
+    [data-theme="dark"] input,
+    [data-theme="dark"] select,
+    [data-theme="dark"] textarea {
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        border-color: var(--border-color);
+    }
+
+    [data-theme="dark"] .btn-primary {
+        background-color: var(--accent-primary);
+        color: var(--text-primary);
+    }
+
+    [data-theme="dark"] .btn-primary:hover {
+        background-color: var(--accent-secondary);
+    }
+</style>
+<style>
+
     .password-field {
         position: relative;
         display: flex;
@@ -40,11 +81,10 @@
         margin: 0;
     }
 </style>
-
-
 {% endblock %}
 
 {% block pre_content %}
+<!-- Certifique-se de que o partial está sendo incluído corretamente -->
 {% include 'partials/_dark_mode_toggle.html' %}
 {% include 'partials/_messages.html' %}
 {% endblock %}
@@ -343,10 +383,10 @@
 
 {% block addjs_extra %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="{% static 'darkmode.js' %}"></script>
-<script src="{% static 'modais.js' %}"></script>
+<script src="{% static 'modal-core.js' %}"></script>
 <script src="{% static 'geral_forms.js' %}"></script>
 <script src="{% static 'mensagem.js' %}"></script>
+<script src="{% static 'darkmode.js' %}"></script>
 
 <script>
     function togglePasswordVisibility(icon) {

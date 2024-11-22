@@ -6,11 +6,14 @@
 {% block addtitle %}<title>Agendamento INSS</title>{% endblock %}
 
 {% block addcss_extra %}
-<link rel="stylesheet" href="{% static 'modais.css' %}">
 <link rel="stylesheet" href="{% static 'divider.css' %}">
 <link rel="stylesheet" href="{% static 'geral_forms.css' %}">
 <link rel="stylesheet" href="{% static 'mensagens.css' %}">
 <link rel="stylesheet" href="{% static 'filtros.css' %}">
+<link rel="stylesheet" href="{% static 'inss/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'modais.css' %}">
+<link rel="stylesheet" href="{% static 'darkmode.css' %}">
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
     .tac-valor-input {
@@ -75,6 +78,43 @@
         margin: 0;
     }
 </style>
+
+<style>
+    .date-range-container {
+        display: flex;
+        gap: 10px;
+        flex: 2;
+    }
+    
+    .date-range-container .filtro-input {
+        flex: 1;
+    }
+</style>
+
+<style>
+    .date-range-container {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+        width: 100%;
+    }
+    
+    .date-range-container input[type="date"] {
+        flex: 1;
+        padding: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .td-data {
+        white-space: nowrap;
+        text-align: center;
+    }
+    
+    .th-data {
+        text-align: center;
+    }
+</style>
 {% endblock %}
 
 {% block pre_content %}
@@ -105,6 +145,10 @@
             <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalReagendamentoTabela')">
                 Confirmação Reagendamento
             </button>
+            
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalAgendamentosAtrasados')">
+                Não Foi Loja
+            </button>
         {% endif %}
 
         {% can_view_inss_button user 'clientes_loja' as can_view_clientes %}
@@ -115,9 +159,6 @@
             <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalTodosAgendamentos')">
                 Todos os Agendamentos
             </button>
-            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalAgendamentosAtrasados')">
-                Não Foi Loja
-            </button>
         {% endif %}
 
         {% can_view_inss_button user 'agendamentos_tac' as can_view_tac %}
@@ -126,6 +167,9 @@
                 Confirmação Pagamento TAC
             </button>
         {% endif %}
+            <button type="button" class="btn btn-primary" onclick="abrirModalOptions('#modalDashboard')">
+                Dashboard
+            </button>
     </div>
 
     <div class="divider"></div>
@@ -537,7 +581,6 @@
                     <button type="button" class="btn-close" data-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- Dentro do modalListaClientes, antes da tabela -->
                     <div class="filtros-wrapper">
                         <div class="filtros-container">
                             <input type="text" 
@@ -563,7 +606,7 @@
                     </div>
 
                     <div class="tabela-separator"></div>
-                    <table class="wp-style-table" id="tabelaClientesLoja">  <!-- Adicionado ID aqui -->
+                    <table class="wp-style-table" id="tabelaClientesLoja">
                         <thead>
                             <tr>
                                 <th>Nome</th>
@@ -576,9 +619,29 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- Será preenchido via jQuery -->
+                            {% for agendamento in agendamentos_confirmados %}
+                            <tr class="linha-cliente-loja">
+                                <td>
+                                    <button type="button" 
+                                            class="btn-link abrir-sub-modal" 
+                                            data-agendamento-id="{{ agendamento.id }}"
+                                            onclick="abrirSubModal('#modalEdicaoCliente', 'listaClientes', '{{ agendamento.id }}')">
+                                        {{ agendamento.nome_cliente }}
+                                    </button>
+                                </td>
+                                <td>{{ agendamento.cpf_cliente }}</td>
+                                <td>{{ agendamento.numero_cliente }}</td>
+                                <td>{{ agendamento.dia_agendado }}</td>
+                                <td>{{ agendamento.atendente_agendou }}</td>
+                                <td>{{ agendamento.loja_agendada }}</td>
+                                <td>{{ agendamento.status }}</td>
+                            </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
+                    <div id="nenhumResultadoClientes" style="display: none;">
+                        Nenhum resultado encontrado.
+                    </div>
                 </div>
             </div>
         </div>
@@ -625,11 +688,11 @@
                                 <tr>
                                     <td>
                                         <button type="button" 
-                                                class="btn-link abrir-sub-modal" 
-                                                data-agendamento-id="{{ agendamento.id }}"
-                                                onclick="abrirSubModal('#modalConfirmacaoAgendamento', 'confirmacao', {{ agendamento.id }})">
-                                            {{ agendamento.nome_cliente }}
-                                        </button>
+                                            class="btn-link abrir-sub-modal" 
+                                            data-agendamento-id="{{ agendamento.id }}"
+                                            onclick="abrirSubModal('#modalEdicaoCliente', 'listaClientes', '{{ agendamento.id }}')">  <!-- Adicionar aspas -->
+                                        {{ agendamento.nome_cliente }}
+                                    </button>
                                     </td>
                                     <td>{{ agendamento.cpf_cliente }}</td>
                                     <td>{{ agendamento.numero_cliente }}</td>
@@ -672,11 +735,29 @@
                             class="filtro-input" 
                             placeholder="CPF...">
                         
+                        <input type="text" 
+                            id="filtroLojaTAC" 
+                            class="filtro-input" 
+                            placeholder="Loja...">
+                        
                         <select id="filtroStatusTAC" class="filtro-input">
                             <option value="">Status...</option>
                             <option value="PAGO">PAGO</option>
-                            <option value="NAO_PAGO">NÃO PAGO</option>
-                            <option value="EM_ESPERA">EM ESPERA</option>
+                            <option value="NÃO PAGO">NÃO PAGO</option>
+                            <option value="EM ESPERA">EM ESPERA</option>
+                        </select>
+
+                        <!-- Input para data específica -->
+                        <input type="date" 
+                            id="filtroDataEspecificaTAC" 
+                            class="filtro-input">
+
+                        <!-- Select para período predefinido -->
+                        <select id="filtroPeriodoTAC" class="filtro-input">
+                            <option value="">Período...</option>
+                            <option value="HOJE">Hoje</option>
+                            <option value="SEMANA">Essa Semana</option>
+                            <option value="MES">Esse Mês</option>
                         </select>
                     </div>
                 </div>
@@ -689,16 +770,21 @@
                             <tr>
                                 <th class="th-nome">Nome Cliente</th>
                                 <th class="th-cpf">CPF</th>
+                                <th class="th-loja">Loja</th>
+                                <th class="th-data">Data</th>
                                 <th class="th-valor">Valor TAC</th>
-                                <th class="th-status">Status</th>
                                 <th class="th-acao">Ação</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for agendamento in agendamentos_tac %}
-                            <tr data-agendamento-id="{{ agendamento.id }}" class="tac-row {% if agendamento.status == 'PAGO' %}status-pago{% elif agendamento.status == 'NAO_PAGO' %}status-nao-pago{% elif agendamento.status == 'EM_ESPERA' %}status-espera{% endif %}">
+                            <tr data-agendamento-id="{{ agendamento.id }}" 
+                                data-data="{{ agendamento.dia_agendado }}" 
+                                class="tac-row status-{{ agendamento.status|lower }}">
                                 <td class="td-nome">{{ agendamento.nome_cliente }}</td>
                                 <td class="td-cpf">{{ agendamento.cpf_cliente }}</td>
+                                <td class="td-loja">{{ agendamento.loja_agendada }}</td>
+                                <td class="td-data">{{ agendamento.dia_agendado }}</td>
                                 <td class="td-valor">
                                     <form method="POST" action="{% url 'inss:all_forms' %}" class="tac-valor-form">
                                         {% csrf_token %}
@@ -710,11 +796,6 @@
                                                value="R$ {{ agendamento.tac|floatformat:2 }}"
                                                onchange="this.form.submit()">
                                     </form>
-                                </td>
-                                <td class="td-status">
-                                    <span class="status-badge status-{{ agendamento.status|lower }}">
-                                        {{ agendamento.status }}
-                                    </span>
                                 </td>
                                 <td class="td-acao">
                                     <form method="POST" action="{% url 'inss:all_forms' %}" class="status-tac-form">
@@ -732,7 +813,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="5" class="no-records">Nenhum agendamento com TAC encontrado</td>
+                                <td colspan="6" class="no-records">Nenhum agendamento com TAC encontrado</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -751,7 +832,7 @@
                     <button type="button" class="btn-close" data-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- Adicionar os filtros -->
+                    <!-- Filtros existentes -->
                     <div class="filtros-wrapper">
                         <div class="filtros-container">
                             <input type="text" 
@@ -789,10 +870,217 @@
                                 <th>Loja</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <!-- Será preenchido via JavaScript -->
+                        <tbody id="tabelaAgendamentosAtrasados">
+                            {% for agendamento in agendamentos_atrasados %}
+                            <tr class="linha-agendamento-atrasado">
+                                <td>
+                                    <button type="button" 
+                                            class="btn-link abrir-sub-modal nome-cliente-link" 
+                                            data-agendamento-id="{{ agendamento.id }}" 
+                                            onclick="abrirSubModal('#modalConfirmacaoAgendamento', 'confirmacao', {{ agendamento.id }})">
+                                        {{ agendamento.nome_cliente }}
+                                    </button>
+                                </td>
+                                <td>{{ agendamento.cpf_cliente }}</td>
+                                <td>{{ agendamento.numero_cliente }}</td>
+                                <td data-dia="{{ agendamento.dia_agendado }}">{{ agendamento.dia_agendado }}</td>
+                                <td>{{ agendamento.atendente_agendou }}</td>
+                                <td>{{ agendamento.loja_agendada }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr id="nenhumResultadoAtrasados">
+                                <td colspan="6" class="text-center">Nenhum agendamento atrasado encontrado</td>
+                            </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+    </div> 
+
+    <!-- Modal para Dashboard -->
+    <div class="modal" id="modalDashboard">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Dashboard de Métricas</h5>
+                    <button type="button" class="btn-close" onclick="fecharModal('modalDashboard')"></button>
+                </div>
+                <div class="modal-body pb-dashboard">
+                    <!-- Período -->
+                    <div id="dashboardPeriodo" class="alert alert-info mb-4">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        Período de análise: {{ agendamentos_finalizados.periodo }}
+                    </div>
+
+                    <!-- Cards principais -->
+                    <div id="dashboardMetricas" class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <div class="card-content">
+                                        <i class="fas fa-calendar-check card-icon"></i>
+                                        <div class="card-info">
+                                            <h6 class="card-title">Total Agendamentos</h6>
+                                            <h2 class="card-text">{{ agendamentos_finalizados.count_agem }}</h2>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <div class="card-content">
+                                        <i class="fas fa-check-circle card-icon"></i>
+                                        <div class="card-info">
+                                            <h6 class="card-title">Confirmados</h6>
+                                            <h2 class="card-text">{{ agendamentos_finalizados.count_agem_confirmados }}</h2>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <div class="card-content">
+                                        <i class="fas fa-flag-checkered card-icon"></i>
+                                        <div class="card-info">
+                                            <h6 class="card-title">Finalizados</h6>
+                                            <h2 class="card-text">{{ agendamentos_finalizados.count_agem_finalizados }}</h2>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Efetividade por Loja -->
+                    <div id="dashboardEfetividade" class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Efetividade por Loja</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Loja</th>
+                                            <th>Comparecimento</th>
+                                            <th>Fechamento</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for loja in agendamentos_finalizados.efetividade_lojas %}
+                                        <tr>
+                                            <td>{{ loja.loja }}</td>
+                                            <td>
+                                                <div class="progress">
+                                                    <div class="progress-bar bg-primary" 
+                                                        role="progressbar" 
+                                                        style="width: {{ loja.efetividade_comparecimento }}%">
+                                                        {{ loja.efetividade_comparecimento }}%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="progress">
+                                                    <div class="progress-bar bg-success" 
+                                                        role="progressbar" 
+                                                        style="width: {{ loja.efetividade_fechamento }}%">
+                                                        {{ loja.efetividade_fechamento }}%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Análise IA -->
+                    <div id="dashboardAnalise" class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Análise de Desempenho</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="analise-scroll">
+                                {% if agendamentos_finalizados.analise_ia.agendamentos %}
+                                <div class="analise-section mb-3">
+                                    <h6 class="text-primary">Análise de Agendamentos</h6>
+                                    <p class="card-text">{{ agendamentos_finalizados.analise_ia.agendamentos }}</p>
+                                </div>
+                                {% endif %}
+
+                                {% if agendamentos_finalizados.analise_ia.vendas %}
+                                <div class="analise-section mb-3">
+                                    <h6 class="text-primary">Análise de Vendas</h6>
+                                    <p class="card-text">{{ agendamentos_finalizados.analise_ia.vendas }}</p>
+                                </div>
+                                {% endif %}
+
+                                {% if agendamentos_finalizados.analise_ia.tac %}
+                                <div class="analise-section mb-3">
+                                    <h6 class="text-primary">Análise de TAC</h6>
+                                    <p class="card-text">{{ agendamentos_finalizados.analise_ia.tac }}</p>
+                                </div>
+                                {% endif %}
+
+                                {% if agendamentos_finalizados.analise_ia.tendencias %}
+                                <div class="analise-section mb-3">
+                                    <h6 class="text-primary">Tendências</h6>
+                                    <p class="card-text">{{ agendamentos_finalizados.analise_ia.tendencias }}</p>
+                                </div>
+                                {% endif %}
+
+                                {% if agendamentos_finalizados.analise_ia.recomendacoes %}
+                                <div class="analise-section">
+                                    <h6 class="text-primary">Recomendações</h6>
+                                    <p class="card-text">{{ agendamentos_finalizados.analise_ia.recomendacoes }}</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Situação TAC -->
+                    <div id="dashboardTac" class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Situação TAC</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive tac-table-container">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Cliente</th>
+                                            <th>Loja</th>
+                                            <th>Valor</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for tac in agendamentos_finalizados.situacao_tac %}
+                                        <tr class="tac-row status-{{ tac.status|lower }}">
+                                            <td>{{ tac.nome_cliente }}</td>
+                                            <td>{{ tac.loja_agendada }}</td>
+                                            <td>R$ {{ tac.valor_tac|floatformat:2 }}</td>
+                                            <td class="td-status">
+                                                <span class="status-badge status-{{ tac.status|lower }}">
+                                                    {{ tac.status }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1011,106 +1299,6 @@
 <!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-<!-- ========================= DADOS INICIAIS ========================= -->
-
-<!-- ========================= FUNÇÕES DE FILTRO ========================= -->
-<script>
-    $(document).ready(function() {
-        // Função para filtrar a tabela de agendamentos
-        function filtrarTabelaAgendamentos() {
-            var nome = $("#filtroNome").val().toLowerCase();
-            var dia = $("#filtroDia").val(); // Formato: YYYY-MM-DD
-            var atendente = $("#filtroAtendente").val().toLowerCase();
-            var loja = $("#filtroLoja").val().toLowerCase();
-            var status = $("#filtroStatus").val().toLowerCase();
-    
-            $("#tabelaAgendamentos tr.linha-agendamento").each(function() {
-                var row = $(this);
-                var nomeCliente = row.find("button").text().toLowerCase();
-                var diaAgendado = row.find("td[data-dia]").text().trim(); // Pegamos o texto da célula
-                var atendenteTexto = row.find("td:nth-child(4)").text().toLowerCase();
-                var lojaTexto = row.find("td:nth-child(5)").text().toLowerCase();
-                var statusTexto = row.find("td:nth-child(6)").text().toLowerCase();
-    
-                var matchNome = nomeCliente.includes(nome);
-                var matchDia = !dia || (diaAgendado && diaAgendado.includes(dia));
-                var matchAtendente = atendenteTexto.includes(atendente);
-                var matchLoja = lojaTexto.includes(loja);
-                var matchStatus = statusTexto.includes(status);
-    
-                if (matchNome && matchDia && matchAtendente && matchLoja && matchStatus) {
-                    row.show();
-                } else {
-                    row.hide();
-                }
-            });
-    
-            // Verifica se há resultados visíveis
-            var temResultados = $("#tabelaAgendamentos tr.linha-agendamento:visible").length > 0;
-            $("#nenhumResultado").toggle(!temResultados);
-        }
-
-        // Função para filtrar a tabela TAC
-        function filtrarTabelaTAC() {
-            var nome = $("#filtroNomeTAC").val().toLowerCase();
-            var cpf = $("#filtroCPFTAC").val().toLowerCase();
-            var status = $("#filtroStatusTAC").val().toLowerCase();
-    
-            $("#modalAgendamentosTAC .tac-row").each(function() {
-                var row = $(this);
-                var nomeCliente = row.find(".td-nome").text().toLowerCase();
-                var cpfCliente = row.find(".td-cpf").text().toLowerCase();
-                var statusCliente = row.find(".td-status .status-badge").text().toLowerCase();
-    
-                var matchNome = nomeCliente.includes(nome);
-                var matchCPF = cpfCliente.includes(cpf);
-                var matchStatus = status === "" || statusCliente === status;
-    
-                if (matchNome && matchCPF && matchStatus) {
-                    row.show();
-                } else {
-                    row.hide();
-                }
-            });
-        }
-    
-        // Event listeners para os filtros de agendamentos
-        $("#filtroNome, #filtroAtendente, #filtroLoja, #filtroStatus").on("keyup change", function() {
-            filtrarTabelaAgendamentos();
-        });
-    
-        // Listener específico para o filtro de data
-        $("#filtroDia").on("change", function() {
-            filtrarTabelaAgendamentos();
-        });
-    
-        // Limpar filtros quando o modal for fechado
-        $("#modalConfiAgendamentoTabela").on("hidden.bs.modal", function() {
-            $("#filtroNome, #filtroDia, #filtroAtendente, #filtroLoja, #filtroStatus").val("");
-            filtrarTabelaAgendamentos();
-        });
-
-        // Event listeners para os filtros TAC
-        $("#filtroNomeTAC, #filtroCPFTAC, #filtroStatusTAC").on("keyup change", function() {
-            filtrarTabelaTAC();
-        });
-    });
-</script>
-<script>
-    function handleTabulacaoVendedorRua() {
-        const tabulacao = document.getElementById('tabulacao_vendedor').value;
-        const fechouNegocioContainer = document.getElementById('fechouNegocioRuaContainer');
-        const observacaoContainer = document.getElementById('observacaoVendedorRuaContainer');
-    
-        if (tabulacao === 'FECHOU NEGOCIO') {
-            fechouNegocioContainer.style.display = 'block';
-            observacaoContainer.style.display = 'block';
-        } else {
-            fechouNegocioContainer.style.display = 'none';
-            observacaoContainer.style.display = 'block';
-        }
-    }
-</script>
 
 <!-- ========================= FUNÇÕES LOCAIS E DICIONÁRIOS ========================= -->
 <script>
@@ -1222,7 +1410,8 @@
 </script>
 <!-- ========================= SCRIPTS DEPENDENTES ========================= -->
 <!-- Carrega scripts que dependem das definições anteriores -->
-<script src="{% static 'modais.js' %}"></script>
+<script src="{% static 'inss/modal-specific.js' %}"></script>
+<script src="{% static 'modal-core.js' %}"></script>
 <script src="{% static 'conjunto/initialConfig.js' %}"></script>
 
 {% endblock %}

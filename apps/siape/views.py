@@ -16,7 +16,6 @@ import logging
 import os
 from datetime import datetime, time, timedelta
 from decimal import Decimal
-import time
 
 # Third party imports
 import pandas as pd
@@ -218,8 +217,11 @@ def get_ficha_cliente(request, cpf):
         info_pessoal_data = {}
         print("Nenhuma informação pessoal encontrada")
 
-    # Obtém o débito/margem mais recente para os cards
-    debito_recente = DebitoMargem.objects.filter(cliente=cliente).first()
+    # Obtém o débito/margem mais recente para os cards (apenas de campanhas ativas)
+    debito_recente = DebitoMargem.objects.filter(
+        cliente=cliente,
+        campanha__status=True
+    ).first()
     
     cards_data = {
         'saldo_5': debito_recente.saldo_5 if debito_recente else Decimal('0.00'),
@@ -227,9 +229,13 @@ def get_ficha_cliente(request, cpf):
     }
     print(f"Dados dos cards coletados: Saldo 5 = {cards_data['saldo_5']}, Benef Saldo 5 = {cards_data['benef_saldo_5']}")
 
-    # Filtra os débitos e margens associados ao cliente com prazo maior que zero
-    debitos_margens = DebitoMargem.objects.filter(cliente=cliente, prazo__gt=0)
-    print(f"Total de débitos/margens encontrados: {debitos_margens.count()}")
+    # Filtra os débitos e margens associados ao cliente com prazo maior que zero e campanha ativa
+    debitos_margens = DebitoMargem.objects.filter(
+        cliente=cliente, 
+        prazo__gt=0,
+        campanha__status=True
+    )
+    print(f"Total de débitos/margens encontrados (apenas campanhas ativas): {debitos_margens.count()}")
 
     debitos_margens_data = []
     for debito_margem in debitos_margens:
@@ -1085,7 +1091,7 @@ def get_cards(periodo='mes'):
         ultimo_dia_geral = datetime.combine(meta_geral.range_data_final, time(23, 59, 59))
     else:
         primeiro_dia_geral = hoje.replace(day=1)
-        ultimo_dia_geral = datetime.combine((hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1)), time(23, 59, 59))
+        ultimo_dia_geral = datetime.combine((hoje.replace(day=1, month=hoje.month + 1) - timedelta(days=1)), time(23, 59, 59))
     
     # Busca os registros financeiros no período da meta geral (sem filtro de departamento)
     valores_range = RegisterMoney.objects.filter(
@@ -1173,7 +1179,7 @@ def get_podium(periodo='mes'):
     else:
         print("Nenhuma meta SIAPE ativa encontrada, usando mês atual")
         primeiro_dia = hoje.replace(day=1)
-        ultimo_dia = (hoje.replace(day=1, month=hoje.month + 1) - timezone.timedelta(days=1))
+        ultimo_dia = (hoje.replace(day=1, month=hoje.month + 1) - timedelta(days=1))
     
     print(f"Período do pódio: {primeiro_dia} até {ultimo_dia}")
     

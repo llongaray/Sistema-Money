@@ -6,8 +6,8 @@ from apps.siape.models import Cliente
 class Agendamento(models.Model):
     # Informações de Cliente
     nome_cliente = models.CharField(max_length=255)
-    cpf_cliente = models.CharField(max_length=14)  # CPF no formato XXX.XXX.XXX-XX
-    numero_cliente = models.CharField(max_length=15, blank=True, null=True)  # Número de celular
+    cpf_cliente = models.CharField(max_length=25)  # CPF no formato XXX.XXX.XXX-XX
+    numero_cliente = models.CharField(max_length=25, blank=True, null=True)  # Número de celular
     confirmacao_whatsapp = models.BooleanField(default=True)  # Confirmação de WhatsApp
 
     # Informações de Agendamento
